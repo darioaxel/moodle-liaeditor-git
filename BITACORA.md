@@ -394,6 +394,25 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-16 — Sesión 16: Tasklist LiaEditor–Moodle v1 + README renombrado
+
+- **README reescrito** con la identidad nueva del proyecto
+  (LiaEditor–Moodle, decisiones D1–D10, arquitectura v1) y subido a
+  `origin/main` (commit `b5c4119`).
+- **Revisión de estado** (docs + roadmap): sistema Course as Code cerrado
+  (E2E real 2026-11-09, 8 PRU pendientes); pivote LiaEditor con los 3 docs
+  base escritos (spec mod_liamd, arquitectura v1, roadmap fork) y **cero
+  código implementado** — el fork `FPVirtual/LiveEditor` ya existe, sin
+  cambios propios todavía.
+- **Creada `docs/Tasklist — Desarrollo LiaEditor–Moodle v1.md`** (formato
+  ENG/PRU): 3 fases con DoD — Fase 1 MVP sin fork (engine `edit/`,
+  `content.php`/`save.php`/tokens/página Publicar 🔌, LiaEdit
+  self-hosted), Fase 2 un clic (fork 🍴 C1–C10 mapeado a LIV-1–6, `liaex`
+  server-side), Fase 3 producción. Cinco decisiones pendientes recogidas
+  con la tarea que condiciona cada una.
+- **Pendiente para la próxima sesión:** resolver la decisión nº 1
+  (Guardar en fase 1: userscript vs. adelantar el fork) y arrancar LIA-001.
+
 ### 2026-11-09 — Sesión 15: Ciclo E2E completo contra Moodle real 🎉
 
 **Primera verificación extremo a extremo del sistema contra el Moodle de

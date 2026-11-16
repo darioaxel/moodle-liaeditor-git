@@ -112,6 +112,7 @@ variables `MOODLE_URL`, `MOODLE_TOKEN`, `CONTENT_REPO_URL`, `CONTENT_REPO_KEY`.
 - [Desarrollo LiaEditor–Moodle v1](docs/desarrollo-liaeditor-moodle-v1.md) — decisiones de arquitectura D1–D10 y fases.
 - [Especificación `mod_liamd` v0.1.0](docs/cambio-curso-a-liascript.md) — requisitos funcionales, endpoints, BD, capacidades.
 - [Roadmap del fork LiveEditor](docs/roadmap-liveeditor-fork.md) — cambios C1–C10 sobre el editor, hitos LIV-1–6.
+- [Tasklist LiaEditor–Moodle v1](docs/Tasklist%20—%20Desarrollo%20LiaEditor–Moodle%20v1.md) — fases 1–3 con DoD, pistas engine/plugin/fork (LIA-001–055).
 - [Guía de autor](docs/Guía%20de%20autor.md) y [Guía de operación](docs/Guía%20de%20operación.md).
 - [Bitácora](BITACORA.md) — progreso real y registro de sesiones.
 - Documentación histórica (Course as Code): [Especificación v0.2](docs/Especificación%20Moodle%20Course%20as%20Code%20v0.2.md), [diagramas de secuencia](docs/Diagramas%20de%20secuencia%20—%20Moodle%20Course%20as%20Code.md), [tasklist del engine](docs/Tasklist%20—%20Desarrollo%20courseascode-engine.md).
