@@ -91,7 +91,7 @@
         <KEY NAME="tokenhash" TYPE="unique" FIELDS="tokenhash"/>
       </KEYS>
       <INDEXES>
-        <INDEX NAME="user-file-branch" UNIQUE="false" FIELDS="userid, file, branch"/>
+        <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
       </INDEXES>
     </TABLE>
   </TABLES>
