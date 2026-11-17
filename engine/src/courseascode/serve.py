@@ -50,6 +50,7 @@ def build_app() -> FastAPI:
         store=ReleaseStore(default_db_url()),
         webhook_secret=os.environ.get("COURSEASCODE_WEBHOOK_SECRET"),
         admin_token=os.environ.get("COURSEASCODE_ADMIN_TOKEN"),
+        content_repo_url=os.environ.get("CONTENT_REPO_URL"),
     )
 
 

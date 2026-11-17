@@ -61,6 +61,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from starlette.middleware.base import RequestResponseEndpoint
 
 from courseascode.api.deployment import DeploymentApiDeps, create_deployment_router
+from courseascode.api.edit import EditApiDeps, create_edit_router
 from courseascode.api.hooks import create_hooks_router
 from courseascode.api.releases import ReleasesApiDeps, create_releases_router
 from courseascode.catalog import (
@@ -141,6 +142,7 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
     webhook_secret: str | None = None,
     admin_token: str | None = None,
     cache: RenderCache[RenderedBook] | None = None,
+    content_repo_url: str | None = None,
 ) -> FastAPI:
     """Crea la app de preview, catálogo y despliegue sobre ``content_root``.
 
@@ -169,6 +171,9 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
             ``COURSEASCODE_ADMIN_TOKEN``) para leer ``/audit``.
         cache: caché de renders (ENG-103); por defecto uno nuevo con TTL y
             tamaño por defecto. El webhook de Git lo invalida al completo.
+        content_repo_url: URL del repo en la forja (``CONTENT_REPO_URL``); los
+            endpoints de edición la usan para construir la ``diff_url`` de los
+            conflictos 409 (LIA-004).
     """
     configure_logging()
     if provider is None:
@@ -211,6 +216,7 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
             DeploymentApiDeps(git=ctx.provider, moodle=ctx.moodle, releases=ctx.releases)
         )
     )
+    app.include_router(create_edit_router(EditApiDeps(git=ctx.provider, repo_url=content_repo_url)))
     app.include_router(
         create_releases_router(
             ReleasesApiDeps(moodle=ctx.moodle, store=store, admin_token=admin_token)

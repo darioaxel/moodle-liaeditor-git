@@ -49,24 +49,24 @@ publicar, con LiaEdit self-hosted **sin modificar** (D7 fase 1).
 
 ### Pista engine
 
-- [ ] **LIA-001** (M) Módulo `edit/` con modelos pydantic: `EditSession`
+- [x] **LIA-001** (M) Módulo `edit/` con modelos pydantic: `EditSession`
   (user, file, branch, base_sha), `SaveRequest` (file, branch,
   original_sha, content), `SaveResult` (ok con `new_sha` | conflict con
   `resolution_branch`, `diff_url`, `current_sha` | error). Límite 1 MB.
-- [ ] **LIA-002** (M) `GET /edit/content?file=&branch=`: contenido del
+- [x] **LIA-002** (M) `GET /edit/content?file=&branch=`: contenido del
   fichero en la rama + SHA actual. 404 si no existe; validación de ruta.
-- [ ] **LIA-003** (L) Gestión de ramas de edición `edicion/<user>/<file>`
+- [x] **LIA-003** (L) Gestión de ramas de edición `edicion/<user>/<file>`
   (D4): crear desde `main` si no existe, reutilizar si existe, reset a
   `main`, sanitización del nombre (lowercase, sin espacios, máx 100),
   detección de rama *stale* si el fichero se renombra en `main`.
-- [ ] **LIA-004** (L) `POST /edit/save` (D5): si `current_sha ==
+- [x] **LIA-004** (L) `POST /edit/save` (D5): si `current_sha ==
   original_sha` → commit con token de servidor y `200 {new_sha}`; si
   difiere → rama `resolucion/<user>/<timestamp>-<file>`, commit ahí y
   `409 {resolution_branch, diff_url, current_sha}`.
-- [ ] **LIA-005** (M) `GET /edit/state?course=&file=` (o ampliación del
+- [x] **LIA-005** (M) `GET /edit/state?course=&file=` (o ampliación del
   endpoint de status): estado por comparación de SHAs
   (`UP_TO_DATE`/`UPDATE_AVAILABLE`, §5.3 de la v1), sin planner.
-- [ ] **LIA-006** (M) Tests E2E sobre fixture Git: abrir → guardar →
+- [x] **LIA-006** (M) Tests E2E sobre fixture Git: abrir → guardar →
   guardar de nuevo → conflicto con commit externo → rama de resolución.
   Contrato documentado en `moodle/functions.py` o módulo equivalente.
 

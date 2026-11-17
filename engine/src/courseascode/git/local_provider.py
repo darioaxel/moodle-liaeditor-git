@@ -7,6 +7,7 @@ expone worktrees de forma fiable. El resto de operaciones van por la API tipada.
 from __future__ import annotations
 
 import fnmatch
+import os
 import subprocess
 import tempfile
 from collections.abc import Iterator
@@ -14,12 +15,12 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from git import Repo
-from git.exc import BadName, InvalidGitRepositoryError
+from git.exc import BadName, GitCommandError, InvalidGitRepositoryError
 from git.objects import Blob, Commit, Tree
 
 from courseascode.domain import GitRef
 from courseascode.git.diff import ChangeStatus, Diff, FileChange
-from courseascode.git.provider import GitProvider, GitProviderError
+from courseascode.git.provider import BranchMovedError, GitProvider, GitProviderError
 
 _STATUS_MAP: dict[str, ChangeStatus] = {
     "A": "added",
@@ -28,6 +29,10 @@ _STATUS_MAP: dict[str, ChangeStatus] = {
     "R": "renamed",
     "T": "modified",
 }
+
+# SHA del árbol vacío (constante bien conocida de Git), para crear
+# directorios intermedios al commitear un archivo en una ruta nueva.
+_EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 
 class LocalGitProvider(GitProvider):
@@ -105,18 +110,30 @@ class LocalGitProvider(GitProvider):
         return Diff(ref_a=ref_a, ref_b=ref_b, changes=tuple(changes))
 
     def merge_base(self, ref_a: str, ref_b: str) -> str:
-        bases = self._repo.merge_base(ref_a, ref_b)
+        try:
+            bases = self._repo.merge_base(ref_a, ref_b)
+        except GitCommandError as exc:
+            msg = f"Referencia Git inválida: {exc}"
+            raise GitProviderError(msg) from exc
         if not bases:
             msg = f"Sin ancestro común entre {ref_a!r} y {ref_b!r}"
             raise GitProviderError(msg)
         return bases[0].hexsha
 
     def commits_ahead(self, base: str, ref: str) -> int:
-        return len(list(self._repo.iter_commits(f"{base}..{ref}")))
+        try:
+            return len(list(self._repo.iter_commits(f"{base}..{ref}")))
+        except GitCommandError as exc:
+            msg = f"Referencia Git inválida: {exc}"
+            raise GitProviderError(msg) from exc
 
     def is_ancestor(self, ref_a: str, ref_b: str) -> bool:
         sha_a = self.get_commit(ref_a)
-        bases = self._repo.merge_base(ref_a, ref_b)
+        try:
+            bases = self._repo.merge_base(ref_a, ref_b)
+        except GitCommandError as exc:
+            msg = f"Referencia Git inválida: {exc}"
+            raise GitProviderError(msg) from exc
         return bool(bases) and bases[0].hexsha == sha_a
 
     def current_branch(self) -> str:
@@ -126,6 +143,67 @@ class LocalGitProvider(GitProvider):
             msg = "HEAD desacoplado: no hay rama actual"
             raise GitProviderError(msg) from exc
         return str(branch)
+
+    # -- escritura (LIA-003/004) -------------------------------------------------
+
+    def branch_exists(self, branch: str) -> bool:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self._root),
+                "show-ref",
+                "--verify",
+                "--quiet",
+                f"refs/heads/{branch}",
+            ],
+            capture_output=True,
+            check=False,
+        )
+        return result.returncode == 0
+
+    def create_branch(self, branch: str, from_ref: str) -> None:
+        if self.branch_exists(branch):
+            msg = f"La rama ya existe: {branch!r}"
+            raise GitProviderError(msg)
+        sha = self.get_commit(from_ref)
+        self._git("update-ref", f"refs/heads/{branch}", sha)
+
+    def commit_file(
+        self,
+        branch: str,
+        path: str,
+        content: str,
+        message: str,
+        author: str,
+    ) -> str:
+        if not self.branch_exists(branch):
+            msg = f"La rama no existe: {branch!r}"
+            raise GitProviderError(msg)
+        author_name, _, email_part = author.partition("<")
+        author_email = email_part.rstrip("> ") or f"{author_name.strip()}@liaeditor.local"
+        base = self.get_commit(branch)
+        blob = self._git_in(["hash-object", "-w", "--stdin"], content)
+        tree = self._replace_tree_entry(f"{base}^{{tree}}", path.split("/"), blob)
+        env = {
+            "GIT_AUTHOR_NAME": author_name.strip(),
+            "GIT_AUTHOR_EMAIL": author_email,
+            "GIT_COMMITTER_NAME": "courseascode-engine",
+            "GIT_COMMITTER_EMAIL": "engine@courseascode.local",
+        }
+        commit = self._git_in(["commit-tree", tree, "-p", base], message, env=env)
+        try:
+            self._git("update-ref", f"refs/heads/{branch}", commit, base)
+        except GitProviderError as exc:
+            raise BranchMovedError(
+                f"la rama {branch!r} avanzó durante el commit de {path}"
+            ) from exc
+        return commit
+
+    def push_branch(self, branch: str) -> None:
+        if not any(remote.name == "origin" for remote in self._repo.remotes):
+            return
+        self._git("push", "origin", f"refs/heads/{branch}:refs/heads/{branch}")
 
     # -- internos ------------------------------------------------------------------
 
@@ -137,16 +215,61 @@ class LocalGitProvider(GitProvider):
             raise GitProviderError(msg) from exc
 
     def _git(self, *args: str) -> str:
+        return self._git_in(list(args), None)
+
+    def _git_in(self, args: list[str], stdin: str | None, env: dict[str, str] | None = None) -> str:
+        """Ejecuta ``git`` en el repo con stdin/env opcionales; error → ``GitProviderError``."""
+        full_env = {**os.environ, **env} if env else None
         result = subprocess.run(
             ["git", "-C", str(self._root), *args],
+            input=stdin,
             capture_output=True,
             text=True,
             check=False,
+            env=full_env,
         )
         if result.returncode != 0:
             msg = f"git {' '.join(args)} falló: {result.stderr.strip()}"
             raise GitProviderError(msg)
         return result.stdout.strip()
+
+    def _replace_tree_entry(self, tree_ref: str, parts: list[str], blob_sha: str) -> str:
+        """Árbol nuevo igual que ``tree_ref`` pero con ``blob_sha`` en ``parts``.
+
+        Reescribe recursivamente con ``git mktree`` solo los árboles del camino
+        del archivo; crea los directorios intermedios si la ruta es nueva.
+        Devuelve el SHA del árbol raíz resultante.
+        """
+        tree_sha = self._git("rev-parse", tree_ref) if "^{" in tree_ref else tree_ref
+        lines = self._git("ls-tree", tree_sha).splitlines()
+        head, rest = parts[0], parts[1:]
+        entries: list[str] = []
+        found = False
+        for line in lines:
+            meta, name = line.split("\t", 1)
+            if name != head:
+                entries.append(line)
+                continue
+            found = True
+            if not rest:
+                entries.append(f"100644 blob {blob_sha}\t{name}")
+                continue
+            mode, entry_type, sha = meta.split()
+            if entry_type != "tree":
+                msg = f"{'/'.join(parts)} no es un directorio en {tree_ref}"
+                raise GitProviderError(msg)
+            sub = self._replace_tree_entry(sha, rest, blob_sha)
+            entries.append(f"{mode} tree {sub}\t{name}")
+        if not found:
+            if not rest:
+                entries.append(f"100644 blob {blob_sha}\t{head}")
+            else:
+                sub = self._replace_tree_entry(_EMPTY_TREE, rest, blob_sha)
+                entries.append(f"040000 tree {sub}\t{head}")
+        # mktree exige las entradas ordenadas; los directorios se ordenan
+        # como si el nombre acabara en '/' (regla de Git).
+        entries.sort(key=lambda e: e.split("\t", 1)[1] + ("/" if " tree " in e else ""))
+        return self._git_in(["mktree"], "\n".join(entries) + "\n")
 
     @staticmethod
     def _walk(tree: Tree) -> Iterator[Blob]:

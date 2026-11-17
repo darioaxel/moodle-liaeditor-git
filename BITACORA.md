@@ -394,6 +394,40 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-17 — Sesión 17: Fase 1 pista engine completa (LIA-001–006)
+
+- **Flujo de edición LiaEditor implementado en el engine** siguiendo la
+  tasklist v1 y la propuesta de UX del profesor (catálogo / mis ediciones /
+  publicados + notificaciones, acordada en la conversación previa).
+- **`GitProvider` extendido con escritura** (`git/provider.py`): `branch_exists`,
+  `create_branch`, `commit_file` (plumbing puro: `hash-object` + `mktree`
+  recursivo + `commit-tree` + `update-ref` CAS — **nunca toca el working
+  tree ni el índice**, a diferencia de un checkout), `push_branch` (no-op
+  sin remoto). `BranchMovedError` nuevo para la carrera del CAS. Errores de
+  GitPython (`GitCommandError` en `merge_base`/`commits_ahead`/`is_ancestor`)
+  envueltos en `GitProviderError` (los SHA de 40 hex no validan existencia).
+- **Módulo `edit/`** (LIA-001/003): modelos (`EditContent`, `SaveRequest`
+  con límite 1 MB, `SaveOk`/`SaveConflict`, `EditState`), `branches.py`
+  (sanitización de nombres máx 100 chars, `resolucion/<user>/<ts>-<file>`,
+  validación anti path-traversal solo `.md`) y `EditService`
+  (open/content/save/state + `build_compare_url` GitHub/GitLab, credenciales
+  https eliminadas de la URL).
+- **Endpoints** (`api/edit.py`, montados en `web/app.py`, `serve.py` pasa
+  `CONTENT_REPO_URL`): `GET /edit/content`, `POST /edit/open` (crea la rama
+  desde `main` si no existe, marca `stale` si el fichero desapareció de
+  main), `POST /edit/save` (200 `{new_sha}` o 409 con rama de resolución +
+  `diff_url` + `current_sha`), `GET /edit/state` (up_to_date /
+  update_available + commits_ahead).
+- **Verificado**: 47 tests nuevos (branches, servicio, API con TestClient).
+  `ruff` ✓ · `ruff format` ✓ · mypy strict ✓ · **340 tests** ✓ (14 skipped
+  integration). Incidencia: el venv de `engine/` quedó roto por el
+  renombrado del directorio del proyecto (shebangs a `moodle-book-git`);
+  reinstalado con `pip install -e .[dev]`.
+- **Pendiente para la próxima sesión:** pista plugin 🔌 (LIA-010–018):
+  tablas, tokens de un solo uso, `content.php`/`save.php`/`token.php`,
+  botón Editar en el catálogo y página Publicar. Y la decisión LIA-022
+  (Guardar en fase 1: userscript vs. adelantar el fork).
+
 ### 2026-11-16 — Sesión 16: Tasklist LiaEditor–Moodle v1 + README renombrado
 
 - **README reescrito** con la identidad nueva del proyecto
