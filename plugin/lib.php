@@ -216,7 +216,7 @@ function local_courseascode_touch_session(int $userid, string $file, string $bra
         'file' => $file,
         'branch' => $branch,
         'opened_at' => time(),
-        'last_save' => 0,
+        'last_save' => $lastsha !== '' ? time() : 0,
         'closed_at' => null,
         'last_sha' => $lastsha,
     ]);
