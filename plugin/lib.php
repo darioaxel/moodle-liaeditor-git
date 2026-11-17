@@ -10,6 +10,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/../../lib/filelib.php'); // clase \curl (cliente server-to-server)
+
 /**
  * URL base del servicio courseascode (configuración obligatoria en producción).
  */
