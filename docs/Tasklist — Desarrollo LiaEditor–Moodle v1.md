@@ -110,7 +110,7 @@ publicar, con LiaEdit self-hosted **sin modificar** (D7 fase 1).
 - [x] **LIA-020** (M) LiaEdit self-hosted sin modificar (D8): build
   `npm ci && npm run build` del fork → `dist/` tras Nginx con HTTPS en
   dominio propio; `.env` mínimo documentado.
-- [ ] **LIA-021** (S) Repo de contenidos preparado para LiaScript:
+- [x] **LIA-021** (S) Repo de contenidos preparado para LiaScript:
   ficheros `.md` con cabecera LiaScript en `contenidos-test` (o repo
   nuevo) para las pruebas del flujo.
 - [x] **LIA-022** (S) Resolver decisión nº 1 (Guardar en fase 1): PoC de

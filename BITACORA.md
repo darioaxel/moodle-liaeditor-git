@@ -394,6 +394,57 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-17 — Sesión 20: Despliegue completo en el servidor de pruebas + E2E del flujo de edición 🎉
+
+**El flujo LiaEditor queda montado y verificado extremo a extremo contra el
+Moodle de pruebas (8088, Moodle 6.0dev) y el editor self-hosted (8090).**
+
+- **Rescate de hotfixes vivos del servidor** (sin commit desde la sesión 15):
+  namespacing `\core_external\*` en las 9 clases external + `book_helper`
+  (Moodle 6) y `local_courseascode_pluginfile` (serving de assets). Portados
+  a main (`2b564ab`) antes de actualizar el clon del servidor (con backup en
+  `/tmp/plugin-live-backup` y stash).
+- **Plugin 0.3.0 desplegado** en el bind mount (clon
+  `/apps/8088-moodle-v5.3-beta-test/moodle-book-git`, remote actualizado a
+  `moodle-liaeditor-git`). `php -l` verde en todos los ficheros. Upgrade OK
+  tras corregir un índice compuesto demasiado largo en `l_deploy...token`
+  (límite XMLDB 333 chars: `userid,file,branch` → índice simple por
+  `userid`, `7639133`). El primer intento de upgrade quedó colgado
+  (upgrade.php es interactivo: usar `--non-interactive`).
+- **Engine redesplegado** (el usuario lo había borrado): imagen reconstruida
+  en el servidor, contenedor `courseascode` en la red
+  `..._moodle-internal`, puerto público **8091** (8090 es ahora el editor),
+  `MOODLE_CONNECT_URL=http://moodle53beta-moodle:80` (el forwarder socat ya
+  no existe), `CONTENT_REPO_URL` añadida al env. El clon
+  `contenidos-test` tiene ahora origin con credenciales de escritura (D1:
+  push de commits y ramas verificado contra GitHub).
+- **Config Moodle**: `service_public_url` → 8091; settings del plugin
+  (`liaeditor_url=http://192.168.2.253:8090`, CORS derivado). **Seguridad
+  cURL**: el helper de Moodle bloqueaba las llamadas al engine (puerto 8000
+  no permitido + 192.168/16 bloqueada por defecto) →
+  `curlsecurityallowedport` = `443,80,8000` y `curlsecurityblockedhosts`
+  sin `192.168.0.0/16` (instancia de pruebas; en producción afinar).
+- **E2E verificado** (curl contra los endpoints reales):
+  1. `GET /edit/files` → materiales con título LiaScript ✓
+  2. `POST /edit/open` → rama `edicion/profesor-test/materiales-ut03-mvc`
+     creada desde main ✓
+  3. `POST /edit/save` (engine) → commit + **push a GitHub verificado** ✓
+  4. Guardado con SHA viejo → **409** con rama `resolucion/...` y diff_url ✓
+  5. `content.php` → 200, CORS al editor, headers X-LiaMD-*, bloque
+     `liascript-lms` inyectado en índice 0 con los 8 campos del contrato ✓
+  6. `save.php` (con token en BD) → 200 `{new_sha, token renovado}`, sesión
+     registrada con SHA nuevo ✓; `token.php` renueva ✓; 409 también a
+     través de la fachada ✓.
+- **Bugs encontrados y corregidos en caliente** (commiteados):
+  `Class "curl" not found` en Moodle 6 → require explícito de
+  `lib/filelib.php` en `lib.php`; `last_save` quedaba a 0 en sesiones
+  creadas desde `record_save` → fix en `touch_session` (verificado
+  `saved_ok=1`).
+- **Pendiente para la próxima sesión:** prueba UI real con profesor
+  (Materiales → Editar → LiaEdit → Guardar; ojo al Service Worker por
+  HTTP), Publicar con un artefacto real (SCORM exportado), y limpiar las
+  ramas de prueba `edicion/profesor-test/*` y `resolucion/*` del repo.
+
 ### 2026-11-17 — Sesión 19: Fork LiveEditor verificado — LIV-1–5 ya implementados
 
 - **Estado real del fork `FPVirtual/LiveEditor`** (HEAD `c905d08`, antes se
