@@ -17,14 +17,14 @@ use local_courseascode\local\book_helper;
 /**
  * Idempotente: repetir con el mismo stable id actualiza el mismo capítulo.
  */
-class upsert_chapter extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'bookid' => new \external_value(PARAM_INT, 'id de la instancia mod_book'),
-            'chapter_stable_id' => new \external_value(PARAM_TEXT, 'id estable del capítulo (book.yml)'),
-            'title' => new \external_value(PARAM_TEXT, 'Título'),
-            'content_html' => new \external_value(PARAM_RAW, 'HTML renderizado y sanitizado'),
-            'position' => new \external_value(PARAM_INT, 'posición 1-based en el índice'),
+class upsert_chapter extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'bookid' => new \core_external\external_value(PARAM_INT, 'id de la instancia mod_book'),
+            'chapter_stable_id' => new \core_external\external_value(PARAM_TEXT, 'id estable del capítulo (book.yml)'),
+            'title' => new \core_external\external_value(PARAM_TEXT, 'Título'),
+            'content_html' => new \core_external\external_value(PARAM_RAW, 'HTML renderizado y sanitizado'),
+            'position' => new \core_external\external_value(PARAM_INT, 'posición 1-based en el índice'),
         ]);
     }
 
@@ -44,7 +44,7 @@ class upsert_chapter extends \external_api {
         return [];
     }
 
-    public static function execute_returns(): \external_single_structure {
-        return new \external_single_structure([]);
+    public static function execute_returns(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([]);
     }
 }

@@ -18,12 +18,12 @@ use local_courseascode\local\book_helper;
  * El fichero vive en el área local_courseascode/asset con itemid = bookid;
  * re-subir el mismo filename sobrescribe (idempotente).
  */
-class upload_asset extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'bookid' => new \external_value(PARAM_INT, 'id de la instancia mod_book'),
-            'filename' => new \external_value(PARAM_FILE, 'nombre del asset (p. ej. mvc.svg)'),
-            'data' => new \external_value(PARAM_TEXT, 'contenido binario en base64'),
+class upload_asset extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'bookid' => new \core_external\external_value(PARAM_INT, 'id de la instancia mod_book'),
+            'filename' => new \core_external\external_value(PARAM_FILE, 'nombre del asset (p. ej. mvc.svg)'),
+            'data' => new \core_external\external_value(PARAM_TEXT, 'contenido binario en base64'),
         ]);
     }
 
@@ -59,9 +59,9 @@ class upload_asset extends \external_api {
         return ['url' => $url->out(false)];
     }
 
-    public static function execute_returns(): \external_single_structure {
-        return new \external_single_structure([
-            'url' => new \external_value(PARAM_URL, 'URL pluginfile.php definitiva'),
+    public static function execute_returns(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([
+            'url' => new \core_external\external_value(PARAM_URL, 'URL pluginfile.php definitiva'),
         ]);
     }
 }

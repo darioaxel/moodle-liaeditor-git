@@ -19,10 +19,10 @@ use local_courseascode\local\book_helper;
  * engine compara el objetivo con este estado y el content_hash con el
  * HTML actual de cada capítulo. 8ª función asumida (contrato functions.py).
  */
-class get_book extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'bookid' => new \external_value(PARAM_INT, 'id de la instancia mod_book'),
+class get_book extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'bookid' => new \core_external\external_value(PARAM_INT, 'id de la instancia mod_book'),
         ]);
     }
 
@@ -79,25 +79,25 @@ class get_book extends \external_api {
         ];
     }
 
-    public static function execute_returns(): \external_single_structure {
+    public static function execute_returns(): \core_external\external_single_structure {
         // Todos opcionales: la respuesta vacía (book inexistente) serializa
         // como [] → null en el engine (mismo patrón que get_deploy).
-        return new \external_single_structure([
-            'bookid' => new \external_value(PARAM_INT, 'id de la instancia mod_book', VALUE_OPTIONAL),
-            'courseid' => new \external_value(PARAM_INT, 'Curso Moodle', VALUE_OPTIONAL),
-            'name' => new \external_value(PARAM_TEXT, 'Título del Book', VALUE_OPTIONAL),
-            'intro' => new \external_value(PARAM_RAW, 'Introducción (HTML)', VALUE_OPTIONAL),
-            'numbering' => new \external_value(PARAM_ALPHAEXT, 'none|numbers|bullets|indented', VALUE_OPTIONAL),
-            'assets' => new \external_multiple_structure(new \external_single_structure([
-                'filename' => new \external_value(PARAM_FILE, 'Nombre del asset'),
-                'sha256' => new \external_value(PARAM_ALPHANUMEXT, 'SHA-256 del contenido'),
+        return new \core_external\external_single_structure([
+            'bookid' => new \core_external\external_value(PARAM_INT, 'id de la instancia mod_book', VALUE_OPTIONAL),
+            'courseid' => new \core_external\external_value(PARAM_INT, 'Curso Moodle', VALUE_OPTIONAL),
+            'name' => new \core_external\external_value(PARAM_TEXT, 'Título del Book', VALUE_OPTIONAL),
+            'intro' => new \core_external\external_value(PARAM_RAW, 'Introducción (HTML)', VALUE_OPTIONAL),
+            'numbering' => new \core_external\external_value(PARAM_ALPHAEXT, 'none|numbers|bullets|indented', VALUE_OPTIONAL),
+            'assets' => new \core_external\external_multiple_structure(new \core_external\external_single_structure([
+                'filename' => new \core_external\external_value(PARAM_FILE, 'Nombre del asset'),
+                'sha256' => new \core_external\external_value(PARAM_ALPHANUMEXT, 'SHA-256 del contenido'),
             ]), 'Assets del Book', VALUE_OPTIONAL),
-            'chapters' => new \external_multiple_structure(new \external_single_structure([
-                'stable_id' => new \external_value(PARAM_TEXT, 'id estable del capítulo'),
-                'title' => new \external_value(PARAM_TEXT, 'Título'),
-                'content_html' => new \external_value(PARAM_RAW, 'HTML actual (detección de drift §19.1)'),
-                'position' => new \external_value(PARAM_INT, 'posición 1-based'),
-                'url' => new \external_value(PARAM_URL, 'URL de vista del capítulo (enlaces internos §16)'),
+            'chapters' => new \core_external\external_multiple_structure(new \core_external\external_single_structure([
+                'stable_id' => new \core_external\external_value(PARAM_TEXT, 'id estable del capítulo'),
+                'title' => new \core_external\external_value(PARAM_TEXT, 'Título'),
+                'content_html' => new \core_external\external_value(PARAM_RAW, 'HTML actual (detección de drift §19.1)'),
+                'position' => new \core_external\external_value(PARAM_INT, 'posición 1-based'),
+                'url' => new \core_external\external_value(PARAM_URL, 'URL de vista del capítulo (enlaces internos §16)'),
             ]), 'Capítulos por stable id, en orden', VALUE_OPTIONAL),
         ]);
     }

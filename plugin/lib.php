@@ -387,3 +387,31 @@ function local_courseascode_extend_navigation_course(\navigation_node $parent, \
         );
     }
 }
+
+/**
+ * Sirve los assets subidos por el engine (upload_asset).
+ * Área local_courseascode/asset con itemid = bookid, en el contexto del curso.
+ */
+function local_courseascode_pluginfile(
+    ?stdClass $course,
+    ?stdClass $cm,
+    context $context,
+    string $filearea,
+    array $args,
+    bool $forcedownload,
+    array $options = []
+): bool {
+    if ($context->contextlevel !== CONTEXT_COURSE || $filearea !== 'asset') {
+        return false;
+    }
+    $itemid = (int) array_shift($args);
+    $filename = array_pop($args);
+    $filepath = '/' . implode('/', $args) . '/';
+
+    $fs = get_file_storage();
+    $file = $fs->get_file($context->id, 'local_courseascode', $filearea, $itemid, $filepath, $filename);
+    if (!$file || $file->is_directory()) {
+        return false;
+    }
+    send_stored_file($file, 0, 0, $forcedownload, $options);
+}

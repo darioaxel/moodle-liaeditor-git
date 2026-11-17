@@ -17,8 +17,8 @@ use local_courseascode\local\book_helper;
 /**
  * No actualiza filas previas: el historial queda intacto (contrato).
  */
-class register_deploy extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
+class register_deploy extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
         $row = book_helper::deploy_structure();
         $fields = [];
         foreach ($row->keys as $name => $value) {
@@ -26,7 +26,7 @@ class register_deploy extends \external_api {
                 $fields[$name] = $value;
             }
         }
-        return new \external_function_parameters($fields);
+        return new \core_external\external_function_parameters($fields);
     }
 
     public static function execute(
@@ -65,9 +65,9 @@ class register_deploy extends \external_api {
         return ['id' => $id];
     }
 
-    public static function execute_returns(): \external_single_structure {
-        return new \external_single_structure([
-            'id' => new \external_value(PARAM_INT, 'ID de la fila insertada'),
+    public static function execute_returns(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([
+            'id' => new \core_external\external_value(PARAM_INT, 'ID de la fila insertada'),
         ]);
     }
 }

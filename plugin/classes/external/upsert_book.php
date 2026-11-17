@@ -17,13 +17,13 @@ use local_courseascode\local\book_helper;
 /**
  * Crea el Book (instancia mod_book) si no existe o actualiza nombre/intro/numbering.
  */
-class upsert_book extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'courseid' => new \external_value(PARAM_INT, 'Course ID'),
-            'name' => new \external_value(PARAM_TEXT, 'Título del Book'),
-            'intro' => new \external_value(PARAM_RAW, 'Introducción (HTML)'),
-            'numbering' => new \external_value(PARAM_ALPHAEXT, 'none|numbers|bullets|indented'),
+class upsert_book extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'courseid' => new \core_external\external_value(PARAM_INT, 'Course ID'),
+            'name' => new \core_external\external_value(PARAM_TEXT, 'Título del Book'),
+            'intro' => new \core_external\external_value(PARAM_RAW, 'Introducción (HTML)'),
+            'numbering' => new \core_external\external_value(PARAM_ALPHAEXT, 'none|numbers|bullets|indented'),
         ]);
     }
 
@@ -43,9 +43,9 @@ class upsert_book extends \external_api {
         return ['bookid' => $bookid];
     }
 
-    public static function execute_returns(): \external_single_structure {
-        return new \external_single_structure([
-            'bookid' => new \external_value(PARAM_INT, 'id de la instancia mod_book'),
+    public static function execute_returns(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([
+            'bookid' => new \core_external\external_value(PARAM_INT, 'id de la instancia mod_book'),
         ]);
     }
 }

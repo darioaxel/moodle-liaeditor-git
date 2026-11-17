@@ -17,12 +17,12 @@ use local_courseascode\local\book_helper;
 /**
  * El más reciente por deployed_at; null si nunca se desplegó (contrato).
  */
-class get_deploy extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'courseid' => new \external_value(PARAM_INT, 'Course ID'),
-            'source' => new \external_value(PARAM_TEXT, 'Fuente (repo/rama)'),
-            'content_id' => new \external_value(PARAM_TEXT, 'Content id del Book'),
+class get_deploy extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'courseid' => new \core_external\external_value(PARAM_INT, 'Course ID'),
+            'source' => new \core_external\external_value(PARAM_TEXT, 'Fuente (repo/rama)'),
+            'content_id' => new \core_external\external_value(PARAM_TEXT, 'Content id del Book'),
         ]);
     }
 
@@ -46,11 +46,11 @@ class get_deploy extends \external_api {
         return $row ? book_helper::deploy_row($row) : [];
     }
 
-    public static function execute_returns(): \external_single_structure {
+    public static function execute_returns(): \core_external\external_single_structure {
         $values = [];
         foreach (book_helper::deploy_structure()->keys as $name => $value) {
-            $values[$name] = new \external_value($value->type, $value->desc, VALUE_OPTIONAL);
+            $values[$name] = new \core_external\external_value($value->type, $value->desc, VALUE_OPTIONAL);
         }
-        return new \external_single_structure($values);
+        return new \core_external\external_single_structure($values);
     }
 }

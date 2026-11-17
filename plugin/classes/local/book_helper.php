@@ -164,20 +164,20 @@ class book_helper {
     /**
      * Estructura external de una fila de deploy (single structure nullable).
      */
-    public static function deploy_structure(): \external_single_structure {
-        return new \external_single_structure([
-            'id' => new \external_value(PARAM_INT, 'ID del registro'),
-            'courseid' => new \external_value(PARAM_INT, 'Curso Moodle'),
-            'bookid' => new \external_value(PARAM_INT, 'id de la instancia mod_book'),
-            'source' => new \external_value(PARAM_TEXT, 'Fuente (repo/rama)'),
-            'content_id' => new \external_value(PARAM_TEXT, 'Content id del Book'),
-            'content_version' => new \external_value(PARAM_TEXT, 'Versión desplegada'),
-            'git_ref' => new \external_value(PARAM_TEXT, 'Tag/rama/commit'),
-            'git_commit' => new \external_value(PARAM_TEXT, 'SHA del commit'),
-            'content_hash' => new \external_value(PARAM_RAW, 'JSON {stable_id: sha256}'),
-            'deployed_at' => new \external_value(PARAM_TEXT, 'ISO 8601'),
-            'deployed_by' => new \external_value(PARAM_TEXT, 'Quién desplegó'),
-            'status' => new \external_value(PARAM_ALPHA, 'ok | error'),
+    public static function deploy_structure(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([
+            'id' => new \core_external\external_value(PARAM_INT, 'ID del registro'),
+            'courseid' => new \core_external\external_value(PARAM_INT, 'Curso Moodle'),
+            'bookid' => new \core_external\external_value(PARAM_INT, 'id de la instancia mod_book'),
+            'source' => new \core_external\external_value(PARAM_TEXT, 'Fuente (repo/rama)'),
+            'content_id' => new \core_external\external_value(PARAM_TEXT, 'Content id del Book'),
+            'content_version' => new \core_external\external_value(PARAM_TEXT, 'Versión desplegada'),
+            'git_ref' => new \core_external\external_value(PARAM_TEXT, 'Tag/rama/commit'),
+            'git_commit' => new \core_external\external_value(PARAM_TEXT, 'SHA del commit'),
+            'content_hash' => new \core_external\external_value(PARAM_RAW, 'JSON {stable_id: sha256}'),
+            'deployed_at' => new \core_external\external_value(PARAM_TEXT, 'ISO 8601'),
+            'deployed_by' => new \core_external\external_value(PARAM_TEXT, 'Quién desplegó'),
+            'status' => new \core_external\external_value(PARAM_ALPHA, 'ok | error'),
         ]);
     }
 }

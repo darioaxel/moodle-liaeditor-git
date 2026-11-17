@@ -17,11 +17,11 @@ use local_courseascode\local\book_helper;
 /**
  * Error 'chapter_not_found' si el stable id no existe (contrato).
  */
-class delete_chapter extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'bookid' => new \external_value(PARAM_INT, 'id de la instancia mod_book'),
-            'chapter_stable_id' => new \external_value(PARAM_TEXT, 'id estable del capítulo'),
+class delete_chapter extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'bookid' => new \core_external\external_value(PARAM_INT, 'id de la instancia mod_book'),
+            'chapter_stable_id' => new \core_external\external_value(PARAM_TEXT, 'id estable del capítulo'),
         ]);
     }
 
@@ -37,7 +37,7 @@ class delete_chapter extends \external_api {
         return [];
     }
 
-    public static function execute_returns(): \external_single_structure {
-        return new \external_single_structure([]);
+    public static function execute_returns(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([]);
     }
 }

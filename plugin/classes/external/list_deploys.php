@@ -18,10 +18,10 @@ use local_courseascode\local\book_helper;
  * Asunción documentada en engine/src/courseascode/moodle/functions.py
  * (función 7ª, necesaria para ENG-060).
  */
-class list_deploys extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'courseid' => new \external_value(PARAM_INT, 'Course ID'),
+class list_deploys extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'courseid' => new \core_external\external_value(PARAM_INT, 'Course ID'),
         ]);
     }
 
@@ -39,9 +39,9 @@ class list_deploys extends \external_api {
         ))];
     }
 
-    public static function execute_returns(): \external_single_structure {
-        return new \external_single_structure([
-            'deploys' => new \external_multiple_structure(book_helper::deploy_structure(), 'Despliegues del curso'),
+    public static function execute_returns(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([
+            'deploys' => new \core_external\external_multiple_structure(book_helper::deploy_structure(), 'Despliegues del curso'),
         ]);
     }
 }

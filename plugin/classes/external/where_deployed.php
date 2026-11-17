@@ -17,12 +17,12 @@ require_once($CFG->libdir . '/externallib.php');
  * Resuelve con SQL sobre la tabla: el despliegue ACTUAL de cada curso para la
  * clave (source, content_id) debe tener content_version = versión pedida.
  */
-class where_deployed extends \external_api {
-    public static function execute_parameters(): \external_function_parameters {
-        return new \external_function_parameters([
-            'source' => new \external_value(PARAM_TEXT, 'Fuente (repo/rama)'),
-            'content_id' => new \external_value(PARAM_TEXT, 'Content id del Book'),
-            'version' => new \external_value(PARAM_TEXT, 'Versión exacta (p. ej. 1.3.0)'),
+class where_deployed extends \core_external\external_api {
+    public static function execute_parameters(): \core_external\external_function_parameters {
+        return new \core_external\external_function_parameters([
+            'source' => new \core_external\external_value(PARAM_TEXT, 'Fuente (repo/rama)'),
+            'content_id' => new \core_external\external_value(PARAM_TEXT, 'Content id del Book'),
+            'version' => new \core_external\external_value(PARAM_TEXT, 'Versión exacta (p. ej. 1.3.0)'),
         ]);
     }
 
@@ -58,10 +58,10 @@ class where_deployed extends \external_api {
         return ['courseids' => $courseids];
     }
 
-    public static function execute_returns(): \external_single_structure {
-        return new \external_single_structure([
-            'courseids' => new \external_multiple_structure(
-                new \external_value(PARAM_INT, 'Course ID'),
+    public static function execute_returns(): \core_external\external_single_structure {
+        return new \core_external\external_single_structure([
+            'courseids' => new \core_external\external_multiple_structure(
+                new \core_external\external_value(PARAM_INT, 'Course ID'),
                 'Cursos cuyo despliegue actual es la versión pedida'
             ),
         ]);
