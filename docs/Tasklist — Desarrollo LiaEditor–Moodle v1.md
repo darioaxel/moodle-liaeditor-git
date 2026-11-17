@@ -107,7 +107,7 @@ publicar, con LiaEdit self-hosted **sin modificar** (D7 fase 1).
 
 ### Pista infraestructura
 
-- [ ] **LIA-020** (M) LiaEdit self-hosted sin modificar (D8): build
+- [x] **LIA-020** (M) LiaEdit self-hosted sin modificar (D8): build
   `npm ci && npm run build` del fork → `dist/` tras Nginx con HTTPS en
   dominio propio; `.env` mínimo documentado.
 - [ ] **LIA-021** (S) Repo de contenidos preparado para LiaScript:

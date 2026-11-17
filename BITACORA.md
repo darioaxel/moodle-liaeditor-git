@@ -411,10 +411,13 @@ operación. La validación real requiere moodle-docker (pendiente).
   el fork solo lee la cabecera si el comentario `<!--` empieza en el índice
   0 del documento; nuestra inyección lo garantiza (tanto al crear como al
   reemplazar el bloque).
-- **Editor desplegado por el usuario** en `192.168.2.256:8090` (red local).
-  ⚠️ `.256` no es un octeto IPv4 válido — pendiente confirmar la dirección
-  real para configurar `liaeditor_url`/`cors_origin` en el plugin y probar
-  el flujo E2E. La CI del fork también despliega a GitHub Pages.
+- **Editor desplegado por el usuario** en `http://192.168.2.253:8090` (mismo
+  servidor que el Moodle de pruebas, que está en `:8088`). Verificado por
+  HTTP: responde 200 y sirve el build del fork (los chunks incluyen
+  `OpenFile` y `lms/config`). Queda configurar `liaeditor_url` +
+  `cors_origin` (se deriva solo del editor) en el plugin y probar E2E.
+  ⚠️ Servido por HTTP: si el Service Worker de la PWA no registra en algún
+  navegador, poner Nginx con certificado delante.
 - **Pendiente para la próxima sesión:** LIV-6 / LIA-041–042 (publish.php +
   `POST /publish` con liaex, fase 2), despliegue del plugin 0.3.0 en el
   Moodle de pruebas y verificación E2E del flujo completo editar→guardar.
