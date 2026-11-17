@@ -37,6 +37,40 @@ Pensado para **Moodle 5.3+** (`$plugin->requires = 2026100600`).
     `local_courseascode_before_standard_html_head()` para estilizar el
     contenido desplegado.
 
+## Flujo LiaEditor (v1, en migración)
+
+El plugin crece hacia la edición de materiales LiaScript desde Moodle
+(decisiones D1–D10 de `docs/desarrollo-liaeditor-moodle-v1.md`):
+
+- **Página "Materiales"** (`/local/courseascode/materials.php`, entrada en la
+  navegación del curso): catálogo master de materiales `.md` del repo
+  (`GET /edit/files`), sesiones de edición del profesor y módulos publicados
+  con su estado por comparación de SHAs (`GET /edit/state`).
+- **Edición** (`edit.php` → LiaEdit self-hosted): asegura la rama
+  `edicion/<user>/<file>` vía `POST /edit/open` del engine (D4), emite un
+  **token de un solo uso** (D9, tabla `local_courseascode_token`, gestionado
+  por `local\token_manager`) y redirige al editor.
+- **`content.php`** (proxy de contenido, patrón B): sirve el markdown al
+  editor con el bloque `liascript-lms` inyectado (endpoints de guardado,
+  SHA, token, readonly). Autenticación por token, CORS restringido al
+  dominio del editor (settings).
+- **`save.php`** (fachada de guardado, D3): valida el token, delega en
+  `POST /edit/save` del engine, registra la sesión (`local_courseascode_editsess`)
+  con el nuevo SHA y devuelve token renovado (contrato C6). El 409 de
+  conflicto llega al editor con su rama `resolucion/...` (D5).
+- **`token.php`**: renovación del token sin guardar (ping del editor, C6).
+- **Publicar** (`publish.php` + `local\publisher`, D6): subida del artefacto
+  exportado en el navegador (SCORM/H5P/ePub/PDF), creación/actualización del
+  módulo (`mod_scorm` / `mod_h5pactivity` / `mod_resource`) y registro del
+  despliegue curso↔SHA↔cmid (`local_courseascode_ldeploy`).
+- **Capacidades nuevas**: `local/courseascode:edit` (editingteacher) y
+  `local/courseascode:editmain` (manager) en contexto de curso.
+- **Settings** (`settings.php`): URL del editor, origen CORS, TTL del token
+  y tamaño máximo de material.
+
+El flujo legado `mod_book` (web services, catálogo, panel) sigue operativo
+mientras conviven ambos sistemas (cuestión abierta nº 5 de la v1).
+
 ## Instalación
 
 1. Copiar el directorio `plugin/` como `local/courseascode` dentro de la

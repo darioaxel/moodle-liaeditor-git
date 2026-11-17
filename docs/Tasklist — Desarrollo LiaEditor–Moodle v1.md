@@ -72,36 +72,36 @@ publicar, con LiaEdit self-hosted **sin modificar** (D7 fase 1).
 
 ### Pista plugin 🔌
 
-- [ ] **LIA-010** (M) Tablas nuevas (`install.xml` + `upgrade.php`):
+- [x] **LIA-010** (M) Tablas nuevas (`install.xml` + `upgrade.php`):
   despliegues simplificada (`courseid, source_file, git_commit,
   artifact_type, cmid, deployed_at, deployed_by, status`) y sesiones de
   edición (`user_id, file, branch, opened_at, last_save, closed_at,
   last_sha`).
-- [ ] **LIA-011** (M) Tokens de un solo uso (D9): tabla, generación ligada
+- [x] **LIA-011** (M) Tokens de un solo uso (D9): tabla, generación ligada
   a usuario+fichero+rama, caducidad corta, validación, invalidación y
   renovación (contrato C6 del roadmap).
-- [ ] **LIA-012** (S) Settings del plugin: URL base del editor, origen
+- [x] **LIA-012** (S) Settings del plugin: URL base del editor, origen
   CORS permitido, tamaño máximo de fichero, duración del token.
-- [ ] **LIA-013** (L) `content.php` (RF-03 de la spec): valida token →
+- [x] **LIA-013** (L) `content.php` (RF-03 de la spec): valida token →
   pide contenido al engine (`/edit/content`) → responde markdown con el
   bloque `liascript-lms` inyectado en el front matter. CORS restringido
   al dominio del editor, `Cache-Control: no-cache`, rate limiting
   60 req/min, sanitización de ruta, 403/404/409 según caso.
-- [ ] **LIA-014** (L) `save.php` (RF-04): valida token + capacidad →
+- [x] **LIA-014** (L) `save.php` (RF-04): valida token + capacidad →
   delega en `POST /edit/save` del engine → registra sesión de edición con
   el `new_sha` (D3: trazabilidad antes/después del commit) → propaga
   200/409/403 con los mensajes del engine.
-- [ ] **LIA-015** (S) `token.php`: endpoint de renovación de token sin
+- [x] **LIA-015** (S) `token.php`: endpoint de renovación de token sin
   guardar (ping del editor, contrato C6).
-- [ ] **LIA-016** (M) Capacidades `edit` / `editmain` y botón "Editar" en
+- [x] **LIA-016** (M) Capacidades `edit` / `editmain` y botón "Editar" en
   el catálogo: genera token, crea/reutiliza rama vía engine y redirige a
   `LIAEDIT_URL/?url=<content.php...&token=...>` en pestaña nueva.
-- [ ] **LIA-017** (L) Página "Publicar" (D6 fase 1): lista los ficheros
+- [x] **LIA-017** (L) Página "Publicar" (D6 fase 1): lista los ficheros
   editados por el usuario con su último `new_sha`; subida de artefacto
   (zip SCORM / h5p / epub / pdf); creación o actualización del módulo
   (`mod_scorm`, `mod_h5pactivity`, `mod_resource`); registro del
   despliegue `(courseid, file, sha, tipo, cmid)`.
-- [ ] **LIA-018** (M) Panel de curso adaptado: estado por SHA
+- [x] **LIA-018** (M) Panel de curso adaptado: estado por SHA
   (UP_TO_DATE/UPDATE_AVAILABLE) consumiendo LIA-005; convive con el panel
   legado de Books mientras no se decida la migración (decisión nº 4).
 

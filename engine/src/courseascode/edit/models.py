@@ -73,3 +73,18 @@ class EditState(BaseModel):
     head_sha: str
     state: Literal["up_to_date", "update_available"]
     commits_ahead: int | None = None  # None si published_sha no es ancestro
+
+
+class MaterialFile(BaseModel):
+    """Un material ``.md`` del repo, con el título de su cabecera LiaScript."""
+
+    path: str
+    title: str
+
+
+class MaterialList(BaseModel):
+    """Listado de materiales de una rama (catálogo master, LIA-016)."""
+
+    branch: str
+    head: str
+    files: list[MaterialFile]

@@ -48,6 +48,15 @@ def create_edit_router(deps: EditApiDeps) -> APIRouter:
             )
         return EditService(deps.git, repo_url=deps.repo_url, default_branch=deps.default_branch)
 
+    @router.get("/edit/files")
+    def files(branch: str = Query(default="main")) -> JSONResponse:
+        """Listado de materiales ``.md`` de la rama con títulos (LIA-016)."""
+        try:
+            result = service().list_materials(branch)
+        except EditError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        return JSONResponse(result.model_dump(mode="json"))
+
     @router.get("/edit/content")
     def content(file: str = Query(min_length=1), branch: str = Query(min_length=1)) -> JSONResponse:
         """Contenido del fichero en la rama, con el SHA del HEAD (LIA-002)."""

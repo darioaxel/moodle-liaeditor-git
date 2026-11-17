@@ -14,8 +14,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_courseascode';
-$plugin->version = 2026110600;        // Páginas UI completas (2026-11-06).
+$plugin->version = 2026111700;        // Flujo LiaEditor: tablas + endpoints de edición (2026-11-17).
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.2.0';
+$plugin->release = '0.3.0';
 $plugin->dependencies = ['mod_book' => ANY_VERSION];

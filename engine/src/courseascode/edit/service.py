@@ -21,6 +21,8 @@ from courseascode.edit.branches import (
 from courseascode.edit.models import (
     EditContent,
     EditState,
+    MaterialFile,
+    MaterialList,
     SaveConflict,
     SaveOk,
     SaveRequest,
@@ -30,6 +32,10 @@ from courseascode.git.provider import BranchMovedError, GitProvider, GitProvider
 
 _SSH_URL_RE = re.compile(r"^git@(?P<host>[^:]+):(?P<path>.+?)(?:\.git)?$")
 _HTTPS_URL_RE = re.compile(r"^https?://(?P<creds>[^/@]+@)?(?P<rest>.+?)(?:\.git)?$")
+# Cabecera LiaScript: comentario HTML al inicio del documento (con líneas
+# en blanco/BOM opcionales delante) y clave ``title:`` en su interior.
+_LIASCRIPT_HEADER_RE = re.compile(r"\s*<!--(?P<body>.*?)-->", re.DOTALL)
+_LIASCRIPT_TITLE_RE = re.compile(r"^\s*title\s*:\s*(?P<title>.+?)\s*$", re.MULTILINE)
 
 
 def build_compare_url(repo_url: str | None, base: str, head: str) -> str | None:
@@ -129,6 +135,38 @@ class EditService:
                 diff_url=build_compare_url(self._repo_url, request.original_sha, target),
             )
         return SaveOk(branch=target, new_sha=new_sha)
+
+    def list_materials(self, branch: str | None = None) -> MaterialList:
+        """Materiales ``.md`` de la rama, con título de la cabecera LiaScript.
+
+        Alimenta el catálogo master del plugin (LIA-016): todos los ``.md``
+        versionados salvo los ficheros de meta del repo (``README.md`` en
+        raíz) se consideran materiales editables.
+        """
+        branch = branch or self._default_branch
+        if not self._git.branch_exists(branch):
+            raise EditError(404, f"la rama no existe: {branch!r}")
+        head = self._git.get_commit(branch)
+        files = [
+            MaterialFile(path=path, title=self._material_title(branch, path))
+            for path in self._git.list_files(branch)
+            if path.lower().endswith(".md") and path != "README.md"
+        ]
+        return MaterialList(branch=branch, head=head, files=files)
+
+    def _material_title(self, branch: str, path: str) -> str:
+        """Título del material: ``title:`` de la cabecera LiaScript o el nombre."""
+        fallback = path.rsplit("/", 1)[-1].removesuffix(".md")
+        try:
+            content = self._git.get_file(branch, path)
+        except GitProviderError:
+            return fallback
+        header = _LIASCRIPT_HEADER_RE.match(content)
+        if header:
+            title = _LIASCRIPT_TITLE_RE.search(header.group(1))
+            if title and title.group(1).strip():
+                return title.group(1).strip().strip("'\"")
+        return fallback
 
     def state(self, file: str, published_sha: str, branch: str | None = None) -> EditState:
         """Estado por comparación de SHAs (§5.3 de la v1): UP_TO_DATE / UPDATE_AVAILABLE."""

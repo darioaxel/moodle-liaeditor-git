@@ -38,5 +38,61 @@
         <KEY NAME="book-stable" TYPE="unique" FIELDS="bookid, stable_id"/>
       </KEYS>
     </TABLE>
+    <TABLE NAME="local_courseascode_ldeploy" COMMENT="Despliegues LiaEditor (v1): curso ↔ fichero .md ↔ SHA ↔ módulo (D6)">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="source_file" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Ruta del .md en el repo"/>
+        <FIELD NAME="git_commit" TYPE="char" LENGTH="40" NOTNULL="true" SEQUENCE="false" COMMENT="SHA publicado"/>
+        <FIELD NAME="artifact_type" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="scorm | h5p | epub | pdf"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="course_modules id del módulo creado"/>
+        <FIELD NAME="deployed_at" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="epoch"/>
+        <FIELD NAME="deployed_by" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="ok" SEQUENCE="false" COMMENT="ok | error"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course-file" UNIQUE="false" FIELDS="courseid, source_file"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_courseascode_editsess" COMMENT="Sesiones de edición LiaEditor (D3: trazabilidad usuario↔fichero↔rama↔SHA)">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="file" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="branch" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="opened_at" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="epoch"/>
+        <FIELD NAME="last_save" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="epoch; 0 = sin guardados"/>
+        <FIELD NAME="closed_at" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="epoch; NULL = activa"/>
+        <FIELD NAME="last_sha" TYPE="char" LENGTH="40" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="último new_sha conocido (alimenta Publicar)"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="user-file" UNIQUE="false" FIELDS="userid, file"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_courseascode_token" COMMENT="Tokens de un solo uso editor↔plugin (D9): hash, nunca el token en claro">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="tokenhash" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="sha256 del token"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="file" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="branch" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="expires" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="epoch de caducidad"/>
+        <FIELD NAME="revoked" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="created" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="epoch"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="tokenhash" TYPE="unique" FIELDS="tokenhash"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="user-file-branch" UNIQUE="false" FIELDS="userid, file, branch"/>
+      </INDEXES>
+    </TABLE>
   </TABLES>
 </XMLDB>

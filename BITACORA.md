@@ -394,6 +394,54 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-17 — Sesión 18: Fase 1 pista plugin 🔌 (LIA-010–018) + catálogo master en el engine
+
+- **Engine — `GET /edit/files`**: listado de materiales `.md` de una rama
+  con el título extraído de la cabecera LiaScript (`title:` del comentario
+  `<!-- ... -->`, fallback al nombre de fichero; excluye el README raíz).
+  Alimenta el catálogo master del plugin (acordado en la UX del profesor).
+  3 tests nuevos → **343 tests** ✓, ruff ✓, mypy strict ✓.
+- **BD del plugin (LIA-010)**: tres tablas nuevas en `install.xml` +
+  `upgrade.php` (2026111700, release 0.3.0): `ldeploy` (curso↔fichero↔SHA↔
+  tipo↔cmid, D6), `editsess` (sesiones de edición con último SHA, D3) y
+  `token` (hash sha256, nunca el token en claro).
+- **Tokens de un solo uso (LIA-011, D9)**: `local\token_manager` —
+  emisión ligada a usuario+fichero+rama, validación (caducidad, revocación,
+  match exacto), renovación revocando el anterior (contrato C6) y revocación
+  por fichero. TTL configurable.
+- **Settings (LIA-012)**: `settings.php` con URL del editor, origen CORS
+  (default: origen del editor), TTL del token (900 s) y tamaño máximo (1 MB).
+- **Endpoints del flujo (LIA-013/014/015)**: `content.php` (proxy markdown
+  con bloque `liascript-lms` inyectado en la cabecera LiaScript, CORS,
+  no-cache, headers X-LiaMD-*), `save.php` (fachada D3: valida token →
+  `POST /edit/save` del engine → registra sesión con el SHA nuevo → token
+  renovado en cada 200; propaga el 409 con rama de resolución y diff_url) y
+  `token.php` (renovación sin guardar). Autenticación por token en los tres
+  (las cookies Moodle no viajan cross-origin, D9). Helper nuevo
+  `service_post_full` en `lib.php` para propagar 4xx con body.
+- **Página "Materiales" (LIA-016/018)**: `materials.php` con las tres
+  secciones de la UX acordada — catálogo master (preview solo lectura con
+  token readonly, Editar, Publicar), mis ediciones (continuar/publicar) y
+  publicados en el curso (badge UP_TO_DATE/UPDATE_AVAILABLE vía
+  `/edit/state`, enlace al módulo, botón Actualizar). Entrada en la
+  navegación del curso. `edit.php` asegura la rama vía `POST /edit/open`,
+  emite token, abre sesión y redirige al editor (`/?/open/file/<url>`,
+  ruta C1 del fork; preview usa `/?/show/file/` de upstream).
+- **Publicar (LIA-017)**: `publish.php` + `local\publisher` — subida del
+  artefacto al área de borrador, creación/actualización del módulo
+  (`mod_scorm` / `mod_h5pactivity` / `mod_resource` vía
+  add/update_moduleinfo) y registro del despliegue curso↔SHA↔cmid.
+- **Capacidades**: `local/courseascode:edit` (editingteacher) y
+  `editmain` (manager). README del plugin actualizado con la sección v1.
+- **No verificable en este entorno** (sin PHP): `php -l`, upgrade de BD,
+  smoke de los endpoints y creación real de módulos quedan para el Moodle
+  de pruebas. Revisión estática hecha a mano: corregidos
+  `random_string_emulate` → `random_string(48)` y dos usos de `$cm->name`
+  (course_modules no tiene `name`; se resuelve vía `get_fast_modinfo`).
+- **Pendiente para la próxima sesión:** decisión LIA-022 (Guardar en fase
+  1) y pista fork 🍴 (LIA-030–034) o despliegue/verificación del plugin en
+  el Moodle de pruebas (PRU-001+ para el flujo nuevo).
+
 ### 2026-11-17 — Sesión 17: Fase 1 pista engine completa (LIA-001–006)
 
 - **Flujo de edición LiaEditor implementado en el engine** siguiendo la

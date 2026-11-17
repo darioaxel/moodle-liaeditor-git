@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from courseascode.edit import EditService
 from courseascode.git import LocalGitProvider
 from courseascode.web import create_app
 
@@ -138,6 +139,40 @@ def test_state(client: TestClient, provider: LocalGitProvider) -> None:
     response = client.get("/edit/state", params={"file": FILE, "sha": old})
     assert response.json()["state"] == "update_available"
     assert response.json()["commits_ahead"] > 0
+
+
+def test_files_lista_materiales_md(client: TestClient, provider: LocalGitProvider) -> None:
+    response = client.get("/edit/files")
+
+    assert response.status_code == HTTP_OK
+    data = response.json()
+    assert data["branch"] == "main"
+    assert data["head"] == provider.get_commit("main")
+    paths = [f["path"] for f in data["files"]]
+    assert FILE in paths
+    assert "README.md" not in paths  # el README raíz no es un material
+    assert all(p.endswith(".md") for p in paths)
+
+
+def test_files_rama_inexistente(client: TestClient) -> None:
+    response = client.get("/edit/files", params={"branch": "no-existe"})
+    assert response.status_code == HTTP_NOT_FOUND
+
+
+def test_material_title_desde_cabecera_liascript(provider: LocalGitProvider) -> None:
+    provider.create_branch("edicion/test/titulo", "main")
+    provider.commit_file(
+        "edicion/test/titulo",
+        "nuevo.md",
+        '<!--\ntitle: "Unidad 3 — MVC"\nauthor: Ana\n-->\n\n# Contenido\n',
+        "nuevo material",
+        "ana <ana@test.local>",
+    )
+    materials = EditService(provider).list_materials("edicion/test/titulo")
+
+    titles = {f.path: f.title for f in materials.files}
+    assert titles["nuevo.md"] == "Unidad 3 — MVC"
+    assert titles[FILE] == FILE.rsplit("/", 1)[-1].removesuffix(".md")  # fallback
 
 
 def test_endpoints_sin_provider_git(tmp_path: Path) -> None:
