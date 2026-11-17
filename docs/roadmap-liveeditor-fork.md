@@ -2,15 +2,26 @@
 
 **Versión**: 0.1.0-draft
 **Fecha**: 2026-11-13
-**Estado**: Aprobado para desarrollo — pendiente de desglose en tareas
+**Estado**: Implementado — C1–C10 verificados en el código del fork
+(2026-11-17); pendiente solo LIV-6 (Publicar, fase 2, depende de
+`publish.php` + `liaex`)
 **Documentos base**:
 
 - `docs/desarrollo-liaeditor-moodle-v1.md` (decisiones D1–D10, fases)
 - `docs/cambio-curso-a-liascript.md` (especificación `mod_liamd` v0.1.0)
 
 **Repositorio**: <https://github.com/FPVirtual/LiveEditor>
-(fork de <https://github.com/LiaScript/LiveEditor>, HEAD actual
-`10c845b "Version bump to 2.2.0"`, sin cambios propios todavía)
+(fork de <https://github.com/LiaScript/LiveEditor>). Cambios propios sobre
+upstream `10c845b`: LIV-1…LIV-5 completos — C1+C2 (`src/views/OpenFile.vue`,
+`src/ts/lms/config.ts`), C3+C4 (`src/ts/lms/LmsBridge.ts`,
+`src/components/lms/LmsSaveBar.vue`), C5+C6
+(`src/components/lms/LmsConflictModal.vue` + renovación de token),
+C7+C8+C9 (ocultar Git, `.env`, i18n ES completo), C10 (CI de build +
+deploy a GitHub Pages). Contrato editor↔plugin verificado contra el plugin
+Moodle (2026-11-17): body de save `{file, branch, original_sha, content,
+token}`, 200 `{new_sha, token}`, 409 `{resolution_branch, diff_url,
+current_sha}`, refresh `{file, branch, token} → {token}` — todo
+coincidente.
 
 ---
 

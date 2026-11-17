@@ -394,6 +394,31 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-17 — Sesión 19: Fork LiveEditor verificado — LIV-1–5 ya implementados
+
+- **Estado real del fork `FPVirtual/LiveEditor`** (HEAD `c905d08`, antes se
+  creía sin cambios): los 10 cambios del roadmap están implementados desde
+  el 2026-11-13 — C1+C2 (`OpenFile.vue`, `lms/config.ts`), C3+C4
+  (`LmsBridge.ts`, `LmsSaveBar.vue`), C5+C6 (`LmsConflictModal.vue` +
+  refresh de token), C7+C8+C9 (Git oculto, `.env`, i18n ES) y C10 (CI con
+  build y deploy a GitHub Pages). Tasklist actualizada: LIA-030–034 ✅ y
+  **LIA-022 resuelta** (no hace falta userscript: el fork ya tiene Guardar).
+- **Contrato editor↔plugin cotejado línea a línea** (`config.ts` +
+  `LmsBridge.ts` del fork vs. `content.php`/`save.php`/`token.php`): body de
+  save, respuestas 200 (`new_sha`, `token`), 409 (`resolution_branch`,
+  `diff_url`, `current_sha`), 401/403 → auth_error, refresh `{token}` y la
+  ruta `?/open/file/:fileUrl` — **todo coincide**. Detalle clave verificado:
+  el fork solo lee la cabecera si el comentario `<!--` empieza en el índice
+  0 del documento; nuestra inyección lo garantiza (tanto al crear como al
+  reemplazar el bloque).
+- **Editor desplegado por el usuario** en `192.168.2.256:8090` (red local).
+  ⚠️ `.256` no es un octeto IPv4 válido — pendiente confirmar la dirección
+  real para configurar `liaeditor_url`/`cors_origin` en el plugin y probar
+  el flujo E2E. La CI del fork también despliega a GitHub Pages.
+- **Pendiente para la próxima sesión:** LIV-6 / LIA-041–042 (publish.php +
+  `POST /publish` con liaex, fase 2), despliegue del plugin 0.3.0 en el
+  Moodle de pruebas y verificación E2E del flujo completo editar→guardar.
+
 ### 2026-11-17 — Sesión 18: Fase 1 pista plugin 🔌 (LIA-010–018) + catálogo master en el engine
 
 - **Engine — `GET /edit/files`**: listado de materiales `.md` de una rama

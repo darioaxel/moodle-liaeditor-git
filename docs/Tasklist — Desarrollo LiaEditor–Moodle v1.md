@@ -113,7 +113,7 @@ publicar, con LiaEdit self-hosted **sin modificar** (D7 fase 1).
 - [ ] **LIA-021** (S) Repo de contenidos preparado para LiaScript:
   ficheros `.md` con cabecera LiaScript en `contenidos-test` (o repo
   nuevo) para las pruebas del flujo.
-- [ ] **LIA-022** (S) Resolver decisión nº 1 (Guardar en fase 1): PoC de
+- [x] **LIA-022** (S) Resolver decisión nº 1 (Guardar en fase 1): PoC de
   userscript contra `save.php` **o** adelantar LIA-030/031. Documentar la
   elección en la bitácora.
 
@@ -135,21 +135,21 @@ publicación sin descarga manual (D7 fase 2).
 
 ### Pista fork 🍴 (mapeo directo del roadmap)
 
-- [ ] **LIA-030** (M) **LIV-1** = C1+C2: ruta `?/open/file/:fileUrl`
+- [x] **LIA-030** (M) **LIV-1** = C1+C2: ruta `?/open/file/:fileUrl`
   editable (vista `OpenFile.vue` + entrada en el router) y extracción del
   bloque `liascript-lms` a `meta.lms` (módulo `src/ts/lms/config.ts`, el
   bloque se elimina del documento antes de importarlo).
-- [ ] **LIA-031** (M) **LIV-2** = C3+C4: `src/ts/lms/LmsBridge.ts`
+- [x] **LIA-031** (M) **LIV-2** = C3+C4: `src/ts/lms/LmsBridge.ts`
   (save/publish/409/refresh) y componente `LmsSaveBar.vue` con botón
   Guardar en la toolbar (solo si hay `meta.lms`), atajo Ctrl+S y badge de
   solo lectura.
-- [ ] **LIA-032** (M) **LIV-3** = C5+C6: modal de conflicto 409 (ver
+- [x] **LIA-032** (M) **LIV-3** = C5+C6: modal de conflicto 409 (ver
   diff, recargar versión actual, forzar la mía) y renovación del token de
   un solo uso (por respuesta 200 y por ping a `token.php`).
-- [ ] **LIA-033** (S) **LIV-4** = C7+C8+C9: flag `LIAEDIT_HIDE_GIT` que
+- [x] **LIA-033** (S) **LIV-4** = C7+C8+C9: flag `LIAEDIT_HIDE_GIT` que
   oculta integraciones Git/OAuth, `.env.example` + branding FPVirtual,
   i18n `lms.*` en `en.json` y `es.json`.
-- [ ] **LIA-034** (S) **LIV-5** = C10: GitHub Action de build (`npm ci &&
+- [x] **LIA-034** (S) **LIV-5** = C10: GitHub Action de build (`npm ci &&
   npm run build`, artefacto `dist/`) y estrategia de rebase documentada
   en el README del fork (tags `fpvirtual-vX.Y.Z`).
 
