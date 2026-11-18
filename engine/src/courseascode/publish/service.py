@@ -40,6 +40,13 @@ class LiaexDockerExecutor(ArtifactExecutor):
     Asunciones documentadas (ajustar si el CLI cambia): el binario dentro de
     la imagen es ``liaex`` y acepta ``--input``/``--format``/``--output``.
     PDF necesita Chromium → se ejecuta con ``--shm-size=1g`` (spec §11).
+
+    **Docker-in-docker**: cuando el engine corre en un contenedor y usa el
+    demonio del host (socket montado), las rutas de ``-v`` las interpreta el
+    host. Con ``workdir``/``host_workdir`` se traduce la ruta del checkout
+    de la vista del contenedor a la del host (mismo bind mount en ambos,
+    p. ej. ``/apps/engine-tmp`` host → ``/work-tmp`` contenedor, con
+    ``TMPDIR`` apuntando ahí para que los worktrees caigan en él).
     """
 
     def __init__(
@@ -47,14 +54,25 @@ class LiaexDockerExecutor(ArtifactExecutor):
         image: str = _DOCKER_IMAGE,
         timeout: int = _DOCKER_TIMEOUT,
         docker_binary: str = "docker",
+        workdir: str | None = None,
+        host_workdir: str | None = None,
     ) -> None:
         self._image = image
         self._timeout = timeout
         self._docker = docker_binary
+        self._workdir = workdir
+        self._host_workdir = host_workdir
 
     def available(self) -> bool:
         """``True`` si hay binario docker usable en el host."""
         return shutil.which(self._docker) is not None
+
+    def _host_path(self, checkout: Path) -> str:
+        """Ruta del checkout tal como la ve el demonio Docker (el host)."""
+        path = str(checkout)
+        if self._workdir and self._host_workdir and path.startswith(self._workdir):
+            return self._host_workdir + path[len(self._workdir) :]
+        return path
 
     def generate(self, checkout: Path, file: str, artifact_format: str) -> bytes:
         output_name = f"artifact.{artifact_format}"
@@ -65,7 +83,7 @@ class LiaexDockerExecutor(ArtifactExecutor):
             "--network",
             "none",
             "-v",
-            f"{checkout}:/work",
+            f"{self._host_path(checkout)}:/work",
         ]
         if artifact_format == "pdf":
             args += ["--shm-size=1g"]

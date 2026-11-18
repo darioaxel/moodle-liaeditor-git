@@ -47,6 +47,7 @@ Otras decisiones:
 from __future__ import annotations
 
 import mimetypes
+import os
 import re
 from collections.abc import Hashable, Iterator
 from contextlib import contextmanager
@@ -190,7 +191,12 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
     if releases is None and store is not None:
         releases = SqlReleasePort(store)
     if executor is None:
-        docker_executor = LiaexDockerExecutor()
+        # Docker-in-docker: WORKDIR/HOST_WORKDIR traducen las rutas de -v
+        # entre la vista del contenedor y la del demonio del host.
+        docker_executor = LiaexDockerExecutor(
+            workdir=os.environ.get("COURSEASCODE_WORKDIR"),
+            host_workdir=os.environ.get("COURSEASCODE_HOST_WORKDIR"),
+        )
         executor = docker_executor if docker_executor.available() else None
     ctx = _PreviewContext(
         content_root=content_root.resolve(),
