@@ -394,6 +394,22 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-18 — Sesión 22: Limpieza del curso de pruebas + materiales LiaScript de calidad
+
+- **Book legado eliminado** del curso CAC-TEST (cmid 533, vía
+  `course_delete_module` por CLI) y purgadas las tablas legadas
+  `local_courseascode_deploy` y `local_courseascode_chapter`. El curso
+  queda solo con contenido del flujo nuevo.
+- **Ramas de prueba eliminadas** de `contenidos-test` en GitHub
+  (`edicion/profesor-test/*`, `resolucion/*`).
+- **Materiales v2 sembrados** (commit `128afcb`): `ut03-mvc.md` reescrito
+  como unidad completa (objetivos, tabla de capas, diagrama ASCII, código
+  comentado, autoevaluación con pistas y respuesta corta) y
+  `demo-liascript.md` nuevo — escaparate de capacidades para el
+  profesorado (tablas, KaTeX, quizzes única/múltiple/corta, encuestas,
+  notas al pie, diagramas). Verificado en `GET /edit/files` del engine con
+  los títulos extraídos de la cabecera.
+
 ### 2026-11-18 — Sesión 21: Materiales Editables v2.0 — retirada de la UI legado mod_book
 
 - **Renombrado visible del plugin**: `pluginname` → **Materiales
