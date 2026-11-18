@@ -1,15 +1,15 @@
 <?php
-// Página "Materiales" del curso (LIA-016/018): catálogo, mis ediciones y publicados.
+// Página "Materiales" del curso (LIA-016/018): catálogo, mis contenidos y publicados.
 
 /**
  * materials.php — punto de entrada del profesor al flujo LiaEditor.
  *
- * Tres secciones (UX acordada):
+ * Tres pestañas (UX acordada):
  *
- * 1. **Catálogo master**: materiales ``.md`` de la rama principal del repo
+ * 1. **Contenidos Master**: materiales ``.md`` de la rama principal del repo
  *    (GET /edit/files del engine), con Vista previa (editor solo lectura),
- *    Editar (rama personal, D4) y Publicar.
- * 2. **Mis ediciones**: sesiones de edición activas del profesor con su
+ *    Editar (rama personal) y Publicar.
+ * 2. **Mis Contenidos**: sesiones de edición activas del profesor con su
  *    último SHA guardado; continuar editando o publicar.
  * 3. **Publicados en este curso**: módulos creados con su estado por
  *    comparación de SHAs (UP_TO_DATE / UPDATE_AVAILABLE, §5.3 de la v1).
@@ -29,17 +29,64 @@ require_capability('local/courseascode:viewcatalog', $context);
 $canedit = has_capability('local/courseascode:edit', $context);
 $candeploy = has_capability('local/courseascode:deploy', $context);
 
+$pagetitle = get_string('materials', 'local_courseascode');
+
 $PAGE->set_url(new moodle_url('/local/courseascode/materials.php', ['id' => $courseid]));
 $PAGE->set_context($context);
-$PAGE->set_title(get_string('materials', 'local_courseascode'));
-$PAGE->set_heading(format_string(get_course($courseid)->fullname));
+$PAGE->set_title($pagetitle);
+$PAGE->set_heading($pagetitle);
+
+$tabidmaster = 'cacc-master';
+$tabidminedit = 'cacc-minedit';
+$tabidpublished = 'cacc-published';
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string('materials', 'local_courseascode'));
 
-// -- 1. Catálogo master ------------------------------------------------------
+// -- Navegación por pestañas -------------------------------------------------
 
-echo $OUTPUT->heading(get_string('materials_catalog', 'local_courseascode'), 3);
+$tabactive = ' active';
+$paneactive = ' show active';
+
+$tabs = [
+    $tabidmaster => get_string('materials_catalog', 'local_courseascode'),
+    $tabidminedit => get_string('materials_minedit', 'local_courseascode'),
+    $tabidpublished => get_string('materials_published', 'local_courseascode'),
+];
+
+echo html_writer::start_tag('ul', ['class' => 'nav nav-tabs mb-3', 'role' => 'tablist']);
+foreach ($tabs as $tid => $tlabel) {
+    echo html_writer::tag('li',
+        html_writer::link(
+            '#' . $tid,
+            $tlabel,
+            [
+                'class' => 'nav-link' . $tabactive,
+                'id' => $tid . '-tab',
+                'data-bs-toggle' => 'tab',
+                'data-toggle' => 'tab',
+                'href' => '#' . $tid,
+                'role' => 'tab',
+                'aria-controls' => $tid,
+                'aria-selected' => $tabactive ? 'true' : 'false',
+            ]
+        ),
+        ['class' => 'nav-item', 'role' => 'presentation']
+    );
+    $tabactive = '';
+}
+echo html_writer::end_tag('ul');
+
+echo html_writer::start_tag('div', ['class' => 'tab-content']);
+
+// -- 1. Contenidos Master ----------------------------------------------------
+
+echo html_writer::start_tag('div', [
+    'class' => 'tab-pane fade' . $paneactive,
+    'id' => $tabidmaster,
+    'role' => 'tabpanel',
+    'aria-labelledby' => $tabidmaster . '-tab',
+]);
+$paneactive = '';
 
 try {
     $materials = local_courseascode_service_get('/edit/files');
@@ -56,7 +103,7 @@ if ($materials && !empty($materials->files)) {
     $table->head = [
         get_string('material_title', 'local_courseascode'),
         get_string('material_file', 'local_courseascode'),
-        get_string('actions'),
+        get_string('actions', 'local_courseascode'),
     ];
     foreach ($materials->files as $material) {
         $file = $material->path;
@@ -99,9 +146,16 @@ if ($materials && !empty($materials->files)) {
     echo $OUTPUT->notification(get_string('materials_empty', 'local_courseascode'), \core\output\notification::NOTIFY_INFO);
 }
 
-// -- 2. Mis ediciones --------------------------------------------------------
+echo html_writer::end_tag('div');
 
-echo $OUTPUT->heading(get_string('materials_minedit', 'local_courseascode'), 3);
+// -- 2. Mis Contenidos -------------------------------------------------------
+
+echo html_writer::start_tag('div', [
+    'class' => 'tab-pane fade',
+    'id' => $tabidminedit,
+    'role' => 'tabpanel',
+    'aria-labelledby' => $tabidminedit . '-tab',
+]);
 
 $sessions = $DB->get_records('local_courseascode_editsess', ['userid' => $USER->id, 'closed_at' => null], 'opened_at DESC');
 if ($sessions) {
@@ -111,7 +165,7 @@ if ($sessions) {
         get_string('material_branch', 'local_courseascode'),
         get_string('material_last_save', 'local_courseascode'),
         get_string('material_last_sha', 'local_courseascode'),
-        get_string('actions'),
+        get_string('actions', 'local_courseascode'),
     ];
     foreach ($sessions as $session) {
         $actions = [];
@@ -146,9 +200,16 @@ if ($sessions) {
     echo $OUTPUT->notification(get_string('materials_minedit_empty', 'local_courseascode'), \core\output\notification::NOTIFY_INFO);
 }
 
-// -- 3. Publicados en este curso ----------------------------------------------
+echo html_writer::end_tag('div');
 
-echo $OUTPUT->heading(get_string('materials_published', 'local_courseascode'), 3);
+// -- 3. Publicados en este curso ---------------------------------------------
+
+echo html_writer::start_tag('div', [
+    'class' => 'tab-pane fade',
+    'id' => $tabidpublished,
+    'role' => 'tabpanel',
+    'aria-labelledby' => $tabidpublished . '-tab',
+]);
 
 $deploys = $DB->get_records('local_courseascode_ldeploy', ['courseid' => $courseid], 'deployed_at DESC, id DESC');
 // La fila más reciente por fichero (historial completo en el log de Moodle).
@@ -165,7 +226,7 @@ if ($latest) {
         get_string('material_module', 'local_courseascode'),
         get_string('material_published_sha', 'local_courseascode'),
         get_string('material_state', 'local_courseascode'),
-        get_string('actions'),
+        get_string('actions', 'local_courseascode'),
     ];
     foreach ($latest as $deploy) {
         try {
@@ -215,5 +276,8 @@ if ($latest) {
 } else {
     echo $OUTPUT->notification(get_string('materials_published_empty', 'local_courseascode'), \core\output\notification::NOTIFY_INFO);
 }
+
+echo html_writer::end_tag('div');
+echo html_writer::end_tag('div');
 
 echo $OUTPUT->footer();

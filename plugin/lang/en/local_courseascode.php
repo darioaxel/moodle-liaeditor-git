@@ -1,5 +1,5 @@
 <?php
-// Strings del plugin (convención Moodle: inglés).
+// Cadenas del plugin en español (paquete idioma base *en* por convención Moodle).
 
 /**
  * Language strings.
@@ -9,72 +9,73 @@
  */
 
 $string['pluginname'] = 'Materiales Editables';
-$string['courseascode:viewcatalog'] = 'View the editable materials catalog';
-$string['courseascode:deploy'] = 'Publish and update editable materials';
-$string['courseascode:manage'] = 'Manage Materiales Editables (system-wide)';
-$string['courseascode:edit'] = 'Edit LiaScript materials in the LiaEditor';
-$string['courseascode:editmain'] = 'Edit materials directly on the main branch';
-$string['book_not_found'] = 'The book does not exist';
-$string['chapter_not_found'] = 'The chapter stable id does not exist in this book';
-$string['invalid_course'] = 'The course does not exist';
-$string['invalid_deployed_at'] = 'deployed_at is not a valid ISO 8601 datetime';
-$string['privacy:metadata:reason'] = 'The plugin stores deployment metadata only; personal data is managed by the courseascode service audit log.';
-$string['servicenotconfigured'] = 'The courseascode service is not configured. Set $CFG->local_courseascode_service_url (see README).';
-$string['servicerror'] = 'The courseascode service returned an error: {$a}';
+$string['courseascode:viewcatalog'] = 'Ver el catálogo de materiales editables';
+$string['courseascode:deploy'] = 'Publicar y actualizar materiales editables';
+$string['courseascode:manage'] = 'Gestionar Materiales Editables (a nivel de sistema)';
+$string['courseascode:edit'] = 'Editar materiales LiaScript en el LiaEditor';
+$string['courseascode:editmain'] = 'Editar materiales directamente en la rama principal';
+$string['book_not_found'] = 'El libro no existe';
+$string['chapter_not_found'] = 'El capítulo no existe en este libro';
+$string['invalid_course'] = 'El curso no existe';
+$string['invalid_deployed_at'] = 'deployed_at no es una fecha ISO 8601 válida';
+$string['privacy:metadata:reason'] = 'El plugin solo almacena metadatos de publicación; los datos personales se gestionan en el registro de auditoría del servicio courseascode.';
+$string['servicenotconfigured'] = 'El servicio courseascode no está configurado. Establece $CFG->local_courseascode_service_url (ver README).';
+$string['servicerror'] = 'El servicio courseascode devolvió un error: {$a}';
 
 // Material states (by SHA comparison, §5.3).
-$string['state_up_to_date'] = 'Up to date';
-$string['state_update_available'] = 'Update available';
+$string['state_up_to_date'] = 'Actualizado';
+$string['state_update_available'] = 'Actualización disponible';
 $string['state_error'] = 'Error';
 
 // LiaEditor: settings (LIA-012).
-$string['settings_liaeditor_url'] = 'LiaEditor URL';
-$string['settings_liaeditor_url_desc'] = 'Base URL of the self-hosted LiaEdit instance (e.g. https://liascript-editor.example.com).';
-$string['settings_cors_origin'] = 'CORS origin for the editor';
-$string['settings_cors_origin_desc'] = 'Origin allowed in content.php responses. If empty, the origin of the LiaEditor URL is used.';
-$string['settings_token_ttl'] = 'Edit token lifetime (seconds)';
-$string['settings_token_ttl_desc'] = 'One-time token lifetime for editor sessions. The editor renews it while working; default 900 (15 minutes).';
-$string['settings_max_file_size'] = 'Maximum material size (bytes)';
-$string['settings_max_file_size_desc'] = 'Markdown files larger than this are rejected by save.php; default 1048576 (1 MB).';
+$string['settings_liaeditor_url'] = 'URL del LiaEditor';
+$string['settings_liaeditor_url_desc'] = 'URL base de la instancia autoalojada de LiaEdit (p. ej. https://liascript-editor.example.com).';
+$string['settings_cors_origin'] = 'Origen CORS para el editor';
+$string['settings_cors_origin_desc'] = 'Origen permitido en las respuestas de content.php. Si se deja vacío, se usará el origen de la URL del LiaEditor.';
+$string['settings_token_ttl'] = 'Tiempo de vida del token de edición (segundos)';
+$string['settings_token_ttl_desc'] = 'Tiempo de vida de un token de un solo uso para sesiones de edición. El editor lo renueva mientras trabaja; por defecto 900 (15 minutos).';
+$string['settings_max_file_size'] = 'Tamaño máximo del material (bytes)';
+$string['settings_max_file_size_desc'] = 'Archivos markdown mayores que este valor serán rechazados por save.php; por defecto 1048576 (1 MB).';
 
 // LiaEditor: tokens and save flow (LIA-011/013/014/015).
-$string['tokeninvalid'] = 'The edit token is invalid or was revoked. Reopen the material from Moodle.';
-$string['tokenexpired'] = 'The edit token expired. Reopen the material from Moodle.';
-$string['tokenmismatch'] = 'The edit token does not match this file and branch.';
-$string['editornotconfigured'] = 'The LiaEditor is not configured. Set the LiaEditor URL in the plugin settings.';
-$string['invalidfile'] = 'Invalid material path: {$a}';
-$string['savedok'] = 'Changes saved to your editing branch.';
-$string['saveconflict'] = 'The material changed on the server while you were editing. Your work is safe in a resolution branch.';
+$string['tokeninvalid'] = 'El token de edición no es válido o ha sido revocado. Vuelve a abrir el material desde Moodle.';
+$string['tokenexpired'] = 'El token de edición ha caducado. Vuelve a abrir el material desde Moodle.';
+$string['tokenmismatch'] = 'El token de edición no corresponde a este fichero y rama.';
+$string['editornotconfigured'] = 'El LiaEditor no está configurado. Establece la URL del LiaEditor en la configuración del plugin.';
+$string['invalidfile'] = 'Ruta de material no válida: {$a}';
+$string['savedok'] = 'Cambios guardados en tu rama de edición.';
+$string['saveconflict'] = 'El material ha cambiado en el servidor mientras editabas. Tu trabajo está a salvo en una rama de resolución.';
 
 // LiaEditor: materials page (LIA-016/018).
-$string['materials'] = 'Materials';
-$string['materials_catalog'] = 'Master materials';
-$string['materials_empty'] = 'No LiaScript materials found in the repository.';
-$string['materials_minedit'] = 'My edits';
-$string['materials_minedit_empty'] = 'You have no active editing sessions.';
-$string['materials_published'] = 'Published in this course';
-$string['materials_published_empty'] = 'No materials published in this course yet.';
-$string['material_title'] = 'Title';
+$string['materials'] = 'Edición Materiales v2';
+$string['materials_catalog'] = 'Contenidos Master';
+$string['materials_empty'] = 'No se han encontrado materiales LiaScript en el repositorio.';
+$string['materials_minedit'] = 'Mis Contenidos';
+$string['materials_minedit_empty'] = 'No tienes sesiones de edición activas.';
+$string['materials_published'] = 'Publicados en este curso';
+$string['materials_published_empty'] = 'Todavía no hay materiales publicados en este curso.';
+$string['material_title'] = 'Título';
 $string['material_file'] = 'Material';
-$string['material_branch'] = 'Editing branch';
-$string['material_last_save'] = 'Last save';
-$string['material_last_sha'] = 'Last SHA';
-$string['material_module'] = 'Course module';
-$string['material_published_sha'] = 'Published SHA';
-$string['material_state'] = 'State';
-$string['material_preview'] = 'Preview';
-$string['material_edit'] = 'Edit';
-$string['material_continue'] = 'Continue editing';
-$string['material_publish'] = 'Publish';
-$string['material_update'] = 'Update';
+$string['material_branch'] = 'Rama de edición';
+$string['material_last_save'] = 'Último guardado';
+$string['material_last_sha'] = 'SHA';
+$string['material_module'] = 'Módulo';
+$string['material_published_sha'] = 'SHA publicado';
+$string['material_state'] = 'Estado';
+$string['actions'] = 'Acciones';
+$string['material_preview'] = 'Vista previa';
+$string['material_edit'] = 'Editar';
+$string['material_continue'] = 'Continuar editando';
+$string['material_publish'] = 'Publicar';
+$string['material_update'] = 'Actualizar';
 
 // LiaEditor: publish page (LIA-017).
-$string['publish_name'] = 'Module name';
-$string['publish_type'] = 'Artifact type';
-$string['publish_section'] = 'Course section';
-$string['publish_file'] = 'Artifact file (.h5p / .epub / .pdf)';
-$string['publishupdate'] = 'This material is already published in the course: submitting will update the existing module.';
-$string['publishok'] = '«{$a}» published in the course and linked to the material version.';
-$string['publishnosha'] = 'No known version of this material: save it from the editor first.';
-$string['publishnofile'] = 'No artifact uploaded or the upload failed.';
-$string['invalidartifacttype'] = 'Invalid artifact type: {$a}';
+$string['publish_name'] = 'Nombre del módulo';
+$string['publish_type'] = 'Tipo de artefacto';
+$string['publish_section'] = 'Sección del curso';
+$string['publish_file'] = 'Fichero del artefacto (.h5p / .epub / .pdf)';
+$string['publishupdate'] = 'Este material ya está publicado en el curso: al enviar se actualizará el módulo existente.';
+$string['publishok'] = '«{$a}» publicado en el curso y vinculado a la versión del material.';
+$string['publishnosha'] = 'No se conoce ninguna versión de este material: guárdalo primero desde el editor.';
+$string['publishnofile'] = 'No se ha subido ningún artefacto o la subida ha fallado.';
+$string['invalidartifacttype'] = 'Tipo de artefacto no válido: {$a}';
