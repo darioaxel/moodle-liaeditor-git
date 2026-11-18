@@ -179,14 +179,14 @@ function local_courseascode_inject_lms_block(string $markdown, array $config): s
 /**
  * URL de apertura del editor para una content.php dada (LIA-016).
  *
- * Ruta editable del fork (``?/open/file/:fileUrl``, cambio C1 del roadmap)
- * o de solo lectura de upstream (``?/show/file/:fileUrl``) para la vista
- * previa sin edición.
+ * Siempre la ruta editable del fork (``?/open/file/:fileUrl``, C1): abre el
+ * editor completo con el markdown. El modo solo lectura NO usa la ruta
+ * ``?/show/file/`` de upstream (que renderiza el curso sin mostrar el
+ * fuente): se indica con ``readonly: true`` en el bloque liascript-lms y el
+ * fork muestra el badge "Solo lectura" en lugar del botón Guardar (C4).
  */
 function local_courseascode_editor_open_url(string $contenturl, bool $readonly): string {
-    $base = local_courseascode_editor_url();
-    $route = $readonly ? '/?/show/file/' : '/?/open/file/';
-    return $base . $route . rawurlencode($contenturl);
+    return local_courseascode_editor_url() . '/?/open/file/' . rawurlencode($contenturl);
 }
 
 /**
