@@ -63,6 +63,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 from courseascode.api.deployment import DeploymentApiDeps, create_deployment_router
 from courseascode.api.edit import EditApiDeps, create_edit_router
 from courseascode.api.hooks import create_hooks_router
+from courseascode.api.publish import PublishApiDeps, create_publish_router
 from courseascode.api.releases import ReleasesApiDeps, create_releases_router
 from courseascode.catalog import (
     CatalogBuilder,
@@ -85,6 +86,7 @@ from courseascode.manifests.errors import ManifestError
 from courseascode.manifests.models import BookManifest, ChapterManifest, CourseManifest
 from courseascode.manifests.parser import ManifestParser
 from courseascode.moodle.provider import MoodleProvider
+from courseascode.publish.service import ArtifactExecutor, LiaexDockerExecutor
 from courseascode.releases import ReleaseStore, SqlReleasePort
 
 _DEFAULT_THEME = "theme-default"
@@ -143,6 +145,7 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
     admin_token: str | None = None,
     cache: RenderCache[RenderedBook] | None = None,
     content_repo_url: str | None = None,
+    executor: ArtifactExecutor | None = None,
 ) -> FastAPI:
     """Crea la app de preview, catálogo y despliegue sobre ``content_root``.
 
@@ -174,6 +177,9 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
         content_repo_url: URL del repo en la forja (``CONTENT_REPO_URL``); los
             endpoints de edición la usan para construir la ``diff_url`` de los
             conflictos 409 (LIA-004).
+        executor: ejecutor de artefactos para ``POST /publish`` (LIA-040);
+            ``None`` → se autodetecta ``LiaexDockerExecutor`` si hay Docker
+            en el host; si no lo hay, el endpoint responde 503.
     """
     configure_logging()
     if provider is None:
@@ -183,6 +189,9 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
             provider = None
     if releases is None and store is not None:
         releases = SqlReleasePort(store)
+    if executor is None:
+        docker_executor = LiaexDockerExecutor()
+        executor = docker_executor if docker_executor.available() else None
     ctx = _PreviewContext(
         content_root=content_root.resolve(),
         provider=provider,
@@ -217,6 +226,7 @@ def create_app(  # noqa: PLR0913, PLR0917 - superficie de configuración de la a
         )
     )
     app.include_router(create_edit_router(EditApiDeps(git=ctx.provider, repo_url=content_repo_url)))
+    app.include_router(create_publish_router(PublishApiDeps(git=ctx.provider, executor=executor)))
     app.include_router(
         create_releases_router(
             ReleasesApiDeps(moodle=ctx.moodle, store=store, admin_token=admin_token)

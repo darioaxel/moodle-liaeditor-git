@@ -74,7 +74,7 @@ $baseurl = (new \moodle_url('/local/courseascode/save.php'))->out(false);
 $tokenurl = (new \moodle_url('/local/courseascode/token.php'))->out(false);
 $returnurl = (new \moodle_url('/my/courses.php'))->out(false);
 
-$markdown = local_courseascode_inject_lms_block($result->content, [
+$lmsconfig = [
     'save_endpoint' => $baseurl,
     'token_refresh_endpoint' => $tokenurl,
     'file' => $file,
@@ -83,7 +83,14 @@ $markdown = local_courseascode_inject_lms_block($result->content, [
     'token' => $token,
     'readonly' => (bool) $readonly,
     'return_url' => $returnurl,
-]);
+];
+// Publicación en un clic (D7 fase 2): solo si el token conoce el curso de
+// origen — el editor muestra el botón Publicar solo si hay publish_endpoint.
+if (!$readonly && (int) $tokendata->courseid > 0) {
+    $lmsconfig['publish_endpoint'] = (new \moodle_url('/local/courseascode/publish_api.php'))->out(false);
+}
+
+$markdown = local_courseascode_inject_lms_block($result->content, $lmsconfig);
 
 http_response_code(200);
 header('Content-Type: text/plain; charset=utf-8');

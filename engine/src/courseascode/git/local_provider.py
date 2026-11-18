@@ -209,8 +209,10 @@ class LocalGitProvider(GitProvider):
 
     def _commit(self, ref: str) -> Commit:
         try:
-            return self._repo.commit(ref)
-        except BadName as exc:
+            commit = self._repo.commit(ref)
+            _ = commit.tree  # fuerza la resolución: un SHA de 40 hex es lazy
+            return commit
+        except (BadName, ValueError) as exc:
             msg = f"Referencia Git no encontrada: {ref!r}"
             raise GitProviderError(msg) from exc
 

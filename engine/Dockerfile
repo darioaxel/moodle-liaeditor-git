@@ -4,8 +4,11 @@ FROM python:3.12-slim
 
 # git: LocalGitProvider usa el CLI (`git worktree add`, ENG-021); GitPython
 # también necesita el binario.
+# docker-cli: LiaexDockerExecutor lanza el exporter de LiaScript como
+# contenedor (LIA-040). Necesita además montar /var/run/docker.sock y que el
+# usuario del contenedor pertenezca al grupo docker del host (--group-add).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git docker.io \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

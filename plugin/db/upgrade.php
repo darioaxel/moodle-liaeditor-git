@@ -37,5 +37,15 @@ function xmldb_local_courseascode_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026111700, 'local', 'courseascode');
     }
 
+    if ($oldversion < 2026111801) {
+        // LIA-041: el token conoce el curso de origen para publicar desde el editor.
+        $table = new xmldb_table('local_courseascode_token');
+        $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'userid');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111801, 'local', 'courseascode');
+    }
+
     return true;
 }

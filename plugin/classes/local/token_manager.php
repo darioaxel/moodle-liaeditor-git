@@ -21,14 +21,21 @@ defined('MOODLE_INTERNAL') || die();
  * Ciclo de vida de los tokens de un solo uso (LIA-011).
  */
 class token_manager {
-    /** Registro validado de un token. */
-    public static function issue(int $userid, string $file, string $branch, ?int $ttl = null): \stdClass {
+    /** Emite un token ligado a usuario+fichero+rama (y curso de origen, para publicar). */
+    public static function issue(
+        int $userid,
+        string $file,
+        string $branch,
+        int $courseid = 0,
+        ?int $ttl = null
+    ): \stdClass {
         global $DB;
         $ttl = $ttl ?? self::ttl();
         $token = random_string(48);
         $record = (object) [
             'tokenhash' => hash('sha256', $token),
             'userid' => $userid,
+            'courseid' => $courseid,
             'file' => $file,
             'branch' => $branch,
             'expires' => time() + $ttl,
@@ -41,12 +48,14 @@ class token_manager {
     }
 
     /**
-     * Valida un token para una operación concreta (fichero y rama).
+     * Valida un token para una operación concreta (fichero y, si se indica,
+     * rama). La rama es opcional: el contrato de publicación del editor no
+     * la envía (`{file, sha, format, token}`).
      *
-     * @return \stdClass fila del token (con userid)
-     * @throws \moodle_exception tokencredentials si es inválido, caducó o no casa
+     * @return \stdClass fila del token (con userid y courseid)
+     * @throws \moodle_exception si es inválido, caducó o no casa
      */
-    public static function validate(string $token, string $file, string $branch): \stdClass {
+    public static function validate(string $token, string $file, ?string $branch = null): \stdClass {
         global $DB;
         $row = $DB->get_record('local_courseascode_token', ['tokenhash' => hash('sha256', $token)]);
         if (!$row || $row->revoked) {
@@ -55,7 +64,7 @@ class token_manager {
         if ((int) $row->expires < time()) {
             throw new \moodle_exception('tokenexpired', 'local_courseascode');
         }
-        if ($row->file !== $file || $row->branch !== $branch) {
+        if ($row->file !== $file || ($branch !== null && $row->branch !== $branch)) {
             throw new \moodle_exception('tokenmismatch', 'local_courseascode');
         }
         return $row;

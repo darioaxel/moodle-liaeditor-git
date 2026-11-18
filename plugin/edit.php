@@ -46,7 +46,7 @@ if ($branch === '') {
     $branch = $opened->branch;
 }
 
-$token = token_manager::issue((int) $USER->id, $file, $branch);
+$token = token_manager::issue((int) $USER->id, $file, $branch, $courseid);
 local_courseascode_touch_session((int) $USER->id, $file, $branch);
 
 $contenturl = (new \moodle_url('/local/courseascode/content.php', [
