@@ -23,7 +23,7 @@
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
       <INDEXES>
-        <INDEX NAME="course-source-content" UNIQUE="false" FIELDS="courseid, source, content_id"/>
+        <INDEX NAME="courseid" UNIQUE="false" FIELDS="courseid"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="local_courseascode_chapter" COMMENT="Correspondencia stable id ↔ capítulo de mod_book (idempotencia §17.3)">

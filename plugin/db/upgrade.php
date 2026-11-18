@@ -49,11 +49,20 @@ function xmldb_local_courseascode_upgrade(int $oldversion): bool {
 
     if ($oldversion < 2026111802) {
         // El índice course-source-content no validaba en Moodle 6 (source
-        // char(1333) > 255): se acorta; el contenido es un slug corto.
+        // char(1333) > 255 y compuesto > 333 chars): se acorta el campo y
+        // se sustituye por un índice simple por curso (tabla legado).
         $table = new xmldb_table('local_courseascode_deploy');
         $field = new xmldb_field('source', XMLDB_TYPE_CHAR, '133', null, XMLDB_NOTNULL, null, null, 'bookid');
         if ($dbman->field_exists($table, $field)) {
             $dbman->change_field_precision($table, $field);
+        }
+        $oldindex = new xmldb_index('course-source-content', XMLDB_INDEX_NOTUNIQUE, ['courseid', 'source', 'content_id']);
+        if ($dbman->index_exists($table, $oldindex)) {
+            $dbman->drop_index($table, $oldindex);
+        }
+        $newindex = new xmldb_index('courseid', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
+        if (!$dbman->index_exists($table, $newindex)) {
+            $dbman->add_index($table, $newindex);
         }
         upgrade_plugin_savepoint(true, 2026111802, 'local', 'courseascode');
     }
