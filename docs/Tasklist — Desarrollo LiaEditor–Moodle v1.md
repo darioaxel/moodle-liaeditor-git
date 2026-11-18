@@ -155,14 +155,14 @@ publicación sin descarga manual (D7 fase 2).
 
 ### Pista engine + plugin 🔌
 
-- [ ] **LIA-040** (L) `POST /publish` en el engine: wrapper de `liaex`
+- [x] **LIA-040** (L) `POST /publish` en el engine: wrapper de `liaex`
   (Docker) para SCORM 2004, ePub y PDF; PDF con `--shm-size=1g` y cola
   con más recursos; timeouts (300 s/formato), reintentos y error parcial
   por formato.
-- [ ] **LIA-041** (M) `publish.php` en el plugin: valida token → delega
+- [x] **LIA-041** (M) `publish.php` en el plugin: valida token → delega
   en `POST /publish` → crea/actualiza el módulo y registra el despliegue
   (misma lógica de LIA-017, sin subida manual).
-- [ ] **LIA-042** (M) **LIV-6**: botón Publicar en el fork (desplegable
+- [x] **LIA-042** (M) **LIV-6**: botón Publicar en el fork (desplegable
   de formatos, solo si `publish_endpoint` presente) contra
   `publish.php`.
 - [ ] **LIA-043** (M) PoC H5P (decisión nº 3): generar paquete con el

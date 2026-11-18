@@ -394,6 +394,37 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-18 — Sesión 23: Publicación en un clic E2E + fix crítico de URL del editor
+
+- **LIA-040/041/042 implementados**: engine `POST /publish` (módulo
+  `publish/`, `ArtifactExecutor` inyectable + `LiaexDockerExecutor`),
+  `publish_api.php` en el plugin (contrato `{file, sha, format, token}` →
+  artefacto → módulo), token con `courseid` (upgrade 2026111801) y
+  `publish_endpoint` inyectado en el bloque `liascript-lms` cuando el token
+  conoce el curso. 8 tests nuevos → **351 tests** ✓, ruff ✓, mypy ✓.
+- **E2E real de liaex verificado** en el servidor: EPUB de
+  `demo-liascript.md` generado (1,4 MB) vía `POST /publish`. Tres bugs de
+  despliegue resueltos: Debian 13 separa `docker-cli` de `docker.io`
+  (imagen del engine actualizada); permisos del directorio compartido
+  `engine-tmp` (chown 1000); y **docker-in-docker**: el demonio del host no
+  ve las rutas del contenedor engine → `LiaexDockerExecutor` con
+  `COURSEASCODE_WORKDIR`/`HOST_WORKDIR` que traduce el mount `-v` y worktrees
+  creados bajo `TMPDIR=/work-tmp` (bind mount host↔engine).
+- **Plugin desinstalado y reinstalado de cero** (a petición del usuario):
+  `uninstall_plugins.php` borra tablas y config; dos fallos de instalación
+  limpia en Moodle 6 corregidos en la tabla legada deploy (`source`
+  char(1333)→133 e índice compuesto >333 chars → índice simple, versión
+  2026111802). Settings reconfigurados tras el wipe.
+- **Fix crítico de UX del editor** (reportado por el usuario): el router
+  del fork captura `:fileUrl` de la query **sin decodeURIComponent**; el
+  plugin enviaba la URL codificada → fetch relativo → el SPA devolvía su
+  propio index.html como documento ("Mis cursos / Sin título" mostrando
+  HTML). Ahora la URL se envuelve en `?%2F...` (el fork decodifica una
+  vez). Además, la vista previa usa la ruta `open` con badge "Solo lectura"
+  en vez de `show` (que renderiza sin mostrar el fuente).
+- **Pendiente**: verificación UI completa del flujo Editar → Guardar por el
+  usuario; prueba real del botón Publicar desde el editor.
+
 ### 2026-11-18 — Sesión 22: Limpieza del curso de pruebas + materiales LiaScript de calidad
 
 - **Book legado eliminado** del curso CAC-TEST (cmid 533, vía
