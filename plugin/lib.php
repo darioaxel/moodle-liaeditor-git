@@ -179,14 +179,21 @@ function local_courseascode_inject_lms_block(string $markdown, array $config): s
 /**
  * URL de apertura del editor para una content.php dada (LIA-016).
  *
- * Siempre la ruta editable del fork (``?/open/file/:fileUrl``, C1): abre el
- * editor completo con el markdown. El modo solo lectura NO usa la ruta
- * ``?/show/file/`` de upstream (que renderiza el curso sin mostrar el
- * fuente): se indica con ``readonly: true`` en el bloque liascript-lms y el
- * fork muestra el badge "Solo lectura" en lugar del botón Guardar (C4).
+ * Ruta editable del fork (``?/open/file/:fileUrl``, C1). OJO con la
+ * codificación: el router del fork captura ``:fileUrl`` de la query **en
+ * crudo, sin decodeURIComponent** — si el contenido va codificado, el
+ * fetch revienta como URL relativa y el SPA devuelve su propio index.html
+ * como "documento". El formato correcto es envolver toda la ruta en una
+ * codificación (``?%2F...``): el fork detecta ese prefijo y decodifica la
+ * query completa una vez, dejando la URL de content.php lista para fetch.
+ *
+ * El modo solo lectura NO usa la ruta ``?/show/file/`` de upstream (que
+ * renderiza el curso sin mostrar el fuente): se indica con
+ * ``readonly: true`` en el bloque liascript-lms y el fork muestra el badge
+ * "Solo lectura" en lugar del botón Guardar (C4).
  */
 function local_courseascode_editor_open_url(string $contenturl, bool $readonly): string {
-    return local_courseascode_editor_url() . '/?/open/file/' . rawurlencode($contenturl);
+    return local_courseascode_editor_url() . '/?' . rawurlencode('/open/file/' . $contenturl);
 }
 
 /**
