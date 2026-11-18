@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_courseascode';
-$plugin->version = 2026111801;        // Token con courseid: publicación desde el editor (2026-11-18).
+$plugin->version = 2026111802;        // Fix índice legado deploy.source (instalación limpia en Moodle 6).
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->release = '2.0.0';

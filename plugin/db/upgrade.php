@@ -47,5 +47,16 @@ function xmldb_local_courseascode_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026111801, 'local', 'courseascode');
     }
 
+    if ($oldversion < 2026111802) {
+        // El índice course-source-content no validaba en Moodle 6 (source
+        // char(1333) > 255): se acorta; el contenido es un slug corto.
+        $table = new xmldb_table('local_courseascode_deploy');
+        $field = new xmldb_field('source', XMLDB_TYPE_CHAR, '133', null, XMLDB_NOTNULL, null, null, 'bookid');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->change_field_precision($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111802, 'local', 'courseascode');
+    }
+
     return true;
 }

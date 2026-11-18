@@ -9,7 +9,7 @@
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="bookid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="id de la instancia mod_book"/>
-        <FIELD NAME="source" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="source" TYPE="char" LENGTH="133" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="content_id" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="content_version" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="git_ref" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
