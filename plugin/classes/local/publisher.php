@@ -6,8 +6,9 @@
  * generado del material (SCORM, H5P, ePub, PDF) y registra el despliegue
  * curso↔SHA↔cmid en ``local_courseascode_ldeploy`` (trazabilidad D6).
  *
- * Mapeo tipo → módulo: ``scorm`` → mod_scorm · ``h5p`` → mod_h5pactivity ·
- * ``epub``/``pdf`` → mod_resource (descarga accesible).
+ * Mapeo tipo → módulo: ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
+ * mod_resource (descarga accesible). Desde Materiales Editables v2.0 los
+ * formatos de publicación son solo H5P, ePub y PDF.
  *
  * @package    local_courseascode
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -23,7 +24,6 @@ defined('MOODLE_INTERNAL') || die();
 class publisher {
     /** Tipos de artefacto → (modulename, campo filemanager del form). */
     private const TYPES = [
-        'scorm' => ['scorm', 'packagefile'],
         'h5p' => ['h5pactivity', 'packagefile'],
         'epub' => ['resource', 'files'],
         'pdf' => ['resource', 'files'],
@@ -76,9 +76,6 @@ class publisher {
             'introformat' => FORMAT_HTML,
             $filefield => $draftitemid,
         ];
-        if ($modulename === 'scorm') {
-            $moduleinfo->scormtype = 'local'; // Paquete subido (SCORM_TYPE_LOCAL).
-        }
 
         if ($existingcmid > 0) {
             $cm = get_coursemodule_from_id('', $existingcmid, 0, false, MUST_EXIST);

@@ -260,57 +260,7 @@ function local_courseascode_validate_file(string $file): string {
 }
 
 /**
- * URL de la preview pública del servicio (ENG-044): mismo renderer que el deploy.
- * La abre el navegador del profesor: usa la URL pública del servicio.
- */
-function local_courseascode_preview_url(string $source, string $book, ?string $ref = null): string {
-    $url = local_courseascode_service_public_url() . "/catalog/{$source}/{$book}/preview";
-    return $ref ? $url . '?ref=' . rawurlencode($ref) : $url;
-}
-
-/**
- * Último despliegue registrado en el curso por cada Book (binding §9).
- *
- * @return \stdClass[] filas de local_courseascode_deploy (la más reciente por source+content_id)
- */
-function local_courseascode_course_deploys(int $courseid): array {
-    global $DB;
-    $rows = $DB->get_records('local_courseascode_deploy', ['courseid' => $courseid], 'deployed_at DESC, id DESC');
-    $latest = [];
-    foreach ($rows as $row) {
-        $key = $row->source . '/' . $row->content_id;
-        if (!isset($latest[$key])) {
-            $latest[$key] = $row;
-        }
-    }
-    return array_values($latest);
-}
-
-/**
- * Estado §19 de un Book en el curso, tolerante a fallos: si el servicio no
- * puede calcularlo devuelve un objeto ERROR con el detalle (la tabla del
- * panel debe seguir mostrando el resto de Books).
- */
-function local_courseascode_book_state(int $courseid, string $source, string $book): \stdClass {
-    try {
-        return local_courseascode_service_get('/deployment/status', [
-            'course_id' => (string) $courseid,
-            'source' => $source,
-            'book_id' => $book,
-        ]);
-    } catch (\moodle_exception $e) {
-        return (object) [
-            'state' => 'ERROR',
-            'severity' => null,
-            'version' => null,
-            'git_commit' => '',
-            'detail' => $e->getMessage(),
-        ];
-    }
-}
-
-/**
- * Etiqueta traducida de un DeploymentState (§19) para la UI.
+ * Etiqueta traducida de un estado de material (§5.3) para la UI.
  */
 function local_courseascode_state_label(string $state): string {
     $key = 'state_' . strtolower($state);
@@ -336,56 +286,20 @@ function local_courseascode_state_class(string $state, ?string $severity = null)
 }
 
 /**
- * Inyección del CSS del tema en las páginas del Book (§5.3d).
- * El CSS lo sirve el engine como asset temático; aquí solo se enlaza.
- */
-function local_courseascode_before_standard_html_head(): string {
-    global $PAGE;
-    if ($PAGE->pagetype !== 'mod-book-view') {
-        return '';
-    }
-    try {
-        return \html_writer::tag('link', '', [
-            'rel' => 'stylesheet',
-            'href' => local_courseascode_service_public_url() . '/static/theme-default.css',
-        ]);
-    } catch (\moodle_exception $e) {
-        return ''; // Servicio no configurado: el campus sigue funcionando.
-    }
-}
-
-/**
- * Navegación: entrada "Course as Code" en el bloque de administración del curso.
+ * Navegación: entrada "Materiales Editables" en el bloque de administración
+ * del curso. El flujo legado mod_book (Course as Code v1) fue retirado de la
+ * UI en la versión 2.0.0: los materiales son Markdown LiaScript que se
+ * publica como H5P/ePub/PDF, nunca como mod_book.
  */
 function local_courseascode_extend_navigation_course(\navigation_node $parent, \stdClass $course, \context_course $context): void {
     if (has_capability('local/courseascode:viewcatalog', $context)) {
         $parent->add(
             get_string('pluginname', 'local_courseascode'),
-            new \moodle_url('/local/courseascode/catalog.php', ['id' => $course->id]),
-            navigation_node::TYPE_SETTING,
-            null,
-            'local_courseascode',
-            new \pix_icon('i/book', '')
-        );
-        // Flujo LiaEditor (v1): página "Materiales" del curso.
-        $parent->add(
-            get_string('materials', 'local_courseascode'),
             new \moodle_url('/local/courseascode/materials.php', ['id' => $course->id]),
             navigation_node::TYPE_SETTING,
             null,
             'local_courseascode_materials',
             new \pix_icon('i/edit', '')
-        );
-    }
-    if (has_capability('local/courseascode:deploy', $context)) {
-        $node = $parent->get('local_courseascode') ?: $parent;
-        $node->add(
-            get_string('admin', 'local_courseascode'),
-            new \moodle_url('/local/courseascode/admin.php', ['id' => $course->id]),
-            navigation_node::TYPE_SETTING,
-            null,
-            'local_courseascode_admin',
-            new \pix_icon('i/settings', '')
         );
     }
 }

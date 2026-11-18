@@ -5,11 +5,11 @@
  * publish.php — subida del artefacto exportado en el navegador y creación
  * del módulo en el curso.
  *
- * Fase 1 del flujo LiaEditor: el profesor exporta el SCORM/H5P/ePub/PDF
- * desde el editor (exporter en navegador) y lo sube aquí; el plugin crea o
- * actualiza el módulo (mod_scorm / mod_h5pactivity / mod_resource) y
- * registra el despliegue curso↔SHA↔cmid (D6: sin este paso la subida
- * manual rompería la trazabilidad).
+ * Fase 1 del flujo LiaEditor: el profesor exporta el H5P/ePub/PDF desde
+ * el editor (exporter en navegador) y lo sube aquí; el plugin crea o
+ * actualiza el módulo (mod_h5pactivity / mod_resource) y registra el
+ * despliegue curso↔SHA↔cmid (D6: sin este paso la subida manual rompería
+ * la trazabilidad).
  *
  * @package    local_courseascode
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -130,11 +130,10 @@ echo html_writer::tag('p', html_writer::tag('label', get_string('publish_name', 
 
 echo html_writer::tag('p', html_writer::tag('label', get_string('publish_type', 'local_courseascode')
     . ' ' . html_writer::select([
-        'scorm' => 'SCORM 2004 (mod_scorm)',
         'h5p' => 'H5P (mod_h5pactivity)',
         'epub' => 'ePub (recurso descargable)',
         'pdf' => 'PDF (recurso descargable)',
-    ], 'artifact_type', 'scorm', false, ['class' => 'form-control'])));
+    ], 'artifact_type', 'h5p', false, ['class' => 'form-control'])));
 
 echo html_writer::tag('p', html_writer::tag('label', get_string('publish_section', 'local_courseascode')
     . ' ' . html_writer::empty_tag('input', [
@@ -144,7 +143,7 @@ echo html_writer::tag('p', html_writer::tag('label', get_string('publish_section
 echo html_writer::tag('p', html_writer::tag('label', get_string('publish_file', 'local_courseascode')
     . ' ' . html_writer::empty_tag('input', [
         'type' => 'file', 'name' => 'artifact', 'required' => 'required', 'class' => 'form-control',
-        'accept' => '.zip,.h5p,.epub,.pdf',
+        'accept' => '.h5p,.epub,.pdf',
     ])));
 
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sha', 'value' => s($sha)]);

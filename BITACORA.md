@@ -394,6 +394,32 @@ operación. La validación real requiere moodle-docker (pendiente).
 
 ## Registro de sesiones
 
+### 2026-11-18 — Sesión 21: Materiales Editables v2.0 — retirada de la UI legado mod_book
+
+- **Renombrado visible del plugin**: `pluginname` → **Materiales
+  Editables**, release **2.0.0** (version 2026111800). El componente interno
+  sigue siendo `local_courseascode` (carpeta/tablas): renombrarlo forzaría
+  reinstalación y pérdida de datos sin ganancia.
+- **Retirada la UI del flujo legado "Course as Code"** (mod_book):
+  eliminadas `catalog.php`, `bookversion.php`, `admin.php`, `deploy.php`,
+  los 3 templates Mustache y el hook de inyección CSS en `mod-book-view`.
+  La navegación del curso queda solo con la entrada **Materiales
+  Editables** → `materials.php`. Eliminados helpers muertos de `lib.php`
+  (`preview_url`, `course_deploys`, `book_state`) y las cadenas de idioma
+  del flujo viejo. Los web services `local_courseascode_*` del contrato
+  antiguo se conservan temporalmente (compatibilidad engine), sin UI.
+- **Formatos de publicación fijados**: solo **H5P, ePub y PDF** (markdown
+  LiaScript transformado por el exporter). Eliminado SCORM de
+  `publisher::TYPES` y del formulario de Publicar.
+- **Contexto de arquitectura**: el editor se alojará en OVH (HTTPS); en el
+  Moodle seguro solo va el plugin PHP + una llamada HTTPS saliente al
+  engine (email de requisitos preparado para los administradores). Los
+  contenedores están casi descartados en ese entorno → la opción A (engine
+  en OVH) no los necesita en el servidor Moodle.
+- **Docs**: `docs/Roadmap — Migración del engine a PHP.md` (análisis de
+  coste de revertir D2: 6–8 semanas solo flujo LiaEditor; recomendación de
+  no migrar salvo que el entorno lo fuerce).
+
 ### 2026-11-17 — Sesión 20: Despliegue completo en el servidor de pruebas + E2E del flujo de edición 🎉
 
 **El flujo LiaEditor queda montado y verificado extremo a extremo contra el

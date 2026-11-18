@@ -79,7 +79,7 @@ la vinculación, el guardado transparente y la publicación de artefactos
 │   ├── src/courseascode/   # domain, manifests, git, content, catalog,
 │   │                       # deployment, moodle, api, web, cli
 │   └── tests/
-├── plugin/                 # plugin Moodle (local_courseascode → mod_liamd)
+├── plugin/                 # plugin Moodle «Materiales Editables» (local_courseascode)
 ├── docs/                   # arquitectura v1, spec mod_liamd, roadmap fork,
 │                           # guías, diagramas, tasklists
 ├── BITACORA.md             # estado del desarrollo (actualizar cada sesión)
