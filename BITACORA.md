@@ -28,6 +28,38 @@
 
 ## Registro de sesiones
 
+### 2026-11-19 — Sesión 28: M1 del editor Crepe + arreglos de Publicar y alcance del token
+
+- **Editor** (`fpvirtual-crepe-editor`, `main`): guardar contra `save.php`
+  (botón y Ctrl+S, 409 con diálogo ver/recargar/forzar, sesión caducada),
+  renovación del token, Publicar H5P/ePub/PDF, borrador en IndexedDB y
+  aviso al salir. Verificado con e2e en Chrome contra un backend simulado
+  (13/13). Desplegado por el usuario en `http://192.168.2.253:8092`; el
+  plugin ya apunta ahí (CORS comprobado).
+- **Plugin 2.2.0 (2026111901)**:
+  - B1: `token_manager::refresh` conserva el curso (y el modo); antes,
+    tras el primer guardado, Publicar daba 403.
+  - B2: `publish_api.php` actúa como el usuario del token
+    (`session\manager::set_user`), necesario para el área de borrador de
+    `add_moduleinfo`, y comprueba `:deploy` y `manageactivities` al publicar.
+  - B3: solo reutiliza el módulo del mismo formato si sigue existiendo
+    (`publisher::reusable_cmid`); devuelve el enlace al módulo.
+  - Token con alcance: campo `readonly` (upgrade). La vista previa emite
+    tokens de solo lectura, y `save.php`/`publish_api.php` los rechazan
+    (antes la vista previa permitía guardar en `main`). `content.php` toma
+    el modo del token.
+  - `edit.php`: el parámetro `branch` solo acepta una rama de una sesión
+    propia del fichero, o `main` con `editmain`.
+  - `content.php` atiende el preflight `OPTIONS` antes de leer parámetros
+    (antes devolvía 404).
+- **Engine**: `MATERIALES_LIASCRIPT_LIAEX_NETWORK` (defecto `none`) para dar
+  red a liaex cuando los materiales importan plantillas. 68 tests ✓.
+- **Verificado**: `php -l` sin errores, `install.xml` válido, `make check`
+  del engine. **No verificado** contra el Moodle de pruebas: hay que
+  desplegar el plugin (upgrade a 2026111901), el editor nuevo y, para
+  publicar materiales con `import:`, el engine con
+  `MATERIALES_LIASCRIPT_LIAEX_NETWORK=bridge`.
+
 ### 2026-11-19 — Sesión 27: Fase 0 del editor Crepe (PoC) — go condicionado
 
 - **Repo del editor**: `FPVirtual/fpvirtual-crepe-editor`, rama `poc/m0`

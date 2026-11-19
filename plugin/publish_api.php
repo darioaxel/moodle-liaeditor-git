@@ -59,14 +59,27 @@ if (!in_array($body->format, ['h5p', 'epub', 'pdf'], true)) {
 
 try {
     local_liamateriales_validate_file($body->file);
-    $tokendata = token_manager::validate($body->token, $body->file);
+    $tokendata = token_manager::validate($body->token, $body->file, null, true);
 } catch (\moodle_exception $e) {
     publish_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
 }
 if ((int) $tokendata->courseid <= 0) {
     publish_respond(403, ['status' => 'error', 'message' => 'este token no permite publicar (sin curso de origen)']);
 }
-$user = \core_user::get_user($tokendata->userid);
+$user = \core_user::get_user($tokendata->userid, '*', MUST_EXIST);
+$coursecontext = \context_course::instance((int) $tokendata->courseid);
+
+// La petición llega sin sesión de Moodle (autenticación por token, D9): se
+// actúa como el usuario del token. Sin esto, add_moduleinfo no encuentra el
+// área de borrador (file_save_draft_area_files usa $USER) ni registra bien
+// el autor de los eventos.
+\core\session\manager::set_user($user);
+
+// Las capacidades se comprueban al publicar, no solo al emitir el token.
+if (!has_capability('local/liamateriales:deploy', $coursecontext, $user)
+        || !has_capability('moodle/course:manageactivities', $coursecontext, $user)) {
+    publish_respond(403, ['status' => 'error', 'message' => get_string('publishnocap', 'local_liamateriales')]);
+}
 
 // El artefacto es binario: petición directa, sin el wrapper JSON del cliente.
 $curl = new \curl();
@@ -104,12 +117,14 @@ $fs->create_file_from_pathname([
 ], $tempfile);
 @unlink($tempfile);
 
-$latest = publisher::latest_deploy((int) $tokendata->courseid, $body->file);
-$modinfo = get_fast_modinfo((int) $tokendata->courseid);
-$cms = $modinfo->get_cms();
-$defaultname = $latest && isset($cms[$latest->cmid])
-    ? $cms[$latest->cmid]->name
-    : basename($body->file, '.md');
+// Solo se actualiza el módulo del mismo formato que siga existiendo; si no,
+// se crea uno nuevo (antes se reutilizaba el último cmid fuera cual fuera su
+// tipo, y fallaba si el profesor lo había borrado).
+$existingcmid = publisher::reusable_cmid((int) $tokendata->courseid, $body->file, $body->format);
+$cms = get_fast_modinfo((int) $tokendata->courseid)->get_cms();
+$defaultname = $existingcmid && isset($cms[$existingcmid])
+    ? $cms[$existingcmid]->name
+    : basename($body->file, '.md') . ' (' . strtoupper($body->format) . ')';
 
 try {
     $cmid = publisher::publish(
@@ -120,7 +135,7 @@ try {
         $body->sha,
         $draftitemid,
         $defaultname,
-        $latest ? (int) $latest->cmid : 0,
+        $existingcmid,
         $user->username
     );
 } catch (\Throwable $e) {
@@ -130,5 +145,8 @@ try {
 publish_respond(200, [
     'status' => 'published',
     'cmid' => $cmid,
-    'url' => (new \moodle_url('/course/view.php', ['id' => $tokendata->courseid]))->out(false),
+    // Enlace directo al módulo publicado (o al curso si no se puede resolver).
+    'url' => ($cm = get_coursemodule_from_id('', $cmid, 0, false, IGNORE_MISSING))
+        ? (new \moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cmid]))->out(false)
+        : (new \moodle_url('/course/view.php', ['id' => $tokendata->courseid]))->out(false),
 ]);

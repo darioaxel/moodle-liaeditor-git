@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026111900;        // Primera versión como local_liamateriales (antes local_courseascode).
+$plugin->version = 2026111901;        // Token con alcance (solo lectura), arreglos de Publicar desde el editor.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.1.0';
+$plugin->release = '2.2.0';

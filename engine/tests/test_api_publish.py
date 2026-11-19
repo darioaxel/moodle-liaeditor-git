@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,11 @@ from materiales_liascript.app import create_app
 from materiales_liascript.edit import EditService
 from materiales_liascript.git import LocalGitProvider
 from materiales_liascript.publish.models import PublishError, PublishRequest
-from materiales_liascript.publish.service import ArtifactExecutor, PublishService
+from materiales_liascript.publish.service import (
+    ArtifactExecutor,
+    LiaexDockerExecutor,
+    PublishService,
+)
 
 FILE = "materiales/ut03-mvc.md"
 USER = "ana"
@@ -123,3 +128,44 @@ def test_edit_service_sigue_funcionando(provider: LocalGitProvider, material_sha
     """El material publicable también se edita por el flujo normal (LIA-001)."""
     opened = EditService(provider).open(USER, FILE)
     assert opened.branch == "edicion/ana/materiales-ut03-mvc"
+
+
+# -- LiaexDockerExecutor: orden docker construida --------------------------------
+
+
+class _Completed:
+    returncode = 0
+    stderr = ""
+
+
+def _capture_docker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[list[str]]:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **_: object) -> _Completed:
+        calls.append(args)
+        out = tmp_path / args[args.index("--output") + 1].removeprefix("/work/")
+        out.write_bytes(b"ARTEFACTO")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    return calls
+
+
+def test_liaex_sin_red_por_defecto(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    calls = _capture_docker(monkeypatch, tmp_path)
+    assert LiaexDockerExecutor().generate(tmp_path, "a.md", "epub") == b"ARTEFACTO"
+    args = calls[0]
+    assert args[args.index("--network") + 1] == "none"
+    assert "--shm-size=1g" not in args
+
+
+def test_liaex_red_configurable_y_pdf(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    calls = _capture_docker(monkeypatch, tmp_path)
+    executor = LiaexDockerExecutor(
+        network="bridge", workdir=str(tmp_path.parent), host_workdir="/host/tmp"
+    )
+    executor.generate(tmp_path, "a.md", "pdf")
+    args = calls[0]
+    assert args[args.index("--network") + 1] == "bridge"
+    assert "--shm-size=1g" in args
+    assert args[args.index("-v") + 1] == f"/host/tmp/{tmp_path.name}:/work"

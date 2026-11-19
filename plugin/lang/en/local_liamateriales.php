@@ -35,6 +35,7 @@ $string['settings_max_file_size_desc'] = 'Archivos markdown mayores que este val
 // LiaEditor: tokens and save flow (LIA-011/013/014/015).
 $string['tokeninvalid'] = 'El token de edición no es válido o ha sido revocado. Vuelve a abrir el material desde Moodle.';
 $string['tokenexpired'] = 'El token de edición ha caducado. Vuelve a abrir el material desde Moodle.';
+$string['tokenreadonly'] = 'Este enlace es de vista previa (solo lectura): no permite guardar ni publicar.';
 $string['tokenmismatch'] = 'El token de edición no corresponde a este fichero y rama.';
 $string['editornotconfigured'] = 'El LiaEditor no está configurado. Establece la URL del LiaEditor en la configuración del plugin.';
 $string['invalidfile'] = 'Ruta de material no válida: {$a}';
@@ -74,3 +75,5 @@ $string['publishok'] = '«{$a}» publicado en el curso y vinculado a la versión
 $string['publishnosha'] = 'No se conoce ninguna versión de este material: guárdalo primero desde el editor.';
 $string['publishnofile'] = 'No se ha subido ningún artefacto o la subida ha fallado.';
 $string['invalidartifacttype'] = 'Tipo de artefacto no válido: {$a}';
+$string['publishnocap'] = 'No tienes permiso para publicar materiales en este curso.';
+$string['invalidbranch'] = 'No puedes editar en esa rama.';

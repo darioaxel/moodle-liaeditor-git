@@ -64,7 +64,7 @@ if (strlen($body->content) > $maxsize) {
 
 try {
     local_liamateriales_validate_file($file);
-    $tokendata = token_manager::validate($body->token, $file, $branch);
+    $tokendata = token_manager::validate($body->token, $file, $branch, true);
 } catch (\moodle_exception $e) {
     save_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
 }

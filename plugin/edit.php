@@ -33,6 +33,20 @@ if ($editorurl === '') {
     throw new \moodle_exception('editornotconfigured', 'local_liamateriales');
 }
 
+if ($branch !== '') {
+    // Continuar una sesión: solo una rama de una sesión propia de este
+    // fichero, o `main` con la capacidad editmain. Nunca una rama ajena.
+    $ownsession = $DB->record_exists('local_liamateriales_editsess', [
+        'userid' => $USER->id,
+        'file' => $file,
+        'branch' => $branch,
+    ]);
+    $mainallowed = $branch === 'main' && has_capability('local/liamateriales:editmain', $context);
+    if (!$ownsession && !$mainallowed) {
+        throw new \moodle_exception('invalidbranch', 'local_liamateriales');
+    }
+}
+
 if ($branch === '') {
     // Asegura la rama de edición del usuario (creación o reutilización, D4).
     try {

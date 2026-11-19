@@ -21,5 +21,21 @@ defined('MOODLE_INTERNAL') || die();
  * @return bool
  */
 function xmldb_local_liamateriales_upgrade(int $oldversion): bool {
+    global $DB;
+
+    $dbman = $DB->get_manager();
+
+    if ($oldversion < 2026111901) {
+        // Alcance del token: los de vista previa (solo lectura) no pueden
+        // guardar ni publicar. Los tokens existentes caducan en minutos: se
+        // marcan como de escritura (valor por defecto) sin más migración.
+        $table = new xmldb_table('local_liamateriales_token');
+        $field = new xmldb_field('readonly', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'courseid');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026111901, 'local', 'liamateriales');
+    }
+
     return true;
 }

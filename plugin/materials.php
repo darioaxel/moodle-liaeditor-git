@@ -108,8 +108,14 @@ if ($materials && !empty($materials->files)) {
     foreach ($materials->files as $material) {
         $file = $material->path;
         $actions = [];
-        // Vista previa solo lectura con token de un solo uso.
-        $previewtoken = \local_liamateriales\local\token_manager::issue((int) $USER->id, $file, $materials->branch);
+        // Vista previa con token de solo lectura (no permite guardar ni publicar).
+        $previewtoken = \local_liamateriales\local\token_manager::issue(
+            (int) $USER->id,
+            $file,
+            $materials->branch,
+            0,
+            true
+        );
         $previewcontent = (new moodle_url('/local/liamateriales/content.php', [
             'file' => $file,
             'branch' => $materials->branch,

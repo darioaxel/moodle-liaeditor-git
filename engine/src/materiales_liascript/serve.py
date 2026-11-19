@@ -9,6 +9,8 @@ entorno:
   ``diff_url`` de los conflictos.
 - ``MATERIALES_LIASCRIPT_WORKDIR`` / ``MATERIALES_LIASCRIPT_HOST_WORKDIR`` (opcionales):
   traducción de rutas docker-in-docker para liaex.
+- ``MATERIALES_LIASCRIPT_LIAEX_NETWORK`` (opcional, defecto ``none``): red del
+  contenedor de liaex; ``bridge`` si los materiales importan plantillas.
 - ``MATERIALES_LIASCRIPT_LOG_FORMAT``: ``console`` (defecto) o ``json``.
 - ``HOST`` / ``PORT``: interfaz y puerto de uvicorn (defaults 0.0.0.0:8000).
 

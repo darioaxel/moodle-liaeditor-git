@@ -21,12 +21,18 @@ defined('MOODLE_INTERNAL') || die();
  * Ciclo de vida de los tokens de un solo uso (LIA-011).
  */
 class token_manager {
-    /** Emite un token ligado a usuario+fichero+rama (y curso de origen, para publicar). */
+    /**
+     * Emite un token ligado a usuario+fichero+rama (y curso de origen, para publicar).
+     *
+     * @param bool $readonly token de solo lectura (vista previa): no sirve para
+     *     guardar ni publicar, aunque el usuario tenga esas capacidades.
+     */
     public static function issue(
         int $userid,
         string $file,
         string $branch,
         int $courseid = 0,
+        bool $readonly = false,
         ?int $ttl = null
     ): \stdClass {
         global $DB;
@@ -36,6 +42,7 @@ class token_manager {
             'tokenhash' => hash('sha256', $token),
             'userid' => $userid,
             'courseid' => $courseid,
+            'readonly' => $readonly ? 1 : 0,
             'file' => $file,
             'branch' => $branch,
             'expires' => time() + $ttl,
@@ -52,10 +59,12 @@ class token_manager {
      * rama). La rama es opcional: el contrato de publicación del editor no
      * la envía (`{file, sha, format, token}`).
      *
-     * @return \stdClass fila del token (con userid y courseid)
-     * @throws \moodle_exception si es inválido, caducó o no casa
+     * @param bool $write la operación escribe (guardar, publicar): rechaza
+     *     los tokens de solo lectura
+     * @return \stdClass fila del token (con userid, courseid y readonly)
+     * @throws \moodle_exception si es inválido, caducó, no casa o no permite escribir
      */
-    public static function validate(string $token, string $file, ?string $branch = null): \stdClass {
+    public static function validate(string $token, string $file, ?string $branch = null, bool $write = false): \stdClass {
         global $DB;
         $row = $DB->get_record('local_liamateriales_token', ['tokenhash' => hash('sha256', $token)]);
         if (!$row || $row->revoked) {
@@ -67,18 +76,22 @@ class token_manager {
         if ($row->file !== $file || ($branch !== null && $row->branch !== $branch)) {
             throw new \moodle_exception('tokenmismatch', 'local_liamateriales');
         }
+        if ($write && !empty($row->readonly)) {
+            throw new \moodle_exception('tokenreadonly', 'local_liamateriales');
+        }
         return $row;
     }
 
     /**
      * Renueva un token válido: revoca el actual y emite uno nuevo con el
-     * mismo usuario/fichero/rama (contrato C6 del roadmap del fork).
+     * mismo usuario, fichero, rama, curso de origen y modo (contrato C6). El
+     * curso se conserva para que Publicar siga funcionando tras guardar.
      */
     public static function refresh(string $token, string $file, string $branch): \stdClass {
         global $DB;
         $row = self::validate($token, $file, $branch);
         $DB->set_field('local_liamateriales_token', 'revoked', 1, ['id' => $row->id]);
-        return self::issue((int) $row->userid, $file, $branch);
+        return self::issue((int) $row->userid, $file, $branch, (int) $row->courseid, !empty($row->readonly));
     }
 
     /**

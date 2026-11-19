@@ -23,11 +23,6 @@ require_once(__DIR__ . '/lib.php');
 
 use local_liamateriales\local\token_manager;
 
-$file = required_param('file', PARAM_PATH);
-$branch = required_param('branch', PARAM_RAW);
-$token = required_param('token', PARAM_RAW);
-$readonly = optional_param('readonly', 0, PARAM_BOOL);
-
 $origin = local_liamateriales_cors_origin();
 
 /**
@@ -54,12 +49,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+// Los parámetros se leen tras el preflight: OPTIONS no los lleva.
+$file = required_param('file', PARAM_PATH);
+$branch = required_param('branch', PARAM_RAW);
+$token = required_param('token', PARAM_RAW);
+
 try {
     local_liamateriales_validate_file($file);
     $tokendata = token_manager::validate($token, $file, $branch);
 } catch (\moodle_exception $e) {
     content_error(403, get_string('tokeninvalid', 'local_liamateriales'));
 }
+// El modo lo decide el token (vista previa = solo lectura), no la URL.
+$readonly = !empty($tokendata->readonly) || optional_param('readonly', 0, PARAM_BOOL);
 
 try {
     $result = local_liamateriales_service_get('/edit/content', [

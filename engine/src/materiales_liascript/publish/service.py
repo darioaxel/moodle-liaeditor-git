@@ -41,6 +41,11 @@ class LiaexDockerExecutor(ArtifactExecutor):
     la imagen es ``liaex`` y acepta ``--input``/``--format``/``--output``.
     PDF necesita Chromium → se ejecuta con ``--shm-size=1g`` (spec §11).
 
+    **Red**: por defecto el contenedor no tiene red (``none``). Los materiales
+    con ``import:`` de plantillas LiaScript la necesitan, porque liaex las
+    descarga en cada ejecución; en ese caso se configura ``network``
+    (p. ej. ``bridge``) con ``MATERIALES_LIASCRIPT_LIAEX_NETWORK``.
+
     **Docker-in-docker**: cuando el engine corre en un contenedor y usa el
     demonio del host (socket montado), las rutas de ``-v`` las interpreta el
     host. Con ``workdir``/``host_workdir`` se traduce la ruta del checkout
@@ -49,15 +54,18 @@ class LiaexDockerExecutor(ArtifactExecutor):
     ``TMPDIR`` apuntando ahí para que los worktrees caigan en él).
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - opciones de despliegue, todas con defecto
         self,
         image: str = _DOCKER_IMAGE,
+        *,
         timeout: int = _DOCKER_TIMEOUT,
         docker_binary: str = "docker",
         workdir: str | None = None,
         host_workdir: str | None = None,
+        network: str = "none",
     ) -> None:
         self._image = image
+        self._network = network
         self._timeout = timeout
         self._docker = docker_binary
         self._workdir = workdir
@@ -81,7 +89,7 @@ class LiaexDockerExecutor(ArtifactExecutor):
             "run",
             "--rm",
             "--network",
-            "none",
+            self._network,
             "-v",
             f"{self._host_path(checkout)}:/work",
         ]

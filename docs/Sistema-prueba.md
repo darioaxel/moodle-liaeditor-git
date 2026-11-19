@@ -12,6 +12,10 @@
    - **Atención**: `config.php` NO es bind mount — los cambios en él se pierden
      si se recrea el contenedor (ver la sesión 20 de BITACORA.md para replicarlos).
 
+ * **Editor Crepe** (`fpvirtual-crepe-editor`): **http://192.168.2.253:8092**
+   (estático, desplegado por el usuario el 2026-11-19). El ajuste
+   `liaeditor_url` del plugin apunta ahí y el CORS de `content.php`/`save.php`
+   responde con ese origen.
  * **Engine courseascode** (desplegado 2026-11-06)
    - ⚠️ Desde 2026-11-19 el engine se llama `materiales_liascript-git`
      (paquete `materiales_liascript`): al redesplegar, el arranque es

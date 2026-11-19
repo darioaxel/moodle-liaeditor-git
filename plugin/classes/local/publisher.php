@@ -105,6 +105,33 @@ class publisher {
     }
 
     /**
+     * Módulo que se puede actualizar al volver a publicar un fichero en un
+     * formato: el del último despliegue de ese mismo formato, si el módulo
+     * sigue existiendo en el curso y es del tipo esperado. 0 = crear uno nuevo
+     * (primera publicación, otro formato o módulo borrado por el profesor).
+     */
+    public static function reusable_cmid(int $courseid, string $sourcefile, string $artifacttype): int {
+        global $DB;
+        if (!isset(self::TYPES[$artifacttype])) {
+            return 0;
+        }
+        $rows = $DB->get_records(
+            'local_liamateriales_deploy',
+            ['courseid' => $courseid, 'source_file' => $sourcefile, 'artifact_type' => $artifacttype],
+            'deployed_at DESC, id DESC',
+            'id, cmid',
+            0,
+            1
+        );
+        $row = $rows ? reset($rows) : null;
+        if (!$row) {
+            return 0;
+        }
+        $cm = get_coursemodule_from_id(self::TYPES[$artifacttype][0], (int) $row->cmid, $courseid, false, IGNORE_MISSING);
+        return $cm ? (int) $cm->id : 0;
+    }
+
+    /**
      * Último despliegue de un fichero en el curso (para pre-rellenar el
      * formulario de actualización), o null.
      */
