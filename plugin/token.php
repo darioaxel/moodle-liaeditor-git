@@ -8,7 +8,7 @@
  * no caduque (C6 del roadmap del fork). Revoca el token actual y emite uno
  * nuevo con el mismo usuario+fichero+rama.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -16,9 +16,9 @@
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
-use local_courseascode\local\token_manager;
+use local_liamateriales\local\token_manager;
 
-$origin = local_courseascode_cors_origin();
+$origin = local_liamateriales_cors_origin();
 
 /**
  * Respuesta JSON con CORS y cierre.

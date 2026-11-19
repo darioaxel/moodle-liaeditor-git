@@ -5,6 +5,11 @@
 **Estado**: En estudio — decisiones de arquitectura tomadas, pendiente plan de implementación
 **Documento base**: `cambio-curso-a-liascript.md` (especificación `mod_liamd` v0.1.0)
 
+> **Nota (2026-11-19)**: el plugin `local_courseascode` citado en este
+> documento se llama ahora **`local_liamateriales`** (tablas
+> `local_liamateriales_deploy`/`_editsess`/`_token`) y el repositorio,
+> **`moodle-liascript-git`**. El flujo `mod_book` del §2.1 ya no existe.
+
 ---
 
 ## 1. Propósito

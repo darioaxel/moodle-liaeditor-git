@@ -1,4 +1,4 @@
-# LiaEditor–Moodle
+# moodle-liascript-git — LiaEditor–Moodle
 
 Edición de materiales docentes en **LiaScript Markdown** alojados en Git,
 directamente desde Moodle, con **LiaEdit (LiveEditor)** self-hosted como
@@ -46,7 +46,7 @@ la vinculación, el guardado transparente y la publicación de artefactos
 
 ```text
 ┌──────────────────────────── MOODLE ────────────────────────────┐
-│  plugin (evolución de local_courseascode)                      │
+│  plugin local_liamateriales («Materiales Editables»)           │
 │  Catálogo/UI · content.php (proxy md) · save.php / publish.php │
 │  Paso "Publicar": mod_h5pactivity / mod_resource (H5P/ePub/PDF)│
 │  + registro (courseid, file, sha, tipo, cmid)                  │
@@ -76,7 +76,7 @@ la vinculación, el guardado transparente y la publicación de artefactos
 ├── engine/                 # engine Python 3.12 (FastAPI, src-layout)
 │   ├── src/courseascode/   # app, api, edit, publish, git
 │   └── tests/
-├── plugin/                 # plugin Moodle «Materiales Editables» (local_courseascode)
+├── plugin/                 # plugin Moodle «Materiales Editables» (local_liamateriales)
 ├── docs/                   # arquitectura v1, spec mod_liamd, roadmaps,
 │                           # tasklist v1; historico/ = Course as Code
 ├── BITACORA.md             # estado del desarrollo (actualizar cada sesión)

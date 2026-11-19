@@ -4,18 +4,18 @@
 /**
  * Language strings.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 $string['pluginname'] = 'Materiales Editables';
-$string['courseascode:viewcatalog'] = 'Ver el catálogo de materiales editables';
-$string['courseascode:deploy'] = 'Publicar y actualizar materiales editables';
-$string['courseascode:edit'] = 'Editar materiales LiaScript en el LiaEditor';
-$string['courseascode:editmain'] = 'Editar materiales directamente en la rama principal';
+$string['liamateriales:viewcatalog'] = 'Ver el catálogo de materiales editables';
+$string['liamateriales:deploy'] = 'Publicar y actualizar materiales editables';
+$string['liamateriales:edit'] = 'Editar materiales LiaScript en el LiaEditor';
+$string['liamateriales:editmain'] = 'Editar materiales directamente en la rama principal';
 $string['privacy:metadata:reason'] = 'El plugin solo almacena metadatos de edición y publicación de materiales.';
-$string['servicenotconfigured'] = 'El servicio courseascode no está configurado. Establece $CFG->local_courseascode_service_url (ver README).';
-$string['servicerror'] = 'El servicio courseascode devolvió un error: {$a}';
+$string['servicenotconfigured'] = 'El engine no está configurado. Establece $CFG->local_liamateriales_service_url (ver README).';
+$string['servicerror'] = 'El engine devolvió un error: {$a}';
 
 // Material states (by SHA comparison, §5.3).
 $string['state_up_to_date'] = 'Actualizado';

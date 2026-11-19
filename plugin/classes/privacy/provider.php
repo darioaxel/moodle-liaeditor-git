@@ -1,16 +1,16 @@
 <?php
 // Privacy API (Moodle exige provider para plugins con datos).
-// PENDIENTE: editsess, token y ldeploy guardan userid/username; hace falta
+// PENDIENTE: editsess, token y deploy guardan userid/username; hace falta
 // un provider real (metadata + export + delete) en lugar del null provider.
 
 /**
  * Privacy provider.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_courseascode\privacy;
+namespace local_liamateriales\privacy;
 
 defined('MOODLE_INTERNAL') || die();
 

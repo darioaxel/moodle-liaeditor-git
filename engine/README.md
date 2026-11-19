@@ -1,7 +1,7 @@
 # courseascode-engine
 
 Engine del sistema **LiaEditor–Moodle**: el único componente que habla con
-Git (D2). El plugin Moodle «Materiales Editables» (`local_courseascode`) lo
+Git (D2). El plugin Moodle «Materiales Editables» (`local_liamateriales`) lo
 consume server-to-server para editar y publicar materiales LiaScript.
 
 ## Arquitectura

@@ -13,8 +13,9 @@
 - **Flujo vigente**: materiales LiaScript `.md` en Git → edición en LiaEdit
   self-hosted (fork) → guardado vía `save.php` → engine (ramas
   `edicion/*`, conflictos 409) → publicación H5P/ePub/PDF con liaex.
-- **Plugin** «Materiales Editables» 2.1.0 (`local_courseascode`, versión
-  2026111900). **Engine** 2.0.0 (solo `/edit/*`, `/publish`, `/health`).
+- **Plugin** «Materiales Editables» 2.1.0 (**`local_liamateriales`**,
+  versión 2026111900; antes `local_courseascode`). Repositorio:
+  **`moodle-liascript-git`**. **Engine** 2.0.0 (solo `/edit/*`, `/publish`, `/health`).
 - **Flujo legado "Course as Code" (`mod_book`) eliminado del código** el
   2026-11-19 (sesión 24). Su progreso por fases (ENG-001–106) y su
   documentación están en [docs/historico/](docs/historico/).
@@ -24,6 +25,33 @@
   en `publish_api.php`, reutilización de cmid entre formatos).
 
 ## Registro de sesiones
+
+### 2026-11-19 — Sesión 25: Renombrado del plugin y del repositorio
+
+- **Plugin**: componente `local_courseascode` → **`local_liamateriales`**
+  (el nombre pedido, `local_materiales_liascript-git`, no es válido:
+  Moodle no admite guiones y el prefijo dejaría sin sitio a los nombres de
+  tabla, limitados a 28 caracteres). Renombrados namespace, funciones
+  `local_liamateriales_*`, capabilities `local/liamateriales:*`, URLs
+  `/local/liamateriales/*`, `$CFG->local_liamateriales_service_url`,
+  config del plugin, fichero de idioma y tablas
+  `local_liamateriales_deploy` (antes `ldeploy`), `_editsess` y `_token`.
+  Nombre visible sin cambios: «Materiales Editables».
+- **Instalación desde cero** (decisión del usuario, sin migración de
+  datos): `upgrade.php` arranca vacío en 2026111900.
+- **Repositorio**: nuevo nombre `moodle-liascript-git` en README y docs.
+  El engine conserva su paquete `courseascode` y las variables
+  `COURSEASCODE_*` (fuera del alcance del cambio).
+- **Verificado**: `php -l` sin errores (php:8.3-cli en Docker),
+  `install.xml` válido, nombres de tabla ≤ 28 caracteres.
+- **Pendiente en el servidor de pruebas**: desinstalar
+  `local_courseascode` (Administración → Plugins → Desinstalar, o
+  `admin/cli/uninstall_plugins.php --plugins=local_courseascode --run`),
+  montar `plugin/` en `public/local/liamateriales`, instalar, mover
+  `$CFG->local_courseascode_service_url` a
+  `$CFG->local_liamateriales_service_url` en `config.php`, reconfigurar
+  los ajustes (URL del editor, CORS, TTL) y reasignar capabilities.
+  Renombrar el repo en GitHub y actualizar `origin` en los clones.
 
 ### 2026-11-19 — Sesión 24: Eliminación de la deuda del flujo legado mod_book
 

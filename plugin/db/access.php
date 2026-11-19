@@ -4,14 +4,14 @@
 /**
  * Access definitions.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
-    'local/courseascode:viewcatalog' => [
+    'local/liamateriales:viewcatalog' => [
         'captype' => 'read',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [
@@ -20,7 +20,7 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
-    'local/courseascode:deploy' => [
+    'local/liamateriales:deploy' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [
@@ -28,7 +28,7 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
-    'local/courseascode:edit' => [
+    'local/liamateriales:edit' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [
@@ -36,7 +36,7 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
-    'local/courseascode:editmain' => [
+    'local/liamateriales:editmain' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [

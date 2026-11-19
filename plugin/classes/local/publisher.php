@@ -4,17 +4,17 @@
 /**
  * Publisher: crea/actualiza el módulo del curso a partir del artefacto
  * generado del material (H5P, ePub, PDF) y registra el despliegue
- * curso↔SHA↔cmid en ``local_courseascode_ldeploy`` (trazabilidad D6).
+ * curso↔SHA↔cmid en ``local_liamateriales_deploy`` (trazabilidad D6).
  *
  * Mapeo tipo → módulo: ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
  * mod_resource (descarga accesible). Desde Materiales Editables v2.0 los
  * formatos de publicación son solo H5P, ePub y PDF.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_courseascode\local;
+namespace local_liamateriales\local;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -59,7 +59,7 @@ class publisher {
         require_once($CFG->dirroot . '/course/modlib.php');
 
         if (!isset(self::TYPES[$artifacttype])) {
-            throw new \moodle_exception('invalidartifacttype', 'local_courseascode', '', $artifacttype);
+            throw new \moodle_exception('invalidartifacttype', 'local_liamateriales', '', $artifacttype);
         }
         [$modulename, $filefield] = self::TYPES[$artifacttype];
         $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
@@ -91,7 +91,7 @@ class publisher {
             $cmid = (int) $created->coursemodule;
         }
 
-        $DB->insert_record('local_courseascode_ldeploy', (object) [
+        $DB->insert_record('local_liamateriales_deploy', (object) [
             'courseid' => $courseid,
             'source_file' => $sourcefile,
             'git_commit' => $sha,
@@ -111,7 +111,7 @@ class publisher {
     public static function latest_deploy(int $courseid, string $sourcefile): ?\stdClass {
         global $DB;
         $rows = $DB->get_records(
-            'local_courseascode_ldeploy',
+            'local_liamateriales_deploy',
             ['courseid' => $courseid, 'source_file' => $sourcefile],
             'deployed_at DESC, id DESC',
             '*',
