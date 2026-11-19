@@ -149,13 +149,16 @@ function local_liamateriales_inject_lms_block(string $markdown, array $config): 
         $rendered = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
         $yaml .= "  {$key}: {$rendered}\n";
     }
-    if (preg_match('/^\s*<!--(.*?)-->/s', $markdown, $match)) {
-        $header = $match[1];
+    if (preg_match('/^\s*<!--(.*?)-->/s', $markdown, $match, PREG_OFFSET_CAPTURE)) {
+        [$header, $offset] = $match[1];
         // Sustituye un bloque previo si existe (claves raíz duplicadas no valen).
         $header = preg_replace('/liascript-lms:\n(  .*\n?)*/', '', $header) ?? $header;
-        $header = rtrim($header) . "\n\n" . $yaml . "\n";
-        $result = preg_replace('/^\s*<!--.*?-->/s', '<!--' . $header . '-->', $markdown, 1);
-        return $result ?? $markdown;
+        // Inyección reversible: el bloque va justo antes de `-->` sin tocar el
+        // resto de la cabecera, de modo que el editor, al quitar sus líneas,
+        // devuelve la cabecera byte a byte. substr_replace (no preg_replace)
+        // para que `$1` o `\\` de la cabecera no se interpreten.
+        $header .= (str_ends_with($header, "\n") ? '' : "\n") . $yaml;
+        return substr_replace($markdown, $header, $offset, strlen($match[1][0]));
     }
     return "<!--\n" . $yaml . "-->\n\n" . $markdown;
 }

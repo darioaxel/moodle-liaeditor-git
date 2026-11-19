@@ -28,6 +28,29 @@
 
 ## Registro de sesiones
 
+### 2026-11-19 — Sesión 27: Fase 0 del editor Crepe (PoC) — go condicionado
+
+- **Repo del editor**: `FPVirtual/fpvirtual-crepe-editor`, rama `poc/m0`
+  (Vue 3 + Vite + TS, `@milkdown/crepe` 7.23.0 fijado). Dialecto LiaScript
+  en `src/liascript/`: cabecera y bloque LMS fuera del editor, transformer
+  remark que protege como nodo atómico (fuente literal) quizzes, efectos,
+  narración, macros, HTML, código con flags, marcas inline, enlaces por
+  referencia y encabezados setext, agrupando bloques adyacentes y `****`;
+  serialización que preserva la fuente por nodo de nivel superior.
+- **Resultados M0** (informe en `docs/informe-m0.md` del editor y §9 del
+  roadmap): 8/8 fixtures idempotentes byte a byte, sin diff semántico, con
+  LiaScript literal y edición local; 8/8 equivalentes según
+  `liaex -f fullJson`; bundle 1,50 MB (472 kB gzip); tema de 3107 líneas:
+  apertura 1,6 s, guardado ≈ 70 ms.
+- **Hallazgos**: liaex no valida (R7 hay que redefinirla); liaex necesita
+  red con `import:` (el engine usa `--network none`, así que publicar falla
+  con templates); errores de quiz en `demo-liascript.md`.
+- **Backend (rama `feature/editor-crepe`)**: inyección del bloque
+  `liascript-lms` reversible y sin el fallo de `$1`/`\\` en
+  `preg_replace`; roadmap actualizado (repo del editor, §9).
+- **Pendiente**: materiales reales para el corpus; decidir el nuevo R7 y la
+  red de liaex; M1 (LmsBridge, guardado, panel de cabecera).
+
 ### 2026-11-19 — Sesión 26: Renombrado del engine a materiales_liascript-git
 
 - **Engine**: distribución `materiales_liascript-git` (pyproject) y paquete

@@ -2,7 +2,7 @@
 
 **Versión**: 0.3.1-draft
 **Fecha**: 2026-11-18
-**Estado**: Propuesta — pendiente PoC (Fase 0) y decisión go/no-go
+**Estado**: Fase 0 (PoC) hecha el 2026-11-19 — **go condicionado** (ver §9)
 **Documentos base**:
 
 - `docs/prompts/cambio_milkdown-crepe.md` (briefing de la migración;
@@ -17,7 +17,7 @@
 |---|----------|
 | R1 | Alcance: **solo la capa de presentación-edición**. Se mantiene Markdown LiaScript como formato y todo el backend (plugin, engine, Git, liaex) |
 | R2 | Formatos de exportación: **solo `h5p`, `epub`, `pdf`** (los ya soportados por el engine). SCORM queda descartado |
-| R3 | El editor se desarrolla en un **repo propio `crepe-editor`** (prompt de desarrollo: `docs/prompts/desarrollo-crepe-editor.md`); este repo mantiene plugin, engine y docs |
+| R3 | El editor se desarrolla en un **repo propio, [`FPVirtual/fpvirtual-crepe-editor`](https://github.com/FPVirtual/fpvirtual-crepe-editor)** (prompt de desarrollo: `docs/prompts/desarrollo-crepe-editor.md`); este repo mantiene plugin, engine y docs, y sus cambios para el editor van en la rama `feature/editor-crepe` |
 | R4 | **Sin preview LiaScript completa**: la vista WYSIWYG del editor es la única preview. Los constructos propios de LiaScript (quizzes, ejecutables) se muestran como tarjetas/placeholders y su comportamiento real solo se comprueba en el artefacto publicado |
 | R5 | Colaboración multi-autor: **fuera de alcance** (el modelo de ramas por usuario D4 ya cubre el aislamiento) |
 | R6 | Exportador en navegador: el **LiaScript-Exporter es un proyecto independiente del editor** y sigue disponible como flujo manual de respaldo (y como forma opcional de "ver como el alumno" antes de publicar), aunque se retire LiveEditor |
@@ -36,7 +36,7 @@ propio, como hoy LiaEdit self-hosted).
 LiaScript en Git, el pipeline de exportación sigue siendo `liaex`
 (engine, Docker) y las decisiones D1–D10 siguen vigentes; solo cambia
 D8/D10 (el editor ya no es un fork de LiveEditor, sino una app propia
-dentro de este repo).
+en el repo `fpvirtual-crepe-editor`).
 
 ## 2. Qué se conserva, qué se reutiliza y qué se retira
 
@@ -94,7 +94,7 @@ dentro de este repo).
 └────────────────────────────────────────────────────────────────┘
                                ▲ token de un solo uso (D9)
 ┌──────────────────────────────┴─────────────────────────────────┐
-│  EDITOR CREPE (editor/ en este repo, app estática)             │
+│  EDITOR CREPE (repo fpvirtual-crepe-editor, app estática)      │
 │  Crepe/Milkdown (ProseMirror + remark) · nodos LiaScript       │
 │  LmsBridge (save/409/token) · panel de cabecera · modo fuente  │
 │  Sin preview LiaScript: WYSIWYG + tarjetas/placeholders (R4)   │
@@ -340,3 +340,50 @@ inspección visual de quizzes y ejecutables antes de publicar.
 | Bundle/rendimiento en docs largos | Media | Medio | Medición en PoC; lazy-loading; virtualización |
 | Basura de assets en el repo | Media | Medio | Hash por contenido, GC cron, commit único (Fase 3) |
 | Acoplamiento a API móvil de Crepe/Milkdown | Media | Alto | Versiones fijadas + suite de round-trip como red |
+
+## 9. Estado — Fase 0 (2026-11-19)
+
+PoC en `fpvirtual-crepe-editor`, rama `poc/m0`. Informe completo en ese
+repo: `docs/informe-m0.md`. Recomendación: **go condicionado**.
+
+| Criterio de salida | Resultado |
+| --- | --- |
+| ≥ 95 % de fixtures sin diff semántico | 8/8 (100 %); además guardar sin editar es idempotente byte a byte |
+| 100 % de constructos cubiertos (nada se pierde) | ✅ todo bloque LiaScript llega literal, también tras editar |
+| liaex acepta el serializado; render equivalente | 8/8 según la huella `liaex -f fullJson`, en el peor caso (todo re-serializado) |
+| Validación con liaex < ~3 s | 0,85–1,3 s en frío, **pero liaex no valida** (ver abajo) |
+| Bundle y carga con tema de 50+ páginas | 1,50 MB (472 kB gzip) inicial; tema de 3107 líneas: apertura 1,6 s y guardado ≈ 70 ms (jsdom) |
+
+**Condiciones del go:**
+
+1. **Corpus real.** Hoy hay 3 materiales reales cortos y 5 casos escritos a
+   mano. Antes de M1 hacen falta materiales de producción (sobre todo los
+   que usan el template de cajas `@nota/@aviso/@error`) y un tema real de
+   50+ páginas.
+2. **Redefinir R7.** El parser de LiaScript es tolerante: `liaex` termina
+   con código 0 incluso con la cabecera sin cerrar (que pierde en silencio),
+   quizzes rotos o vallas sin cerrar. No hay errores con línea que devolver
+   en un 422. Propuesta: una **comprobación estructural** en el engine
+   (~1 s) que compare la huella `fullJson` (secciones, quizzes y su tipo,
+   encuestas, tareas, cabecera) con la de la versión anterior. Avisaría de
+   desapariciones o cambios de tipo, y bloquearía solo si la cabecera queda
+   vacía cuando la fuente empieza por `<!--`.
+
+**Hallazgos para el backend:**
+
+- **liaex necesita red con `import:`**: descarga los templates en cada
+  ejecución y falla con `--network none`, que es como lo lanza hoy el
+  engine. Publicar un material con imports fallará. Decisión pendiente:
+  salida HTTP con lista de dominios permitidos, o resolver los imports antes
+  de lanzar liaex.
+- **Inyección del bloque `liascript-lms` reversible** (hecho en
+  `feature/editor-crepe`): el bloque va justo antes de `-->` sin `rtrim` de
+  la cabecera, con `substr_replace` (corrige también el fallo de `$1`/`\`
+  en `preg_replace`).
+- **Apertura**: el plugin genera `?/open/file/<url>` (la ruta del fork); el
+  editor nuevo acepta esa forma y `?url=`, así que basta con cambiar
+  `liaeditor_url` para probarlo.
+- **Contenido**: en `demo-liascript.md`, «opción única» (`[[( )]]`) se
+  interpreta como dos quizzes de texto y «Encuestas» (`[( )]`) es un quiz
+  puntuable de opción única.
+
