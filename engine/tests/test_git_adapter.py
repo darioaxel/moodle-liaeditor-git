@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from courseascode.git import GitProviderError, LocalGitProvider
+from materiales_liascript.git import GitProviderError, LocalGitProvider
 
 SHA_LEN = 40
 OTRA_COMMITS_AHEAD = 1

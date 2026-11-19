@@ -13,7 +13,7 @@
  * Respuestas: 200 ``{status, cmid, url}`` · 403 token inválido · 400
  * petición incompleta · 502 error del engine.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -21,10 +21,10 @@
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
-use local_courseascode\local\publisher;
-use local_courseascode\local\token_manager;
+use local_liamateriales\local\publisher;
+use local_liamateriales\local\token_manager;
 
-$origin = local_courseascode_cors_origin();
+$origin = local_liamateriales_cors_origin();
 
 /**
  * Respuesta JSON con CORS y cierre.
@@ -58,7 +58,7 @@ if (!in_array($body->format, ['h5p', 'epub', 'pdf'], true)) {
 }
 
 try {
-    local_courseascode_validate_file($body->file);
+    local_liamateriales_validate_file($body->file);
     $tokendata = token_manager::validate($body->token, $body->file);
 } catch (\moodle_exception $e) {
     publish_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
@@ -73,7 +73,7 @@ $curl = new \curl();
 $curl->setHeader('Content-Type: application/json');
 $curl->setHeader('Accept: application/octet-stream');
 $response = $curl->post(
-    local_courseascode_service_url() . '/publish',
+    local_liamateriales_service_url() . '/publish',
     json_encode(['file' => $body->file, 'sha' => $body->sha, 'format' => $body->format])
 );
 $status = (int) ($curl->get_info()['http_code'] ?? 0);

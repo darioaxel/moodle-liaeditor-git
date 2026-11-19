@@ -17,7 +17,7 @@ from git import Repo
 from git.exc import BadName, GitCommandError, InvalidGitRepositoryError
 from git.objects import Blob, Commit, Tree
 
-from courseascode.git.provider import BranchMovedError, GitProvider, GitProviderError
+from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
 
 # SHA del árbol vacío (constante bien conocida de Git), para crear
 # directorios intermedios al commitear un archivo en una ruta nueva.
@@ -39,7 +39,7 @@ class LocalGitProvider(GitProvider):
 
     @contextmanager
     def checkout_ref(self, ref: str) -> Iterator[Path]:
-        tmp = Path(tempfile.mkdtemp(prefix="courseascode-wt-"))
+        tmp = Path(tempfile.mkdtemp(prefix="materiales-liascript-wt-"))
         worktree_path = tmp / "checkout"
         self._git("worktree", "add", "--detach", str(worktree_path), ref)
         try:
@@ -137,8 +137,8 @@ class LocalGitProvider(GitProvider):
         env = {
             "GIT_AUTHOR_NAME": author_name.strip(),
             "GIT_AUTHOR_EMAIL": author_email,
-            "GIT_COMMITTER_NAME": "courseascode-engine",
-            "GIT_COMMITTER_EMAIL": "engine@courseascode.local",
+            "GIT_COMMITTER_NAME": "materiales-liascript-git",
+            "GIT_COMMITTER_EMAIL": "engine@materiales-liascript.local",
         }
         commit = self._git_in(["commit-tree", tree, "-p", base], message, env=env)
         try:

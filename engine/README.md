@@ -1,13 +1,13 @@
-# courseascode-engine
+# materiales_liascript-git (engine)
 
 Engine del sistema **LiaEditor–Moodle**: el único componente que habla con
-Git (D2). El plugin Moodle «Materiales Editables» (`local_courseascode`) lo
+Git (D2). El plugin Moodle «Materiales Editables» (`local_liamateriales`) lo
 consume server-to-server para editar y publicar materiales LiaScript.
 
 ## Arquitectura
 
 ```text
-src/courseascode/
+src/materiales_liascript/
 ├── app.py            # create_app(): monta /edit/*, /publish y /health
 ├── serve.py          # arranque uvicorn configurado por entorno
 ├── logging_config.py # structlog + correlation id por petición
@@ -49,8 +49,8 @@ CONTENT_REPO=/ruta/al/clon make serve
 | --- | --- | --- |
 | `CONTENT_REPO` | sí | Clon del repo de contenidos; su `origin` necesita credenciales de escritura (push de ramas, D1) |
 | `CONTENT_REPO_URL` | no | URL del repo en la forja, para la `diff_url` de los conflictos |
-| `COURSEASCODE_WORKDIR` / `COURSEASCODE_HOST_WORKDIR` | no | Traducción de rutas docker-in-docker para liaex (mismo bind mount visto desde el contenedor y desde el host) |
-| `COURSEASCODE_LOG_FORMAT` | no | `console` (defecto) o `json` |
+| `MATERIALES_LIASCRIPT_WORKDIR` / `MATERIALES_LIASCRIPT_HOST_WORKDIR` | no | Traducción de rutas docker-in-docker para liaex (mismo bind mount visto desde el contenedor y desde el host) |
+| `MATERIALES_LIASCRIPT_LOG_FORMAT` | no | `console` (defecto) o `json` |
 | `HOST` / `PORT` | no | Interfaz y puerto (defecto `0.0.0.0:8000`) |
 
 ## Docker

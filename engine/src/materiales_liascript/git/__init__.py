@@ -1,7 +1,7 @@
 """GitProvider (interfaz) + LocalGitProvider: lectura, worktrees aislados y commits plumbing."""
 
-from courseascode.git.local_provider import LocalGitProvider
-from courseascode.git.provider import BranchMovedError, GitProvider, GitProviderError
+from materiales_liascript.git.local_provider import LocalGitProvider
+from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
 
 __all__ = [
     "BranchMovedError",

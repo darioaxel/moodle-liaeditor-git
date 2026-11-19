@@ -7,12 +7,12 @@ entorno:
   ``origin`` con credenciales de escritura para el push, D1).
 - ``CONTENT_REPO_URL`` (opcional): URL del repo en la forja, para la
   ``diff_url`` de los conflictos.
-- ``COURSEASCODE_WORKDIR`` / ``COURSEASCODE_HOST_WORKDIR`` (opcionales):
+- ``MATERIALES_LIASCRIPT_WORKDIR`` / ``MATERIALES_LIASCRIPT_HOST_WORKDIR`` (opcionales):
   traducción de rutas docker-in-docker para liaex.
-- ``COURSEASCODE_LOG_FORMAT``: ``console`` (defecto) o ``json``.
+- ``MATERIALES_LIASCRIPT_LOG_FORMAT``: ``console`` (defecto) o ``json``.
 - ``HOST`` / ``PORT``: interfaz y puerto de uvicorn (defaults 0.0.0.0:8000).
 
-Uso local: ``CONTENT_REPO=/ruta/al/repo python -m courseascode.serve``.
+Uso local: ``CONTENT_REPO=/ruta/al/repo python -m materiales_liascript.serve``.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 
-from courseascode.app import create_app
+from materiales_liascript.app import create_app
 
 
 def build_app() -> FastAPI:

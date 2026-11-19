@@ -17,10 +17,10 @@ from dataclasses import dataclass
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
-from courseascode.edit.branches import EditError
-from courseascode.git.provider import GitProvider
-from courseascode.publish.models import PublishError, PublishRequest
-from courseascode.publish.service import ArtifactExecutor, PublishService
+from materiales_liascript.edit.branches import EditError
+from materiales_liascript.git.provider import GitProvider
+from materiales_liascript.publish.models import PublishError, PublishRequest
+from materiales_liascript.publish.service import ArtifactExecutor, PublishService
 
 
 @dataclass(frozen=True)

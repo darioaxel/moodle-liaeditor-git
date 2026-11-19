@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from courseascode.app import create_app
-from courseascode.edit import EditService
-from courseascode.git import LocalGitProvider
-from courseascode.publish.models import PublishError, PublishRequest
-from courseascode.publish.service import ArtifactExecutor, PublishService
+from materiales_liascript.app import create_app
+from materiales_liascript.edit import EditService
+from materiales_liascript.git import LocalGitProvider
+from materiales_liascript.publish.models import PublishError, PublishRequest
+from materiales_liascript.publish.service import ArtifactExecutor, PublishService
 
 FILE = "materiales/ut03-mvc.md"
 USER = "ana"

@@ -13,7 +13,7 @@
  * cabecera (roadmap del fork §C2): endpoints de guardado/renovación, SHA,
  * token y modo solo lectura. CORS restringido al origen del editor.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -21,14 +21,14 @@
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
-use local_courseascode\local\token_manager;
+use local_liamateriales\local\token_manager;
 
 $file = required_param('file', PARAM_PATH);
 $branch = required_param('branch', PARAM_RAW);
 $token = required_param('token', PARAM_RAW);
 $readonly = optional_param('readonly', 0, PARAM_BOOL);
 
-$origin = local_courseascode_cors_origin();
+$origin = local_liamateriales_cors_origin();
 
 /**
  * Respuesta de error JSON con CORS (el editor la muestra como pantalla clara).
@@ -55,14 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 try {
-    local_courseascode_validate_file($file);
+    local_liamateriales_validate_file($file);
     $tokendata = token_manager::validate($token, $file, $branch);
 } catch (\moodle_exception $e) {
-    content_error(403, get_string('tokeninvalid', 'local_courseascode'));
+    content_error(403, get_string('tokeninvalid', 'local_liamateriales'));
 }
 
 try {
-    $result = local_courseascode_service_get('/edit/content', [
+    $result = local_liamateriales_service_get('/edit/content', [
         'file' => $file,
         'branch' => $branch,
     ]);
@@ -70,8 +70,8 @@ try {
     content_error(502, $e->getMessage());
 }
 
-$baseurl = (new \moodle_url('/local/courseascode/save.php'))->out(false);
-$tokenurl = (new \moodle_url('/local/courseascode/token.php'))->out(false);
+$baseurl = (new \moodle_url('/local/liamateriales/save.php'))->out(false);
+$tokenurl = (new \moodle_url('/local/liamateriales/token.php'))->out(false);
 $returnurl = (new \moodle_url('/my/courses.php'))->out(false);
 
 $lmsconfig = [
@@ -87,10 +87,10 @@ $lmsconfig = [
 // Publicación en un clic (D7 fase 2): solo si el token conoce el curso de
 // origen — el editor muestra el botón Publicar solo si hay publish_endpoint.
 if (!$readonly && (int) $tokendata->courseid > 0) {
-    $lmsconfig['publish_endpoint'] = (new \moodle_url('/local/courseascode/publish_api.php'))->out(false);
+    $lmsconfig['publish_endpoint'] = (new \moodle_url('/local/liamateriales/publish_api.php'))->out(false);
 }
 
-$markdown = local_courseascode_inject_lms_block($result->content, $lmsconfig);
+$markdown = local_liamateriales_inject_lms_block($result->content, $lmsconfig);
 
 http_response_code(200);
 header('Content-Type: text/plain; charset=utf-8');

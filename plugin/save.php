@@ -14,7 +14,7 @@
  * conflict, resolution_branch, current_sha, diff_url}`` · 403 token
  * inválido · 502 error del engine.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -22,9 +22,9 @@
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
-use local_courseascode\local\token_manager;
+use local_liamateriales\local\token_manager;
 
-$origin = local_courseascode_cors_origin();
+$origin = local_liamateriales_cors_origin();
 
 /**
  * Respuesta JSON con CORS y cierre.
@@ -57,13 +57,13 @@ if (!is_object($body) || empty($body->file) || empty($body->branch) || empty($bo
 
 $file = $body->file;
 $branch = $body->branch;
-$maxsize = (int) get_config('local_courseascode', 'max_file_size') ?: 1048576;
+$maxsize = (int) get_config('local_liamateriales', 'max_file_size') ?: 1048576;
 if (strlen($body->content) > $maxsize) {
     save_respond(413, ['status' => 'error', 'message' => 'archivo demasiado grande para edición online']);
 }
 
 try {
-    local_courseascode_validate_file($file);
+    local_liamateriales_validate_file($file);
     $tokendata = token_manager::validate($body->token, $file, $branch);
 } catch (\moodle_exception $e) {
     save_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
@@ -72,7 +72,7 @@ try {
 $user = \core_user::get_user($tokendata->userid);
 
 try {
-    [$status, $result] = local_courseascode_service_post_full('/edit/save', [
+    [$status, $result] = local_liamateriales_service_post_full('/edit/save', [
         'user' => $user->username,
         'file' => $file,
         'branch' => $branch,
@@ -86,7 +86,7 @@ try {
 
 if ($status === 200) {
     // D3: el plugin registra la versión modificada después del commit.
-    local_courseascode_record_save((int) $user->id, $file, $branch, $result->new_sha);
+    local_liamateriales_record_save((int) $user->id, $file, $branch, $result->new_sha);
     // Contrato C6: token renovado en cada respuesta 200.
     $newtoken = token_manager::refresh($body->token, $file, $branch);
     save_respond(200, [
@@ -94,14 +94,14 @@ if ($status === 200) {
         'new_sha' => $result->new_sha,
         'branch' => $branch,
         'token' => $newtoken->token,
-        'message' => get_string('savedok', 'local_courseascode'),
+        'message' => get_string('savedok', 'local_liamateriales'),
     ]);
 }
 
 if ($status === 409) {
     save_respond(409, [
         'status' => 'conflict',
-        'message' => get_string('saveconflict', 'local_courseascode'),
+        'message' => get_string('saveconflict', 'local_liamateriales'),
         'resolution_branch' => $result->resolution_branch,
         'current_sha' => $result->current_sha,
         'diff_url' => $result->diff_url ?? null,

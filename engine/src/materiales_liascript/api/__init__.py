@@ -1,4 +1,4 @@
 """Routers FastAPI que consume el plugin Moodle (``/edit/*`` y ``/publish``).
 
-Se montan en ``courseascode.app.create_app``.
+Se montan en ``materiales_liascript.app.create_app``.
 """

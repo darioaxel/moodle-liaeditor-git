@@ -78,7 +78,7 @@ dentro de este repo).
 
 ```
 ┌──────────────────────────── MOODLE ────────────────────────────┐
-│  plugin local_courseascode (sin cambios funcionales)           │
+│  plugin local_liamateriales (sin cambios funcionales)          │
 │  edit.php → content.php · save.php · token.php · publish.php   │
 │  + upload.php (nuevo, assets)  + asset.php (imágenes, nuevo)   │
 └──────────────────────────────┬─────────────────────────────────┘

@@ -5,6 +5,11 @@
 **Estado**: En estudio — decisiones de arquitectura tomadas, pendiente plan de implementación
 **Documento base**: `cambio-curso-a-liascript.md` (especificación `mod_liamd` v0.1.0)
 
+> **Nota (2026-11-19)**: el plugin `local_courseascode` citado en este
+> documento se llama ahora **`local_liamateriales`** (tablas
+> `local_liamateriales_deploy`/`_editsess`/`_token`) y el repositorio,
+> **`moodle-liascript-git`**. El flujo `mod_book` del §2.1 ya no existe.
+
 ---
 
 ## 1. Propósito
@@ -375,4 +380,4 @@ original): usuario, fichero, rama, `opened_at`, `last_save`,
 - Exporter npm: <https://www.npmjs.com/package/@liascript/exporter>
 - Documentación LiaScript: <https://liascript.github.io/>
 - Plugin actual: `plugin/README.md`
-- Contrato engine↔plugin actual: `engine/src/courseascode/moodle/functions.py`
+- Contrato engine↔plugin actual: `engine/README.md` (endpoints) y `plugin/README.md`

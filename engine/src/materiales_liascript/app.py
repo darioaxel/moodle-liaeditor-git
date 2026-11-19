@@ -2,9 +2,9 @@
 
 Monta los dos routers que consume el plugin «Materiales Editables»:
 
-- ``/edit/*`` (``courseascode.api.edit``): ramas ``edicion/*``, contenido,
+- ``/edit/*`` (``materiales_liascript.api.edit``): ramas ``edicion/*``, contenido,
   guardado con optimistic locking por SHA y estado (D2-D5).
-- ``/publish`` (``courseascode.api.publish``): artefactos H5P/ePub/PDF con
+- ``/publish`` (``materiales_liascript.api.publish``): artefactos H5P/ePub/PDF con
   liaex (D7 fase 2).
 
 Más ``GET /health`` para el healthcheck del contenedor.
@@ -19,12 +19,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 from starlette.middleware.base import RequestResponseEndpoint
 
-from courseascode.api.edit import EditApiDeps, create_edit_router
-from courseascode.api.publish import PublishApiDeps, create_publish_router
-from courseascode.git.local_provider import LocalGitProvider
-from courseascode.git.provider import GitProvider, GitProviderError
-from courseascode.logging_config import bound_correlation, configure_logging
-from courseascode.publish.service import ArtifactExecutor, LiaexDockerExecutor
+from materiales_liascript.api.edit import EditApiDeps, create_edit_router
+from materiales_liascript.api.publish import PublishApiDeps, create_publish_router
+from materiales_liascript.git.local_provider import LocalGitProvider
+from materiales_liascript.git.provider import GitProvider, GitProviderError
+from materiales_liascript.logging_config import bound_correlation, configure_logging
+from materiales_liascript.publish.service import ArtifactExecutor, LiaexDockerExecutor
 
 
 def create_app(
@@ -54,12 +54,12 @@ def create_app(
         # Docker-in-docker: WORKDIR/HOST_WORKDIR traducen las rutas de -v
         # entre la vista del contenedor y la del demonio del host.
         docker_executor = LiaexDockerExecutor(
-            workdir=os.environ.get("COURSEASCODE_WORKDIR"),
-            host_workdir=os.environ.get("COURSEASCODE_HOST_WORKDIR"),
+            workdir=os.environ.get("MATERIALES_LIASCRIPT_WORKDIR"),
+            host_workdir=os.environ.get("MATERIALES_LIASCRIPT_HOST_WORKDIR"),
         )
         executor = docker_executor if docker_executor.available() else None
 
-    app = FastAPI(title="courseascode engine", docs_url=None, redoc_url=None)
+    app = FastAPI(title="materiales_liascript-git engine", docs_url=None, redoc_url=None)
 
     @app.middleware("http")
     async def _correlation_middleware(

@@ -19,4 +19,4 @@ typecheck:
 check: lint typecheck test
 
 serve:
-	python -m courseascode.serve
+	python -m materiales_liascript.serve

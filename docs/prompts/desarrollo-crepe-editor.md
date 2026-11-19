@@ -4,7 +4,7 @@
 
 Existe un sistema "Course as Code" (repo `moodle-liaeditor`) con:
 
-- **Plugin Moodle** (`local_courseascode`, PHP): catálogo de materiales,
+- **Plugin Moodle** (`local_liamateriales`, PHP): catálogo de materiales,
   proxy de contenido (`content.php`), guardado (`save.php`), renovación
   de token (`token.php`), publicación (`publish.php`). Gestiona sesiones
   de edición y trazabilidad curso↔versión publicada.

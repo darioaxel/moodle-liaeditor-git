@@ -4,7 +4,7 @@
 #   CONTENT_REPO=/ruta/al/clon/contenidos docker compose up --build
 #   Engine: http://localhost:8000/health  ·  Moodle: http://localhost:8080
 #
-# En Moodle, `config.php`: $CFG->local_courseascode_service_url = 'http://engine:8000';
+# En Moodle, `config.php`: $CFG->local_liamateriales_service_url = 'http://engine:8000';
 # y en los ajustes del plugin, la URL del editor LiaEdit self-hosted.
 #
 # El editor (fork FPVirtual/LiveEditor) se despliega aparte como estático.
@@ -18,12 +18,12 @@ services:
     environment:
       CONTENT_REPO: /content
       CONTENT_REPO_URL: ${CONTENT_REPO_URL:-}
-      COURSEASCODE_LOG_FORMAT: console
+      MATERIALES_LIASCRIPT_LOG_FORMAT: console
     volumes:
       # Clon del repo de contenidos con `origin` con credenciales de escritura (D1).
       - ${CONTENT_REPO:-./content}:/content
       # Publicación con liaex: el engine lanza contenedores en el demonio del
-      # host. Para docker-in-docker real, ver COURSEASCODE_WORKDIR/HOST_WORKDIR
+      # host. Para docker-in-docker real, ver MATERIALES_LIASCRIPT_WORKDIR/HOST_WORKDIR
       # en engine/README.md.
       - /var/run/docker.sock:/var/run/docker.sock
 
@@ -39,7 +39,7 @@ services:
       MOODLE_DOCKER_DBPASS: moodle
     volumes:
       - moodle-data:/var/www/moodledata
-      - ./plugin:/var/www/html/local/courseascode:ro
+      - ./plugin:/var/www/html/local/liamateriales:ro
     depends_on:
       - db
       - engine

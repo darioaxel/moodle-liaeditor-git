@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/courseascode/db" VERSION="1" COMMENT="XMLDB file for Moodle local_courseascode plugin"
+<XMLDB PATH="local/liamateriales/db" VERSION="1" COMMENT="XMLDB file for Moodle local_liamateriales plugin"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="local_courseascode_ldeploy" COMMENT="Despliegues LiaEditor (v1): curso ↔ fichero .md ↔ SHA ↔ módulo (D6)">
+    <TABLE NAME="local_liamateriales_deploy" COMMENT="Despliegues LiaEditor (v1): curso ↔ fichero .md ↔ SHA ↔ módulo (D6)">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -23,7 +23,7 @@
         <INDEX NAME="course-file" UNIQUE="false" FIELDS="courseid, source_file"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_courseascode_editsess" COMMENT="Sesiones de edición LiaEditor (D3: trazabilidad usuario↔fichero↔rama↔SHA)">
+    <TABLE NAME="local_liamateriales_editsess" COMMENT="Sesiones de edición LiaEditor (D3: trazabilidad usuario↔fichero↔rama↔SHA)">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -41,7 +41,7 @@
         <INDEX NAME="user-file" UNIQUE="false" FIELDS="userid, file"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_courseascode_token" COMMENT="Tokens de un solo uso editor↔plugin (D9): hash, nunca el token en claro">
+    <TABLE NAME="local_liamateriales_token" COMMENT="Tokens de un solo uso editor↔plugin (D9): hash, nunca el token en claro">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="tokenhash" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false" COMMENT="sha256 del token"/>

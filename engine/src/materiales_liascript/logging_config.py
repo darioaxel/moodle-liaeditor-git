@@ -6,7 +6,7 @@ pipeline, y la API lo acepta por el header ``X-Correlation-Id`` (si no llega,
 lo genera). Así los eventos ``deploy.start``/``deploy.plan``/``deploy.execute``
 de un mismo despliegue se pueden cruzar con los logs del servicio y de Moodle.
 
-Formato de salida (``COURSEASCODE_LOG_FORMAT``):
+Formato de salida (``MATERIALES_LIASCRIPT_LOG_FORMAT``):
 
 - ``console`` (por defecto): salida legible para el desarrollador local (CLI).
 - ``json``: una línea JSON por evento, para el servicio en producción
@@ -59,11 +59,11 @@ def bound_correlation(cid: str | None = None) -> Iterator[str]:
 
 
 def configure_logging(fmt: str | None = None) -> None:
-    """Configura structlog; el formato se toma de ``COURSEASCODE_LOG_FORMAT``.
+    """Configura structlog; el formato se toma de ``MATERIALES_LIASCRIPT_LOG_FORMAT``.
 
     Valores: ``console`` (por defecto) o ``json``. Valor desconocido → console.
     """
-    effective = (fmt or os.environ.get("COURSEASCODE_LOG_FORMAT") or "console").lower()
+    effective = (fmt or os.environ.get("MATERIALES_LIASCRIPT_LOG_FORMAT") or "console").lower()
     renderer: object
     if effective == "json":
         renderer = structlog.processors.JSONRenderer()

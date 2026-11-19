@@ -14,7 +14,7 @@
  * 3. **Publicados en este curso**: módulos creados con su estado por
  *    comparación de SHAs (UP_TO_DATE / UPDATE_AVAILABLE, §5.3 de la v1).
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -24,14 +24,14 @@ require_once(__DIR__ . '/lib.php');
 $courseid = required_param('id', PARAM_INT);
 $context = context_course::instance($courseid);
 require_login($courseid);
-require_capability('local/courseascode:viewcatalog', $context);
+require_capability('local/liamateriales:viewcatalog', $context);
 
-$canedit = has_capability('local/courseascode:edit', $context);
-$candeploy = has_capability('local/courseascode:deploy', $context);
+$canedit = has_capability('local/liamateriales:edit', $context);
+$candeploy = has_capability('local/liamateriales:deploy', $context);
 
-$pagetitle = get_string('materials', 'local_courseascode');
+$pagetitle = get_string('materials', 'local_liamateriales');
 
-$PAGE->set_url(new moodle_url('/local/courseascode/materials.php', ['id' => $courseid]));
+$PAGE->set_url(new moodle_url('/local/liamateriales/materials.php', ['id' => $courseid]));
 $PAGE->set_context($context);
 $PAGE->set_title($pagetitle);
 $PAGE->set_heading($pagetitle);
@@ -48,9 +48,9 @@ $tabactive = ' active';
 $paneactive = ' show active';
 
 $tabs = [
-    $tabidmaster => get_string('materials_catalog', 'local_courseascode'),
-    $tabidminedit => get_string('materials_minedit', 'local_courseascode'),
-    $tabidpublished => get_string('materials_published', 'local_courseascode'),
+    $tabidmaster => get_string('materials_catalog', 'local_liamateriales'),
+    $tabidminedit => get_string('materials_minedit', 'local_liamateriales'),
+    $tabidpublished => get_string('materials_published', 'local_liamateriales'),
 ];
 
 echo html_writer::start_tag('ul', ['class' => 'nav nav-tabs mb-3', 'role' => 'tablist']);
@@ -89,11 +89,11 @@ echo html_writer::start_tag('div', [
 $paneactive = '';
 
 try {
-    $materials = local_courseascode_service_get('/edit/files');
+    $materials = local_liamateriales_service_get('/edit/files');
 } catch (\moodle_exception $e) {
     $materials = null;
     echo $OUTPUT->notification(
-        get_string('servicerror', 'local_courseascode', $e->getMessage()),
+        get_string('servicerror', 'local_liamateriales', $e->getMessage()),
         \core\output\notification::NOTIFY_ERROR
     );
 }
@@ -101,37 +101,37 @@ try {
 if ($materials && !empty($materials->files)) {
     $table = new html_table();
     $table->head = [
-        get_string('material_title', 'local_courseascode'),
-        get_string('material_file', 'local_courseascode'),
-        get_string('actions', 'local_courseascode'),
+        get_string('material_title', 'local_liamateriales'),
+        get_string('material_file', 'local_liamateriales'),
+        get_string('actions', 'local_liamateriales'),
     ];
     foreach ($materials->files as $material) {
         $file = $material->path;
         $actions = [];
         // Vista previa solo lectura con token de un solo uso.
-        $previewtoken = \local_courseascode\local\token_manager::issue((int) $USER->id, $file, $materials->branch);
-        $previewcontent = (new moodle_url('/local/courseascode/content.php', [
+        $previewtoken = \local_liamateriales\local\token_manager::issue((int) $USER->id, $file, $materials->branch);
+        $previewcontent = (new moodle_url('/local/liamateriales/content.php', [
             'file' => $file,
             'branch' => $materials->branch,
             'token' => $previewtoken->token,
             'readonly' => 1,
         ]))->out(false);
         $actions[] = html_writer::link(
-            local_courseascode_editor_open_url($previewcontent, true),
-            get_string('material_preview', 'local_courseascode'),
+            local_liamateriales_editor_open_url($previewcontent, true),
+            get_string('material_preview', 'local_liamateriales'),
             ['target' => '_blank', 'rel' => 'noopener noreferrer', 'class' => 'btn btn-secondary btn-sm']
         );
         if ($canedit) {
             $actions[] = html_writer::link(
-                new moodle_url('/local/courseascode/edit.php', ['id' => $courseid, 'file' => $file]),
-                get_string('material_edit', 'local_courseascode'),
+                new moodle_url('/local/liamateriales/edit.php', ['id' => $courseid, 'file' => $file]),
+                get_string('material_edit', 'local_liamateriales'),
                 ['class' => 'btn btn-primary btn-sm']
             );
         }
         if ($candeploy) {
             $actions[] = html_writer::link(
-                new moodle_url('/local/courseascode/publish.php', ['id' => $courseid, 'file' => $file]),
-                get_string('material_publish', 'local_courseascode'),
+                new moodle_url('/local/liamateriales/publish.php', ['id' => $courseid, 'file' => $file]),
+                get_string('material_publish', 'local_liamateriales'),
                 ['class' => 'btn btn-secondary btn-sm']
             );
         }
@@ -143,7 +143,7 @@ if ($materials && !empty($materials->files)) {
     }
     echo html_writer::table($table);
 } else if ($materials) {
-    echo $OUTPUT->notification(get_string('materials_empty', 'local_courseascode'), \core\output\notification::NOTIFY_INFO);
+    echo $OUTPUT->notification(get_string('materials_empty', 'local_liamateriales'), \core\output\notification::NOTIFY_INFO);
 }
 
 echo html_writer::end_tag('div');
@@ -157,33 +157,33 @@ echo html_writer::start_tag('div', [
     'aria-labelledby' => $tabidminedit . '-tab',
 ]);
 
-$sessions = $DB->get_records('local_courseascode_editsess', ['userid' => $USER->id, 'closed_at' => null], 'opened_at DESC');
+$sessions = $DB->get_records('local_liamateriales_editsess', ['userid' => $USER->id, 'closed_at' => null], 'opened_at DESC');
 if ($sessions) {
     $table = new html_table();
     $table->head = [
-        get_string('material_file', 'local_courseascode'),
-        get_string('material_branch', 'local_courseascode'),
-        get_string('material_last_save', 'local_courseascode'),
-        get_string('material_last_sha', 'local_courseascode'),
-        get_string('actions', 'local_courseascode'),
+        get_string('material_file', 'local_liamateriales'),
+        get_string('material_branch', 'local_liamateriales'),
+        get_string('material_last_save', 'local_liamateriales'),
+        get_string('material_last_sha', 'local_liamateriales'),
+        get_string('actions', 'local_liamateriales'),
     ];
     foreach ($sessions as $session) {
         $actions = [];
         if ($canedit) {
             $actions[] = html_writer::link(
-                new moodle_url('/local/courseascode/edit.php', [
+                new moodle_url('/local/liamateriales/edit.php', [
                     'id' => $courseid,
                     'file' => $session->file,
                     'branch' => $session->branch,
                 ]),
-                get_string('material_continue', 'local_courseascode'),
+                get_string('material_continue', 'local_liamateriales'),
                 ['class' => 'btn btn-primary btn-sm']
             );
         }
         if ($candeploy && $session->last_sha !== '') {
             $actions[] = html_writer::link(
-                new moodle_url('/local/courseascode/publish.php', ['id' => $courseid, 'file' => $session->file]),
-                get_string('material_publish', 'local_courseascode'),
+                new moodle_url('/local/liamateriales/publish.php', ['id' => $courseid, 'file' => $session->file]),
+                get_string('material_publish', 'local_liamateriales'),
                 ['class' => 'btn btn-secondary btn-sm']
             );
         }
@@ -197,7 +197,7 @@ if ($sessions) {
     }
     echo html_writer::table($table);
 } else {
-    echo $OUTPUT->notification(get_string('materials_minedit_empty', 'local_courseascode'), \core\output\notification::NOTIFY_INFO);
+    echo $OUTPUT->notification(get_string('materials_minedit_empty', 'local_liamateriales'), \core\output\notification::NOTIFY_INFO);
 }
 
 echo html_writer::end_tag('div');
@@ -211,7 +211,7 @@ echo html_writer::start_tag('div', [
     'aria-labelledby' => $tabidpublished . '-tab',
 ]);
 
-$deploys = $DB->get_records('local_courseascode_ldeploy', ['courseid' => $courseid], 'deployed_at DESC, id DESC');
+$deploys = $DB->get_records('local_liamateriales_deploy', ['courseid' => $courseid], 'deployed_at DESC, id DESC');
 // La fila más reciente por fichero (historial completo en el log de Moodle).
 $latest = [];
 foreach ($deploys as $deploy) {
@@ -222,15 +222,15 @@ foreach ($deploys as $deploy) {
 if ($latest) {
     $table = new html_table();
     $table->head = [
-        get_string('material_file', 'local_courseascode'),
-        get_string('material_module', 'local_courseascode'),
-        get_string('material_published_sha', 'local_courseascode'),
-        get_string('material_state', 'local_courseascode'),
-        get_string('actions', 'local_courseascode'),
+        get_string('material_file', 'local_liamateriales'),
+        get_string('material_module', 'local_liamateriales'),
+        get_string('material_published_sha', 'local_liamateriales'),
+        get_string('material_state', 'local_liamateriales'),
+        get_string('actions', 'local_liamateriales'),
     ];
     foreach ($latest as $deploy) {
         try {
-            $state = local_courseascode_service_get('/edit/state', [
+            $state = local_liamateriales_service_get('/edit/state', [
                 'file' => $deploy->source_file,
                 'sha' => $deploy->git_commit,
             ]);
@@ -239,8 +239,8 @@ if ($latest) {
             $statekey = 'ERROR';
         }
         $badge = html_writer::span(
-            local_courseascode_state_label($statekey),
-            'badge bg-' . local_courseascode_state_class($statekey)
+            local_liamateriales_state_label($statekey),
+            'badge bg-' . local_liamateriales_state_class($statekey)
         );
         $cmlink = '—';
         if ($cm = get_coursemodule_from_id('', $deploy->cmid, 0, false, IGNORE_MISSING)) {
@@ -255,12 +255,12 @@ if ($latest) {
         $actions = '';
         if ($candeploy && $statekey === 'update_available') {
             $actions = html_writer::link(
-                new moodle_url('/local/courseascode/publish.php', [
+                new moodle_url('/local/liamateriales/publish.php', [
                     'id' => $courseid,
                     'file' => $deploy->source_file,
                     'update' => 1,
                 ]),
-                get_string('material_update', 'local_courseascode'),
+                get_string('material_update', 'local_liamateriales'),
                 ['class' => 'btn btn-warning btn-sm']
             );
         }
@@ -274,7 +274,7 @@ if ($latest) {
     }
     echo html_writer::table($table);
 } else {
-    echo $OUTPUT->notification(get_string('materials_published_empty', 'local_courseascode'), \core\output\notification::NOTIFY_INFO);
+    echo $OUTPUT->notification(get_string('materials_published_empty', 'local_liamateriales'), \core\output\notification::NOTIFY_INFO);
 }
 
 echo html_writer::end_tag('div');

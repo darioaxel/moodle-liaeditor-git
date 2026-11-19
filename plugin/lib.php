@@ -4,7 +4,7 @@
 /**
  * Library functions.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -13,14 +13,14 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/../../lib/filelib.php'); // clase \curl (cliente server-to-server)
 
 /**
- * URL base del servicio courseascode (configuración obligatoria en producción).
+ * URL base del engine (configuración obligatoria en producción).
  */
-function local_courseascode_service_url(): string {
+function local_liamateriales_service_url(): string {
     global $CFG;
-    if (empty($CFG->local_courseascode_service_url)) {
-        throw new \moodle_exception('servicenotconfigured', 'local_courseascode');
+    if (empty($CFG->local_liamateriales_service_url)) {
+        throw new \moodle_exception('servicenotconfigured', 'local_liamateriales');
     }
-    return rtrim($CFG->local_courseascode_service_url, '/');
+    return rtrim($CFG->local_liamateriales_service_url, '/');
 }
 
 /**
@@ -35,8 +35,8 @@ function local_courseascode_service_url(): string {
  * @param array<string, mixed>|null $payload body JSON (solo POST)
  * @return mixed body decodificado
  */
-function local_courseascode_service_request(string $method, string $path, array $query = [], ?array $payload = null) {
-    $url = local_courseascode_service_url() . $path . ($query ? '?' . http_build_query($query) : '');
+function local_liamateriales_service_request(string $method, string $path, array $query = [], ?array $payload = null) {
+    $url = local_liamateriales_service_url() . $path . ($query ? '?' . http_build_query($query) : '');
     $headers = ['Accept: application/json'];
     $curl = new \curl();
     if ($method === 'POST') {
@@ -46,16 +46,16 @@ function local_courseascode_service_request(string $method, string $path, array 
         $response = $curl->get($url, [], ['CURLOPT_HTTPHEADER' => $headers]);
     }
     if ($curl->get_errno()) {
-        throw new \moodle_exception('servicerror', 'local_courseascode', '', $curl->error);
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $curl->error);
     }
     $status = (int) ($curl->get_info()['http_code'] ?? 0);
     $data = json_decode($response);
     if ($status >= 400) {
         $detail = (is_object($data) && !empty($data->detail)) ? $data->detail : "HTTP {$status}";
-        throw new \moodle_exception('servicerror', 'local_courseascode', '', $detail);
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $detail);
     }
     if ($data === null) {
-        throw new \moodle_exception('servicerror', 'local_courseascode', '', 'invalid JSON');
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', 'invalid JSON');
     }
     return $data;
 }
@@ -66,8 +66,8 @@ function local_courseascode_service_request(string $method, string $path, array 
  * @param array<string, string> $query
  * @return mixed
  */
-function local_courseascode_service_get(string $path, array $query = []) {
-    return local_courseascode_service_request('GET', $path, $query);
+function local_liamateriales_service_get(string $path, array $query = []) {
+    return local_liamateriales_service_request('GET', $path, $query);
 }
 
 /**
@@ -76,8 +76,8 @@ function local_courseascode_service_get(string $path, array $query = []) {
  * @param array<string, mixed> $payload
  * @return mixed
  */
-function local_courseascode_service_post(string $path, array $payload) {
-    return local_courseascode_service_request('POST', $path, [], $payload);
+function local_liamateriales_service_post(string $path, array $payload) {
+    return local_liamateriales_service_request('POST', $path, [], $payload);
 }
 
 /**
@@ -89,8 +89,8 @@ function local_courseascode_service_post(string $path, array $payload) {
  *
  * @return array{0: int, 1: mixed} (HTTP status, body decodificado)
  */
-function local_courseascode_service_post_full(string $path, array $payload): array {
-    $url = local_courseascode_service_url() . $path;
+function local_liamateriales_service_post_full(string $path, array $payload): array {
+    $url = local_liamateriales_service_url() . $path;
     $headers = [
         'Content-Type: application/json',
         'Accept: application/json',
@@ -98,12 +98,12 @@ function local_courseascode_service_post_full(string $path, array $payload): arr
     $curl = new \curl();
     $response = $curl->post($url, json_encode($payload), ['CURLOPT_HTTPHEADER' => $headers]);
     if ($curl->get_errno()) {
-        throw new \moodle_exception('servicerror', 'local_courseascode', '', $curl->error);
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $curl->error);
     }
     $status = (int) ($curl->get_info()['http_code'] ?? 0);
     $data = json_decode($response);
     if ($data === null && $response !== 'null') {
-        throw new \moodle_exception('servicerror', 'local_courseascode', '', 'invalid JSON');
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', 'invalid JSON');
     }
     return [$status, $data];
 }
@@ -111,20 +111,20 @@ function local_courseascode_service_post_full(string $path, array $payload): arr
 /**
  * URL base del editor LiaEdit self-hosted (setting, LIA-012); vacía si no configurado.
  */
-function local_courseascode_editor_url(): string {
-    $url = (string) get_config('local_courseascode', 'liaeditor_url');
+function local_liamateriales_editor_url(): string {
+    $url = (string) get_config('local_liamateriales', 'liaeditor_url');
     return rtrim($url, '/');
 }
 
 /**
  * Origen CORS permitido en content.php (setting); por defecto el origen del editor.
  */
-function local_courseascode_cors_origin(): string {
-    $origin = (string) get_config('local_courseascode', 'cors_origin');
+function local_liamateriales_cors_origin(): string {
+    $origin = (string) get_config('local_liamateriales', 'cors_origin');
     if ($origin !== '') {
         return $origin;
     }
-    $parts = parse_url(local_courseascode_editor_url());
+    $parts = parse_url(local_liamateriales_editor_url());
     if (empty($parts['scheme']) || empty($parts['host'])) {
         return '';
     }
@@ -143,7 +143,7 @@ function local_courseascode_cors_origin(): string {
  * @param string $markdown contenido original
  * @param array<string, string|bool> $config campos del bloque (yaml plano)
  */
-function local_courseascode_inject_lms_block(string $markdown, array $config): string {
+function local_liamateriales_inject_lms_block(string $markdown, array $config): string {
     $yaml = "liascript-lms:\n";
     foreach ($config as $key => $value) {
         $rendered = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
@@ -176,8 +176,8 @@ function local_courseascode_inject_lms_block(string $markdown, array $config): s
  * ``readonly: true`` en el bloque liascript-lms y el fork muestra el badge
  * "Solo lectura" en lugar del botón Guardar (C4).
  */
-function local_courseascode_editor_open_url(string $contenturl, bool $readonly): string {
-    return local_courseascode_editor_url() . '/?' . rawurlencode('/open/file/' . $contenturl);
+function local_liamateriales_editor_open_url(string $contenturl, bool $readonly): string {
+    return local_liamateriales_editor_url() . '/?' . rawurlencode('/open/file/' . $contenturl);
 }
 
 /**
@@ -186,9 +186,9 @@ function local_courseascode_editor_open_url(string $contenturl, bool $readonly):
  * Una sesión activa (closed_at NULL) por usuario y fichero; si ya existe se
  * reabre con la nueva rama. Devuelve el id de la sesión.
  */
-function local_courseascode_touch_session(int $userid, string $file, string $branch, string $lastsha = ''): int {
+function local_liamateriales_touch_session(int $userid, string $file, string $branch, string $lastsha = ''): int {
     global $DB;
-    $session = $DB->get_record('local_courseascode_editsess', [
+    $session = $DB->get_record('local_liamateriales_editsess', [
         'userid' => $userid,
         'file' => $file,
         'closed_at' => null,
@@ -199,10 +199,10 @@ function local_courseascode_touch_session(int $userid, string $file, string $bra
             $session->last_sha = $lastsha;
             $session->last_save = time();
         }
-        $DB->update_record('local_courseascode_editsess', $session);
+        $DB->update_record('local_liamateriales_editsess', $session);
         return (int) $session->id;
     }
-    return (int) $DB->insert_record('local_courseascode_editsess', (object) [
+    return (int) $DB->insert_record('local_liamateriales_editsess', (object) [
         'userid' => $userid,
         'file' => $file,
         'branch' => $branch,
@@ -216,9 +216,9 @@ function local_courseascode_touch_session(int $userid, string $file, string $bra
 /**
  * Registra el guardado en la sesión activa del usuario (LIA-014, D3).
  */
-function local_courseascode_record_save(int $userid, string $file, string $branch, string $newsha): void {
+function local_liamateriales_record_save(int $userid, string $file, string $branch, string $newsha): void {
     global $DB;
-    $session = $DB->get_record('local_courseascode_editsess', [
+    $session = $DB->get_record('local_liamateriales_editsess', [
         'userid' => $userid,
         'file' => $file,
         'closed_at' => null,
@@ -227,9 +227,9 @@ function local_courseascode_record_save(int $userid, string $file, string $branc
         $session->branch = $branch;
         $session->last_sha = $newsha;
         $session->last_save = time();
-        $DB->update_record('local_courseascode_editsess', $session);
+        $DB->update_record('local_liamateriales_editsess', $session);
     } else {
-        local_courseascode_touch_session($userid, $file, $branch, $newsha);
+        local_liamateriales_touch_session($userid, $file, $branch, $newsha);
     }
 }
 
@@ -237,15 +237,15 @@ function local_courseascode_record_save(int $userid, string $file, string $branc
  * Validación de ruta de fichero en el lado plugin (espejo de las reglas del
  * engine: relativa, sin traversal, extensión .md). Lanza moodle_exception.
  */
-function local_courseascode_validate_file(string $file): string {
+function local_liamateriales_validate_file(string $file): string {
     if ($file === '' || $file[0] === '/' || str_contains($file, '..') || str_contains($file, "\0")) {
-        throw new \moodle_exception('invalidfile', 'local_courseascode', '', $file);
+        throw new \moodle_exception('invalidfile', 'local_liamateriales', '', $file);
     }
     if (!str_ends_with(strtolower($file), '.md')) {
-        throw new \moodle_exception('invalidfile', 'local_courseascode', '', $file);
+        throw new \moodle_exception('invalidfile', 'local_liamateriales', '', $file);
     }
     if (strlen($file) > 255) {
-        throw new \moodle_exception('invalidfile', 'local_courseascode', '', $file);
+        throw new \moodle_exception('invalidfile', 'local_liamateriales', '', $file);
     }
     return $file;
 }
@@ -254,17 +254,17 @@ function local_courseascode_validate_file(string $file): string {
  * Etiqueta traducida de un estado de material (``up_to_date`` /
  * ``update_available`` del engine, o ``error``) para la UI.
  */
-function local_courseascode_state_label(string $state): string {
+function local_liamateriales_state_label(string $state): string {
     $key = 'state_' . strtolower($state);
-    return get_string_manager()->string_exists($key, 'local_courseascode')
-        ? get_string($key, 'local_courseascode')
+    return get_string_manager()->string_exists($key, 'local_liamateriales')
+        ? get_string($key, 'local_liamateriales')
         : $state;
 }
 
 /**
  * Clase Bootstrap del badge de un estado de material.
  */
-function local_courseascode_state_class(string $state): string {
+function local_liamateriales_state_class(string $state): string {
     return match (strtolower($state)) {
         'up_to_date' => 'success',
         'update_available' => 'warning',
@@ -277,14 +277,14 @@ function local_courseascode_state_class(string $state): string {
  * Navegación: entrada "Materiales Editables" en el bloque de administración
  * del curso.
  */
-function local_courseascode_extend_navigation_course(\navigation_node $parent, \stdClass $course, \context_course $context): void {
-    if (has_capability('local/courseascode:viewcatalog', $context)) {
+function local_liamateriales_extend_navigation_course(\navigation_node $parent, \stdClass $course, \context_course $context): void {
+    if (has_capability('local/liamateriales:viewcatalog', $context)) {
         $parent->add(
-            get_string('pluginname', 'local_courseascode'),
-            new \moodle_url('/local/courseascode/materials.php', ['id' => $course->id]),
+            get_string('pluginname', 'local_liamateriales'),
+            new \moodle_url('/local/liamateriales/materials.php', ['id' => $course->id]),
             navigation_node::TYPE_SETTING,
             null,
-            'local_courseascode_materials',
+            'local_liamateriales_materials',
             new \pix_icon('i/edit', '')
         );
     }

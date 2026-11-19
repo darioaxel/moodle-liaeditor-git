@@ -9,14 +9,14 @@
  * D4), emite un token de un solo uso (D9), registra la sesión de edición y
  * redirige al editor self-hosted con la URL de content.php.
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
-use local_courseascode\local\token_manager;
+use local_liamateriales\local\token_manager;
 
 $courseid = required_param('id', PARAM_INT);
 $file = required_param('file', PARAM_PATH);
@@ -24,35 +24,35 @@ $branch = optional_param('branch', '', PARAM_RAW); // Rama explícita (p. ej. co
 
 $context = context_course::instance($courseid);
 require_login($courseid);
-require_capability('local/courseascode:edit', $context);
+require_capability('local/liamateriales:edit', $context);
 
-local_courseascode_validate_file($file);
+local_liamateriales_validate_file($file);
 
-$editorurl = local_courseascode_editor_url();
+$editorurl = local_liamateriales_editor_url();
 if ($editorurl === '') {
-    throw new \moodle_exception('editornotconfigured', 'local_courseascode');
+    throw new \moodle_exception('editornotconfigured', 'local_liamateriales');
 }
 
 if ($branch === '') {
     // Asegura la rama de edición del usuario (creación o reutilización, D4).
     try {
-        $opened = local_courseascode_service_post('/edit/open', [
+        $opened = local_liamateriales_service_post('/edit/open', [
             'user' => $USER->username,
             'file' => $file,
         ]);
     } catch (\moodle_exception $e) {
-        throw new \moodle_exception('servicerror', 'local_courseascode', '', $e->getMessage());
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $e->getMessage());
     }
     $branch = $opened->branch;
 }
 
 $token = token_manager::issue((int) $USER->id, $file, $branch, $courseid);
-local_courseascode_touch_session((int) $USER->id, $file, $branch);
+local_liamateriales_touch_session((int) $USER->id, $file, $branch);
 
-$contenturl = (new \moodle_url('/local/courseascode/content.php', [
+$contenturl = (new \moodle_url('/local/liamateriales/content.php', [
     'file' => $file,
     'branch' => $branch,
     'token' => $token->token,
 ]))->out(false);
 
-redirect(local_courseascode_editor_open_url($contenturl, false));
+redirect(local_liamateriales_editor_open_url($contenturl, false));

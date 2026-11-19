@@ -11,36 +11,36 @@
  * despliegue curso↔SHA↔cmid (D6: sin este paso la subida manual rompería
  * la trazabilidad).
  *
- * @package    local_courseascode
+ * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
 
-use local_courseascode\local\publisher;
+use local_liamateriales\local\publisher;
 
 $courseid = required_param('id', PARAM_INT);
 $file = required_param('file', PARAM_PATH);
 $context = context_course::instance($courseid);
 require_login($courseid);
-require_capability('local/courseascode:deploy', $context);
+require_capability('local/liamateriales:deploy', $context);
 
-local_courseascode_validate_file($file);
+local_liamateriales_validate_file($file);
 
 $latest = publisher::latest_deploy($courseid, $file);
-$session = $DB->get_record('local_courseascode_editsess', [
+$session = $DB->get_record('local_liamateriales_editsess', [
     'userid' => $USER->id,
     'file' => $file,
     'closed_at' => null,
 ]);
 
-$PAGE->set_url(new moodle_url('/local/courseascode/publish.php', ['id' => $courseid, 'file' => $file]));
+$PAGE->set_url(new moodle_url('/local/liamateriales/publish.php', ['id' => $courseid, 'file' => $file]));
 $PAGE->set_context($context);
-$PAGE->set_title(get_string('material_publish', 'local_courseascode'));
+$PAGE->set_title(get_string('material_publish', 'local_liamateriales'));
 $PAGE->set_heading(format_string(get_course($courseid)->fullname));
 
-$returnurl = new moodle_url('/local/courseascode/materials.php', ['id' => $courseid]);
+$returnurl = new moodle_url('/local/liamateriales/materials.php', ['id' => $courseid]);
 
 if (data_submitted() && confirm_sesskey()) {
     $artifacttype = required_param('artifact_type', PARAM_ALPHA);
@@ -49,11 +49,11 @@ if (data_submitted() && confirm_sesskey()) {
     $sha = optional_param('sha', $latest->git_commit ?? ($session->last_sha ?? ''), PARAM_RAW);
 
     if (strlen($sha) !== 40) {
-        throw new \moodle_exception('publishnosha', 'local_courseascode');
+        throw new \moodle_exception('publishnosha', 'local_liamateriales');
     }
     $upload = $_FILES['artifact'] ?? null;
     if (!$upload || !is_uploaded_file($upload['tmp_name']) || $upload['error'] !== UPLOAD_ERR_OK) {
-        throw new \moodle_exception('publishnofile', 'local_courseascode');
+        throw new \moodle_exception('publishnofile', 'local_liamateriales');
     }
 
     // El paquete pasa por el área de borrador del usuario: es el contrato
@@ -83,7 +83,7 @@ if (data_submitted() && confirm_sesskey()) {
 
     redirect(
         $returnurl,
-        get_string('publishok', 'local_courseascode', $name),
+        get_string('publishok', 'local_liamateriales', $name),
         null,
         \core\output\notification::NOTIFY_SUCCESS
     );
@@ -91,7 +91,7 @@ if (data_submitted() && confirm_sesskey()) {
 
 // Formulario (GET).
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string('material_publish', 'local_courseascode'));
+echo $OUTPUT->heading(get_string('material_publish', 'local_liamateriales'));
 
 $sha = $latest->git_commit ?? ($session->last_sha ?? '');
 $defaultname = basename($file);
@@ -113,34 +113,34 @@ echo html_writer::input_hidden_params($PAGE->url);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 
 echo $OUTPUT->box_start('generalbox');
-echo html_writer::tag('p', html_writer::tag('strong', get_string('material_file', 'local_courseascode') . ': ')
+echo html_writer::tag('p', html_writer::tag('strong', get_string('material_file', 'local_liamateriales') . ': ')
     . html_writer::tag('code', s($file)));
-echo html_writer::tag('p', html_writer::tag('strong', get_string('material_published_sha', 'local_courseascode') . ': ')
+echo html_writer::tag('p', html_writer::tag('strong', get_string('material_published_sha', 'local_liamateriales') . ': ')
     . ($sha !== '' ? html_writer::tag('code', s($sha)) : '—'));
 if ($latest) {
-    echo $OUTPUT->notification(get_string('publishupdate', 'local_courseascode'), \core\output\notification::NOTIFY_INFO);
+    echo $OUTPUT->notification(get_string('publishupdate', 'local_liamateriales'), \core\output\notification::NOTIFY_INFO);
 }
 echo $OUTPUT->box_end();
 
-echo html_writer::tag('p', html_writer::tag('label', get_string('publish_name', 'local_courseascode')
+echo html_writer::tag('p', html_writer::tag('label', get_string('publish_name', 'local_liamateriales')
     . ' ' . html_writer::empty_tag('input', [
         'type' => 'text', 'name' => 'name', 'value' => $defaultname, 'required' => 'required',
         'class' => 'form-control', 'maxlength' => 255,
     ])));
 
-echo html_writer::tag('p', html_writer::tag('label', get_string('publish_type', 'local_courseascode')
+echo html_writer::tag('p', html_writer::tag('label', get_string('publish_type', 'local_liamateriales')
     . ' ' . html_writer::select([
         'h5p' => 'H5P (mod_h5pactivity)',
         'epub' => 'ePub (recurso descargable)',
         'pdf' => 'PDF (recurso descargable)',
     ], 'artifact_type', 'h5p', false, ['class' => 'form-control'])));
 
-echo html_writer::tag('p', html_writer::tag('label', get_string('publish_section', 'local_courseascode')
+echo html_writer::tag('p', html_writer::tag('label', get_string('publish_section', 'local_liamateriales')
     . ' ' . html_writer::empty_tag('input', [
         'type' => 'number', 'name' => 'section', 'value' => 0, 'min' => 0, 'class' => 'form-control',
     ])));
 
-echo html_writer::tag('p', html_writer::tag('label', get_string('publish_file', 'local_courseascode')
+echo html_writer::tag('p', html_writer::tag('label', get_string('publish_file', 'local_liamateriales')
     . ' ' . html_writer::empty_tag('input', [
         'type' => 'file', 'name' => 'artifact', 'required' => 'required', 'class' => 'form-control',
         'accept' => '.h5p,.epub,.pdf',
@@ -148,7 +148,7 @@ echo html_writer::tag('p', html_writer::tag('label', get_string('publish_file', 
 
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sha', 'value' => s($sha)]);
 echo html_writer::tag('p',
-    html_writer::tag('button', get_string('material_publish', 'local_courseascode'), [
+    html_writer::tag('button', get_string('material_publish', 'local_liamateriales'), [
         'type' => 'submit', 'class' => 'btn btn-primary',
     ]) . ' ' . html_writer::link($returnurl, get_string('cancel'), ['class' => 'btn btn-secondary'])
 );

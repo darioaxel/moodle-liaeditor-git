@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from courseascode.edit import (
+from materiales_liascript.edit import (
     EditError,
     build_compare_url,
     edit_branch_name,

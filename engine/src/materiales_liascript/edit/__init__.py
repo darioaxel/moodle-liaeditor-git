@@ -1,12 +1,12 @@
 """Flujo de edición LiaEditor: ramas ``edicion/*``, guardado por SHA y estado (LIA)."""
 
-from courseascode.edit.branches import (
+from materiales_liascript.edit.branches import (
     EditError,
     edit_branch_name,
     resolution_branch_name,
     validate_file_path,
 )
-from courseascode.edit.models import (
+from materiales_liascript.edit.models import (
     MAX_FILE_SIZE,
     EditContent,
     EditOpenRequest,
@@ -18,7 +18,7 @@ from courseascode.edit.models import (
     SaveRequest,
     SaveResult,
 )
-from courseascode.edit.service import EditService, build_compare_url
+from materiales_liascript.edit.service import EditService, build_compare_url
 
 __all__ = [
     "MAX_FILE_SIZE",
