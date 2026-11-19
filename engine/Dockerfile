@@ -17,9 +17,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     # Defaults de desarrollo; sobrescribir en despliegue real.
     HOST=0.0.0.0 \
     PORT=8000 \
-    COURSEASCODE_LOG_FORMAT=json
+    MATERIALES_LIASCRIPT_LOG_FORMAT=json
 
-WORKDIR /srv/courseascode
+WORKDIR /srv/materiales-liascript
 
 # Dependencias primero para aprovechar la caché de capas.
 COPY pyproject.toml README.md ./
@@ -27,9 +27,9 @@ COPY src ./src
 RUN pip install --no-cache-dir .
 
 # Usuario no-root.
-RUN useradd --create-home courseascode \
-    && chown -R courseascode:courseascode /srv/courseascode
-USER courseascode
+RUN useradd --create-home liascript \
+    && chown -R liascript:liascript /srv/materiales-liascript
+USER liascript
 
 # El repo de contenidos se monta en /content con otro propietario (host):
 # sin esta excepción git rechaza operar sobre él ("dubious ownership").
@@ -41,4 +41,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import os,urllib.request;urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\",\"8000\")}/health')" || exit 1
 
 # El repo de contenidos se monta en /content (ver docker-compose.yml).
-CMD ["python", "-m", "courseascode.serve"]
+CMD ["python", "-m", "materiales_liascript.serve"]

@@ -13,9 +13,9 @@ import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from courseascode.edit.branches import EditError, validate_file_path
-from courseascode.git.provider import GitProvider, GitProviderError
-from courseascode.publish.models import (
+from materiales_liascript.edit.branches import EditError, validate_file_path
+from materiales_liascript.git.provider import GitProvider, GitProviderError
+from materiales_liascript.publish.models import (
     ARTIFACT_MEDIA_TYPES,
     PublishError,
     PublishRequest,

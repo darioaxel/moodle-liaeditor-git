@@ -380,4 +380,4 @@ original): usuario, fichero, rama, `opened_at`, `last_save`,
 - Exporter npm: <https://www.npmjs.com/package/@liascript/exporter>
 - Documentación LiaScript: <https://liascript.github.io/>
 - Plugin actual: `plugin/README.md`
-- Contrato engine↔plugin actual: `engine/src/courseascode/moodle/functions.py`
+- Contrato engine↔plugin actual: `engine/README.md` (endpoints) y `plugin/README.md`

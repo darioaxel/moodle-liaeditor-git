@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from courseascode.edit import EditError, EditService, SaveConflict, SaveOk, SaveRequest
-from courseascode.git import GitProviderError, LocalGitProvider
+from materiales_liascript.edit import EditError, EditService, SaveConflict, SaveOk, SaveRequest
+from materiales_liascript.git import GitProviderError, LocalGitProvider
 
 FILE = "materiales/ut03-mvc/02-mvc.md"
 USER = "ana"

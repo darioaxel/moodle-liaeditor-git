@@ -14,8 +14,10 @@
   self-hosted (fork) → guardado vía `save.php` → engine (ramas
   `edicion/*`, conflictos 409) → publicación H5P/ePub/PDF con liaex.
 - **Plugin** «Materiales Editables» 2.1.0 (**`local_liamateriales`**,
-  versión 2026111900; antes `local_courseascode`). Repositorio:
-  **`moodle-liascript-git`**. **Engine** 2.0.0 (solo `/edit/*`, `/publish`, `/health`).
+  versión 2026111900; antes `local_courseascode`). **Engine**
+  `materiales_liascript-git` (paquete `materiales_liascript`, antes
+  `courseascode`). Repositorio: **`moodle-liascript-git`**. Engine 2.0.0: solo
+  `/edit/*`, `/publish` y `/health`.
 - **Flujo legado "Course as Code" (`mod_book`) eliminado del código** el
   2026-11-19 (sesión 24). Su progreso por fases (ENG-001–106) y su
   documentación están en [docs/historico/](docs/historico/).
@@ -25,6 +27,25 @@
   en `publish_api.php`, reutilización de cmid entre formatos).
 
 ## Registro de sesiones
+
+### 2026-11-19 — Sesión 26: Renombrado del engine a materiales_liascript-git
+
+- **Engine**: distribución `materiales_liascript-git` (pyproject) y paquete
+  importable **`materiales_liascript`** (Python no admite guiones en
+  nombres importables). Arranque: `python -m materiales_liascript.serve`.
+- **Variables de entorno**: `COURSEASCODE_LOG_FORMAT/WORKDIR/HOST_WORKDIR`
+  → `MATERIALES_LIASCRIPT_*`.
+- **Identidad Git del committer**: `materiales-liascript-git
+  <engine@materiales-liascript.local>` (los commits nuevos de profesores
+  llevan este committer; el autor sigue siendo el profesor).
+- **Dockerfile**: `WORKDIR /srv/materiales-liascript`, usuario `liascript`.
+- **Verificado**: `.venv` regenerado en la ruta actual (el anterior
+  apuntaba a `moodle-book-git`); `make check` verde (ruff ✓, mypy strict
+  ✓, 66 tests ✓); `docker build` OK y `GET /health` →
+  `{"ok":true,"git":true,"publish":true}` con un repo montado.
+- **Pendiente en el servidor de pruebas**: reconstruir la imagen y
+  renombrar en el env las variables `COURSEASCODE_*` (ver
+  `docs/Sistema-prueba.md`).
 
 ### 2026-11-19 — Sesión 25: Renombrado del plugin y del repositorio
 

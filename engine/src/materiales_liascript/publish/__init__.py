@@ -5,13 +5,17 @@ concreto ejecutando el exporter de LiaScript; el plugin Moodle recibe los
 bytes y crea el módulo (D6).
 """
 
-from courseascode.publish.models import (
+from materiales_liascript.publish.models import (
     ARTIFACT_MEDIA_TYPES,
     PublishError,
     PublishRequest,
     PublishResult,
 )
-from courseascode.publish.service import ArtifactExecutor, LiaexDockerExecutor, PublishService
+from materiales_liascript.publish.service import (
+    ArtifactExecutor,
+    LiaexDockerExecutor,
+    PublishService,
+)
 
 __all__ = [
     "ARTIFACT_MEDIA_TYPES",

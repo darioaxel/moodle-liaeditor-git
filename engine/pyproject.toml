@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "courseascode"
+name = "materiales_liascript-git"
 version = "2.0.0"
 description = "Engine LiaEditor–Moodle: ramas de edición y guardado en Git, y publicación de materiales LiaScript (H5P/ePub/PDF) con liaex."
 readme = "README.md"
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/courseascode"]
+packages = ["src/materiales_liascript"]
 
 [tool.ruff]
 target-version = "py312"
@@ -38,7 +38,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RET", "C4", "PL", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-packages = ["courseascode", "tests"]
+packages = ["materiales_liascript", "tests"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

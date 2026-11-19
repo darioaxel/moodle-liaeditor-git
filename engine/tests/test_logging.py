@@ -6,8 +6,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from courseascode.app import create_app
-from courseascode.logging_config import (
+from materiales_liascript.app import create_app
+from materiales_liascript.logging_config import (
     bound_correlation,
     correlation_id,
     new_correlation_id,

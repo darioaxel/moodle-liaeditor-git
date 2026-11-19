@@ -1,7 +1,7 @@
 """Endpoints REST del flujo de edición LiaEditor (LIA-002/004/005).
 
 El plugin Moodle (``content.php``, ``save.php``, panel del curso) consume
-estas rutas; la lógica Git vive en ``courseascode.edit`` (D2):
+estas rutas; la lógica Git vive en ``materiales_liascript.edit`` (D2):
 
 - ``GET /edit/content``: contenido de un fichero en una rama + SHA del HEAD.
 - ``POST /edit/open``: asegura la rama ``edicion/<user>/<file>`` (D4) y
@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from courseascode.edit.branches import EditError
-from courseascode.edit.models import EditOpenRequest, SaveRequest
-from courseascode.edit.service import EditService
-from courseascode.git.provider import GitProvider, GitProviderError
+from materiales_liascript.edit.branches import EditError
+from materiales_liascript.edit.models import EditOpenRequest, SaveRequest
+from materiales_liascript.edit.service import EditService
+from materiales_liascript.git.provider import GitProvider, GitProviderError
 
 
 @dataclass(frozen=True)

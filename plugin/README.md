@@ -52,7 +52,7 @@ en Moodle 6.0dev.
    (`php admin/cli/upgrade.php --non-interactive`).
 2. Configurar en `config.php` (o equivalente):
    - `$CFG->local_liamateriales_service_url` — URL interna del engine
-     (server-to-server), p. ej. `http://courseascode:8000`. El navegador
+     (server-to-server), p. ej. `http://engine:8000`. El navegador
      nunca habla con el engine: no necesita URL pública.
 3. En *Administración del sitio → Plugins → Materiales Editables*: URL del
    editor LiaEdit self-hosted (obligatoria), origen CORS (opcional, se
@@ -65,7 +65,7 @@ en Moodle 6.0dev.
 
 El plugin es deliberadamente una fachada (D2): toda la lógica Git (ramas
 `edicion/*`, conflictos optimistic-locking por SHA, commits, estado) vive
-en el engine Python (`courseascode-engine`, contenedor `courseascode`).
+en el engine Python (`materiales_liascript-git`, carpeta `engine/`).
 El plugin gestiona tokens, sesiones, trazabilidad curso↔SHA↔módulo y la UI.
 
 Contrato con el editor (fork `FPVirtual/LiveEditor`): bloque

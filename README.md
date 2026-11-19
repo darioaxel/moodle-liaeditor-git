@@ -74,7 +74,7 @@ la vinculación, el guardado transparente y la publicación de artefactos
 
 ```text
 ├── engine/                 # engine Python 3.12 (FastAPI, src-layout)
-│   ├── src/courseascode/   # app, api, edit, publish, git
+│   ├── src/materiales_liascript/  # app, api, edit, publish, git
 │   └── tests/
 ├── plugin/                 # plugin Moodle «Materiales Editables» (local_liamateriales)
 ├── docs/                   # arquitectura v1, spec mod_liamd, roadmaps,

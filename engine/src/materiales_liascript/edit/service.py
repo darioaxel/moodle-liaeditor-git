@@ -12,13 +12,13 @@ import re
 from collections.abc import Callable
 from datetime import datetime
 
-from courseascode.edit.branches import (
+from materiales_liascript.edit.branches import (
     EditError,
     edit_branch_name,
     resolution_branch_name,
     validate_file_path,
 )
-from courseascode.edit.models import (
+from materiales_liascript.edit.models import (
     EditContent,
     EditState,
     MaterialFile,
@@ -28,7 +28,7 @@ from courseascode.edit.models import (
     SaveRequest,
     SaveResult,
 )
-from courseascode.git.provider import BranchMovedError, GitProvider, GitProviderError
+from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
 
 _SSH_URL_RE = re.compile(r"^git@(?P<host>[^:]+):(?P<path>.+?)(?:\.git)?$")
 _HTTPS_URL_RE = re.compile(r"^https?://(?P<creds>[^/@]+@)?(?P<rest>.+?)(?:\.git)?$")

@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from courseascode.app import create_app
-from courseascode.edit import EditService
-from courseascode.git import LocalGitProvider
+from materiales_liascript.app import create_app
+from materiales_liascript.edit import EditService
+from materiales_liascript.git import LocalGitProvider
 
 FILE = "materiales/ut03-mvc/02-mvc.md"
 USER = "ana"

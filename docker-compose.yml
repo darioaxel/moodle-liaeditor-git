@@ -18,12 +18,12 @@ services:
     environment:
       CONTENT_REPO: /content
       CONTENT_REPO_URL: ${CONTENT_REPO_URL:-}
-      COURSEASCODE_LOG_FORMAT: console
+      MATERIALES_LIASCRIPT_LOG_FORMAT: console
     volumes:
       # Clon del repo de contenidos con `origin` con credenciales de escritura (D1).
       - ${CONTENT_REPO:-./content}:/content
       # Publicación con liaex: el engine lanza contenedores en el demonio del
-      # host. Para docker-in-docker real, ver COURSEASCODE_WORKDIR/HOST_WORKDIR
+      # host. Para docker-in-docker real, ver MATERIALES_LIASCRIPT_WORKDIR/HOST_WORKDIR
       # en engine/README.md.
       - /var/run/docker.sock:/var/run/docker.sock
 

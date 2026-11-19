@@ -13,6 +13,12 @@
      si se recrea el contenedor (ver la sesión 20 de BITACORA.md para replicarlos).
 
  * **Engine courseascode** (desplegado 2026-11-06)
+   - ⚠️ Desde 2026-11-19 el engine se llama `materiales_liascript-git`
+     (paquete `materiales_liascript`): al redesplegar, el arranque es
+     `python -m materiales_liascript.serve` y las variables
+     `COURSEASCODE_*` del env pasan a `MATERIALES_LIASCRIPT_*`
+     (`LOG_FORMAT`, `WORKDIR`, `HOST_WORKDIR`). Los nombres de contenedor
+     y de fichero de abajo son los actuales del servidor.
    - Contenedor `courseascode-engine` en la red interna del Moodle
      (alias `courseascode`), publicado en **http://192.168.2.253:8090**.
    - Contenido: clon de `contenidos-test` en
