@@ -3,7 +3,7 @@
 
 /**
  * Publisher: crea/actualiza el módulo del curso a partir del artefacto
- * generado del material (SCORM, H5P, ePub, PDF) y registra el despliegue
+ * generado del material (H5P, ePub, PDF) y registra el despliegue
  * curso↔SHA↔cmid en ``local_courseascode_ldeploy`` (trazabilidad D6).
  *
  * Mapeo tipo → módulo: ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
@@ -36,7 +36,7 @@ class publisher {
      * @param int $courseid curso destino
      * @param int $section sección del curso (0 = general)
      * @param string $sourcefile ruta del .md en el repo
-     * @param string $artifacttype scorm | h5p | epub | pdf
+     * @param string $artifacttype h5p | epub | pdf
      * @param string $sha SHA del material publicado (trazabilidad)
      * @param int $draftitemid área de borrador con el paquete subido
      * @param string $name nombre visible del módulo

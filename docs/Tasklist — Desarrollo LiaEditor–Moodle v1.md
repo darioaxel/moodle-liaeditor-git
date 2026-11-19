@@ -35,8 +35,8 @@ Resolver antes (o a más tardar al inicio de la tarea afectada):
    multipart → afecta a LIA-004/LIA-013.
 3. **H5P vs `mod_h5pactivity`** (cuestión abierta nº 3): PoC previa en
    LIA-043 antes de soportar el formato.
-4. **Books legados** (cuestión abierta nº 5): convivencia o migración →
-   afecta a LIA-017 y al alcance de Fase 3.
+4. **Books legados** (cuestión abierta nº 5): ✅ resuelta el 2026-11-19 —
+   sin convivencia, flujo `mod_book` eliminado del código (LIA-055).
 5. **Colaboración WebRTC** (cuestión abierta nº 6): desactivada por
    defecto en el `.env` del fork (LIA-033).
 
@@ -192,8 +192,8 @@ build sin opciones Git y textos en español.
   (spec §15); revisión de límites (1 MB, rate limiting, 50 ramas/usuario).
 - [ ] **LIA-054** (S) Propuesta upstream del parche `liascript-lms`
   (roadmap C10): issue de diseño previo antes que PR directo.
-- [ ] **LIA-055** (M) Decisión nº 4 resuelta y ejecutada: migración de
-  books legados o convivencia documentada de ambos flujos.
+- [x] **LIA-055** (M) Decisión nº 4 resuelta y ejecutada: flujo
+  `mod_book` eliminado de plugin y engine (sesión 24, 2026-11-19).
 
 **DoD Fase 3:** sistema en producción con monitorización activa, sesiones
 limpiadas por cron, guía de profesor publicada, pruebas de carga

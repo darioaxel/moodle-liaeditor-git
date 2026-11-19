@@ -1,5 +1,5 @@
 <?php
-// Librería del plugin: cliente del servicio (server-to-server) e inyección CSS.
+// Librería del plugin: cliente del engine (server-to-server), tokens/sesiones y navegación.
 
 /**
  * Library functions.
@@ -24,7 +24,7 @@ function local_courseascode_service_url(): string {
 }
 
 /**
- * Petición server-to-server contra la API del servicio (§5.4).
+ * Petición server-to-server contra la API del engine.
  *
  * Comprueba el status HTTP: las respuestas de error del engine son JSON
  * ``{"detail": ...}`` (HTTPException de FastAPI) y se convierten en
@@ -36,12 +36,8 @@ function local_courseascode_service_url(): string {
  * @return mixed body decodificado
  */
 function local_courseascode_service_request(string $method, string $path, array $query = [], ?array $payload = null) {
-    global $CFG;
     $url = local_courseascode_service_url() . $path . ($query ? '?' . http_build_query($query) : '');
-    $headers = [
-        'X-CourseAsCode-User: ' . ($CFG->local_courseascode_service_token ?? ''),
-        'Accept: application/json',
-    ];
+    $headers = ['Accept: application/json'];
     $curl = new \curl();
     if ($method === 'POST') {
         $headers[] = 'Content-Type: application/json';
@@ -65,7 +61,7 @@ function local_courseascode_service_request(string $method, string $path, array 
 }
 
 /**
- * GET server-to-server contra la API del servicio (§5.4).
+ * GET server-to-server contra la API del engine.
  *
  * @param array<string, string> $query
  * @return mixed
@@ -75,7 +71,7 @@ function local_courseascode_service_get(string $path, array $query = []) {
 }
 
 /**
- * POST server-to-server contra la API del servicio (deploy/plan, §12.3, §17).
+ * POST server-to-server contra la API del engine.
  *
  * @param array<string, mixed> $payload
  * @return mixed
@@ -110,18 +106,6 @@ function local_courseascode_service_post_full(string $path, array $payload): arr
         throw new \moodle_exception('servicerror', 'local_courseascode', '', 'invalid JSON');
     }
     return [$status, $data];
-}
-
-/**
- * URL pública del servicio (para enlaces que abre el navegador del usuario:
- * preview, CSS). Si no se define, se usa la URL server-to-server.
- */
-function local_courseascode_service_public_url(): string {
-    global $CFG;
-    if (!empty($CFG->local_courseascode_service_public_url)) {
-        return rtrim($CFG->local_courseascode_service_public_url, '/');
-    }
-    return local_courseascode_service_url();
 }
 
 /**
@@ -267,7 +251,8 @@ function local_courseascode_validate_file(string $file): string {
 }
 
 /**
- * Etiqueta traducida de un estado de material (§5.3) para la UI.
+ * Etiqueta traducida de un estado de material (``up_to_date`` /
+ * ``update_available`` del engine, o ``error``) para la UI.
  */
 function local_courseascode_state_label(string $state): string {
     $key = 'state_' . strtolower($state);
@@ -277,26 +262,20 @@ function local_courseascode_state_label(string $state): string {
 }
 
 /**
- * Clase Bootstrap del badge/alerta de un estado (§19) con su severidad (§11).
+ * Clase Bootstrap del badge de un estado de material.
  */
-function local_courseascode_state_class(string $state, ?string $severity = null): string {
-    if ($severity === 'critical') {
-        return 'danger';
-    }
-    return match ($state) {
-        'UP_TO_DATE' => 'success',
-        'UPDATE_AVAILABLE' => 'warning',
-        'DRIFT_DETECTED', 'ERROR' => 'danger',
-        'DEPLOYING' => 'info',
+function local_courseascode_state_class(string $state): string {
+    return match (strtolower($state)) {
+        'up_to_date' => 'success',
+        'update_available' => 'warning',
+        'error' => 'danger',
         default => 'secondary',
     };
 }
 
 /**
  * Navegación: entrada "Materiales Editables" en el bloque de administración
- * del curso. El flujo legado mod_book (Course as Code v1) fue retirado de la
- * UI en la versión 2.0.0: los materiales son Markdown LiaScript que se
- * publica como H5P/ePub/PDF, nunca como mod_book.
+ * del curso.
  */
 function local_courseascode_extend_navigation_course(\navigation_node $parent, \stdClass $course, \context_course $context): void {
     if (has_capability('local/courseascode:viewcatalog', $context)) {
@@ -309,32 +288,4 @@ function local_courseascode_extend_navigation_course(\navigation_node $parent, \
             new \pix_icon('i/edit', '')
         );
     }
-}
-
-/**
- * Sirve los assets subidos por el engine (upload_asset).
- * Área local_courseascode/asset con itemid = bookid, en el contexto del curso.
- */
-function local_courseascode_pluginfile(
-    ?stdClass $course,
-    ?stdClass $cm,
-    context $context,
-    string $filearea,
-    array $args,
-    bool $forcedownload,
-    array $options = []
-): bool {
-    if ($context->contextlevel !== CONTEXT_COURSE || $filearea !== 'asset') {
-        return false;
-    }
-    $itemid = (int) array_shift($args);
-    $filename = array_pop($args);
-    $filepath = '/' . implode('/', $args) . '/';
-
-    $fs = get_file_storage();
-    $file = $fs->get_file($context->id, 'local_courseascode', $filearea, $itemid, $filepath, $filename);
-    if (!$file || $file->is_directory()) {
-        return false;
-    }
-    send_stored_file($file, 0, 0, $forcedownload, $options);
 }

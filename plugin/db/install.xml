@@ -4,47 +4,13 @@
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="local_courseascode_deploy" COMMENT="Registro de despliegues (binding curso↔versión, §5.3a)">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="bookid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="id de la instancia mod_book"/>
-        <FIELD NAME="source" TYPE="char" LENGTH="133" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="content_id" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="content_version" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="git_ref" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="git_commit" TYPE="char" LENGTH="64" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="content_hash" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="JSON {stable_id: sha256} del HTML desplegado (drift §19.1)"/>
-        <FIELD NAME="deployed_at" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="epoch"/>
-        <FIELD NAME="deployed_by" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="ok" SEQUENCE="false" COMMENT="ok | error"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-      </KEYS>
-      <INDEXES>
-        <INDEX NAME="courseid" UNIQUE="false" FIELDS="courseid"/>
-      </INDEXES>
-    </TABLE>
-    <TABLE NAME="local_courseascode_chapter" COMMENT="Correspondencia stable id ↔ capítulo de mod_book (idempotencia §17.3)">
-      <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="bookid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="id de la instancia mod_book"/>
-        <FIELD NAME="stable_id" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="chapterid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="id en book_chapters"/>
-      </FIELDS>
-      <KEYS>
-        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
-        <KEY NAME="book-stable" TYPE="unique" FIELDS="bookid, stable_id"/>
-      </KEYS>
-    </TABLE>
     <TABLE NAME="local_courseascode_ldeploy" COMMENT="Despliegues LiaEditor (v1): curso ↔ fichero .md ↔ SHA ↔ módulo (D6)">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="source_file" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Ruta del .md en el repo"/>
         <FIELD NAME="git_commit" TYPE="char" LENGTH="40" NOTNULL="true" SEQUENCE="false" COMMENT="SHA publicado"/>
-        <FIELD NAME="artifact_type" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="scorm | h5p | epub | pdf"/>
+        <FIELD NAME="artifact_type" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="h5p | epub | pdf"/>
         <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="course_modules id del módulo creado"/>
         <FIELD NAME="deployed_at" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="epoch"/>
         <FIELD NAME="deployed_by" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>

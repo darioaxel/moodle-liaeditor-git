@@ -1,35 +1,31 @@
-# Entorno de desarrollo completo del sistema (ENG-105):
-# servicio courseascode (engine) + Moodle + MariaDB.
+# Entorno de desarrollo: engine + Moodle (con el plugin montado) + MariaDB.
 #
 # Uso:
-#   docker compose up --build
-#   Servicio: http://localhost:8000  ·  Moodle: http://localhost:8080
+#   CONTENT_REPO=/ruta/al/clon/contenidos docker compose up --build
+#   Engine: http://localhost:8000/health  ·  Moodle: http://localhost:8080
 #
-# El plugin Moodle `local_courseascode` 🔌 es una pista paralela: su código no
-# vive en este repo. Cuando exista, descomenta el volumen en el servicio
-# `moodle` para montarlo sobre la instalación.
+# En Moodle, `config.php`: $CFG->local_courseascode_service_url = 'http://engine:8000';
+# y en los ajustes del plugin, la URL del editor LiaEdit self-hosted.
+#
+# El editor (fork FPVirtual/LiveEditor) se despliega aparte como estático.
 
 services:
   engine:
     build: engine/
+    # Sin puerto publicado en producción: solo Moodle habla con el engine.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      # Repo de contenidos montado (working tree que sirve la preview/catálogo).
       CONTENT_REPO: /content
-      # Credenciales de desarrollo; en producción viven fuera del compose.
-      MOODLE_URL: http://moodle:8080
-      MOODLE_TOKEN: ${MOODLE_TOKEN:-dev-token-cambiar}
-      COURSEASCODE_DB: /data/courseascode.db
-      COURSEASCODE_ADMIN_TOKEN: ${COURSEASCODE_ADMIN_TOKEN:-dev-admin-cambiar}
-      COURSEASCODE_WEBHOOK_SECRET: ${COURSEASCODE_WEBHOOK_SECRET:-dev-secret-cambiar}
+      CONTENT_REPO_URL: ${CONTENT_REPO_URL:-}
       COURSEASCODE_LOG_FORMAT: console
     volumes:
-      # Sustituye la ruta por tu clon del repo de contenidos.
-      - ${CONTENT_REPO:-./content}:/content:ro
-      - engine-data:/data
-    depends_on:
-      - moodle
+      # Clon del repo de contenidos con `origin` con credenciales de escritura (D1).
+      - ${CONTENT_REPO:-./content}:/content
+      # Publicación con liaex: el engine lanza contenedores en el demonio del
+      # host. Para docker-in-docker real, ver COURSEASCODE_WORKDIR/HOST_WORKDIR
+      # en engine/README.md.
+      - /var/run/docker.sock:/var/run/docker.sock
 
   moodle:
     image: moodlehq/moodle-php-apache:latest
@@ -43,10 +39,10 @@ services:
       MOODLE_DOCKER_DBPASS: moodle
     volumes:
       - moodle-data:/var/www/moodledata
-      # Plugin local_courseascode 🔌 (pista paralela; descomentar cuando exista):
-      # - ../local_courseascode:/var/www/html/local/courseascode:ro
+      - ./plugin:/var/www/html/local/courseascode:ro
     depends_on:
       - db
+      - engine
 
   db:
     image: mariadb:11
@@ -59,6 +55,5 @@ services:
       - db-data:/var/lib/mysql
 
 volumes:
-  engine-data:
   moodle-data:
   db-data:

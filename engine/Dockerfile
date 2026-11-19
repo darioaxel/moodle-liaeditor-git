@@ -1,9 +1,9 @@
-# Servicio courseascode (engine) — imagen de producción (ENG-105).
+# Engine LiaEditor–Moodle — imagen de producción.
 
 FROM python:3.12-slim
 
-# git: LocalGitProvider usa el CLI (`git worktree add`, ENG-021); GitPython
-# también necesita el binario.
+# git: LocalGitProvider usa el CLI (worktrees, plumbing); GitPython también
+# necesita el binario.
 # docker-cli (solo el cliente; Debian 13 lo separó de docker.io):
 # LiaexDockerExecutor lanza el exporter de LiaScript como contenedor
 # (LIA-040). Necesita además montar /var/run/docker.sock y que el usuario
@@ -17,7 +17,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     # Defaults de desarrollo; sobrescribir en despliegue real.
     HOST=0.0.0.0 \
     PORT=8000 \
-    COURSEASCODE_DB=/data/courseascode.db \
     COURSEASCODE_LOG_FORMAT=json
 
 WORKDIR /srv/courseascode
@@ -27,21 +26,19 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install --no-cache-dir .
 
-# BD SQLite persistente y usuario no-root.
+# Usuario no-root.
 RUN useradd --create-home courseascode \
-    && mkdir -p /data \
-    && chown -R courseascode:courseascode /data /srv/courseascode
+    && chown -R courseascode:courseascode /srv/courseascode
 USER courseascode
 
 # El repo de contenidos se monta en /content con otro propietario (host):
 # sin esta excepción git rechaza operar sobre él ("dubious ownership").
 RUN git config --global --add safe.directory /content
-VOLUME ["/data"]
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import os,urllib.request;urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\",\"8000\")}/')" || exit 1
+    CMD python -c "import os,urllib.request;urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\",\"8000\")}/health')" || exit 1
 
 # El repo de contenidos se monta en /content (ver docker-compose.yml).
 CMD ["python", "-m", "courseascode.serve"]

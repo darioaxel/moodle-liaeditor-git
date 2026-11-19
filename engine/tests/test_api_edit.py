@@ -7,13 +7,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from courseascode.app import create_app
 from courseascode.edit import EditService
 from courseascode.git import LocalGitProvider
-from courseascode.web import create_app
 
-FILE = "books/ut03-mvc/02-mvc.md"
+FILE = "materiales/ut03-mvc/02-mvc.md"
 USER = "ana"
-BRANCH = "edicion/ana/books-ut03-mvc-02-mvc"
+BRANCH = "edicion/ana/materiales-ut03-mvc-02-mvc"
 REPO_URL = "https://github.com/FPVirtual/contenidos-test.git"
 
 HTTP_OK = 200
@@ -135,7 +135,7 @@ def test_state(client: TestClient, provider: LocalGitProvider) -> None:
     assert response.status_code == HTTP_OK
     assert response.json()["state"] == "up_to_date"
 
-    old = provider.get_commit("book/ut03-mvc/v1.1.0")
+    old = provider.get_commit("main~1")
     response = client.get("/edit/state", params={"file": FILE, "sha": old})
     assert response.json()["state"] == "update_available"
     assert response.json()["commits_ahead"] > 0

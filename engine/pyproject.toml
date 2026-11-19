@@ -4,39 +4,25 @@ build-backend = "hatchling.build"
 
 [project]
 name = "courseascode"
-version = "0.1.0"
-description = "Engine de Moodle Course as Code: renderer, catálogo y deployment de contenido docente versionado en Git hacia Moodle."
+version = "2.0.0"
+description = "Engine LiaEditor–Moodle: ramas de edición y guardado en Git, y publicación de materiales LiaScript (H5P/ePub/PDF) con liaex."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "GPL-3.0-or-later" }
 dependencies = [
     "GitPython>=3.1.43",
-    "bleach>=6.1",
     "fastapi>=0.110",
-    "httpx>=0.27",
-    "jinja2>=3.1",
-    "markdown-it-py>=3.0",
-    "mdit-py-plugins>=0.4",
     "pydantic>=2.7",
-    "pydantic-settings>=2.3",
-    "pygments>=2.18",
-    "pyyaml>=6.0",
-    "sqlmodel>=0.0.21",
     "structlog>=24.1",
-    "tinycss2>=1.2",
-    "typer>=0.12",
     "uvicorn>=0.29",
 ]
 
-[project.scripts]
-courseascode = "courseascode.cli.main:app"
-
 [project.optional-dependencies]
 dev = [
+    "httpx>=0.27",
     "mypy>=1.10",
     "pytest>=8.2",
     "ruff>=0.5",
-    "types-PyYAML>=6.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -54,13 +40,6 @@ python_version = "3.12"
 strict = true
 packages = ["courseascode", "tests"]
 
-[[tool.mypy.overrides]]
-module = ["bleach.*", "mdit_py_plugins.*"]
-ignore_missing_imports = true
-
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
-markers = [
-    "integration: tests contra Moodle real (requieren MOODLE_URL/MOODLE_TOKEN de moodle-docker); 'make check' corre sin ellos, 'make test-integration' los activa",
-]

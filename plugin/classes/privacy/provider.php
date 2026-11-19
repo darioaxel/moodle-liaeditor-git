@@ -1,7 +1,7 @@
 <?php
 // Privacy API (Moodle exige provider para plugins con datos).
-// Las tablas guardan identificadores de despliegue (deployed_by = username
-// opcional). Esqueleto: null provider; pendiente export real (post-Beta).
+// PENDIENTE: editsess, token y ldeploy guardan userid/username; hace falta
+// un provider real (metadata + export + delete) en lugar del null provider.
 
 /**
  * Privacy provider.
@@ -15,8 +15,7 @@ namespace local_courseascode\privacy;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Sin datos personales exportables en esta versión (deployed_by es un
- * identificador operativo a cargo del servicio; ver auditoría del engine).
+ * Null provider provisional (ver nota de cabecera).
  */
 class provider implements \core_privacy\local\metadata\null_provider {
     public static function get_reason(): string {

@@ -266,8 +266,9 @@ ni diff estructural):
   SCORM/H5P/ePub/PDF.
 
 **Se simplifica:** el planner de despliegues deja de comparar capítulo
-a capítulo; compara SHAs de fichero. La carpeta `deployment/` queda en
-desuso para el flujo nuevo (conservar solo si hay books legados).
+a capítulo; compara SHAs de fichero. **Resuelto (2026-11-19)**:
+`deployment/`, renderer, catálogo, releases y adapter Moodle eliminados
+del engine (ver cuestión abierta 5).
 
 ### 7.3 Modelo de datos (plugin)
 
@@ -355,8 +356,11 @@ original): usuario, fichero, rama, `opened_at`, `last_save`,
    `mod_h5pactivity` de Moodle (tipo de paquete y tracking).
 4. **SCORM embebido vs. referenciado**: decidir `--scorm-embed`
    (contenido dentro del zip, recomendado para portabilidad).
-5. **Books legados**: ¿se mantiene el flujo `mod_book` actual en
-   paralelo durante la transición o se migra todo de una vez?
+5. ~~**Books legados**: ¿se mantiene el flujo `mod_book` actual en
+   paralelo durante la transición o se migra todo de una vez?~~
+   **Resuelta (2026-11-19)**: sin convivencia. El flujo `mod_book` se
+   eliminó del código (plugin 2.1.0, engine 2.0.0); los materiales se
+   rehacen como LiaScript. Documentación antigua en `docs/historico/`.
 6. **Colaboración WebRTC de LiaEdit**: ¿se habilita edición colaborativa
    entre profesores (requiere servidor de señalización/TURN propio) o se
    desactiva?

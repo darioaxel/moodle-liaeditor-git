@@ -1,5 +1,5 @@
 <?php
-// Capabilities del plugin (§5.3d).
+// Capabilities del plugin.
 
 /**
  * Access definitions.
@@ -25,13 +25,6 @@ $capabilities = [
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [
             'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW,
-        ],
-    ],
-    'local/courseascode:manage' => [
-        'captype' => 'write',
-        'contextlevel' => CONTEXT_SYSTEM,
-        'archetypes' => [
             'manager' => CAP_ALLOW,
         ],
     ],

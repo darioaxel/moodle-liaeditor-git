@@ -4,18 +4,16 @@ Edición de materiales docentes en **LiaScript Markdown** alojados en Git,
 directamente desde Moodle, con **LiaEdit (LiveEditor)** self-hosted como
 editor. **Git es la única fuente de verdad del contenido**; Moodle gestiona
 la vinculación, el guardado transparente y la publicación de artefactos
-(SCORM, H5P, ePub, PDF) en los cursos.
+(H5P, ePub, PDF) en los cursos.
 
 - **Documento de arquitectura v1:** [docs/desarrollo-liaeditor-moodle-v1.md](docs/desarrollo-liaeditor-moodle-v1.md) (decisiones D1–D10)
 - **Especificación del plugin `mod_liamd`:** [docs/cambio-curso-a-liascript.md](docs/cambio-curso-a-liascript.md)
 - **Roadmap del fork LiveEditor:** [docs/roadmap-liveeditor-fork.md](docs/roadmap-liveeditor-fork.md)
 - **Bitácora de desarrollo (estado actual):** [BITACORA.md](BITACORA.md)
 
-> Este proyecto evoluciona del sistema "Moodle Course as Code"
-> (especificación v0.2 en [docs/](docs/)). El engine Python y el plugin
-> `local_courseascode` desarrollados para esa Beta se reutilizan como base:
-> el engine sigue siendo el único que habla con Git, y el plugin se
-> extiende con los endpoints de edición y publicación.
+> Este proyecto evoluciona del sistema "Moodle Course as Code" (Books en
+> `mod_book`). Ese flujo se eliminó del código en noviembre de 2026; su
+> documentación queda archivada en [docs/historico/](docs/historico/).
 
 ## Decisiones clave (D1–D10)
 
@@ -32,7 +30,7 @@ la vinculación, el guardado transparente y la publicación de artefactos
   `resolucion/<user>/<timestamp>-<archivo>` y respuesta 409 — el último
   escritor no gana silenciosamente.
 - **Paso "Publicar en el curso"** (D6): el plugin crea el módulo
-  (`mod_scorm` / `mod_h5pactivity` / recurso) y registra
+  (`mod_h5pactivity` / `mod_resource`) y registra
   `(courseid, file, sha, tipo, cmid)`.
 - **Exportación** (D7): Fase 1 con el exporter en navegador (nativo de
   LiaEdit); Fase 2 con `liaex` server-side en el engine.
@@ -50,7 +48,7 @@ la vinculación, el guardado transparente y la publicación de artefactos
 ┌──────────────────────────── MOODLE ────────────────────────────┐
 │  plugin (evolución de local_courseascode)                      │
 │  Catálogo/UI · content.php (proxy md) · save.php / publish.php │
-│  Paso "Publicar": mod_scorm / mod_h5pactivity / recurso        │
+│  Paso "Publicar": mod_h5pactivity / mod_resource (H5P/ePub/PDF)│
 │  + registro (courseid, file, sha, tipo, cmid)                  │
 └──────────────────────────────┬─────────────────────────────────┘
                                │ server-to-server
@@ -58,7 +56,7 @@ la vinculación, el guardado transparente y la publicación de artefactos
 │  ENGINE (FastAPI, Python)                                      │
 │  Cliente Git (token servidor) · ramas edicion/* · conflictos   │
 │  Endpoints: /edit/content, /edit/save, /publish                │
-│  Fase 2: liaex (Docker) para SCORM/H5P/ePub/PDF                │
+│  liaex (Docker) para H5P/ePub/PDF                              │
 └──────────────────────────────┬─────────────────────────────────┘
                                │ HTTPS API Git
 ┌──────────────────────────────▼─────────────────────────────────┐
@@ -76,12 +74,11 @@ la vinculación, el guardado transparente y la publicación de artefactos
 
 ```text
 ├── engine/                 # engine Python 3.12 (FastAPI, src-layout)
-│   ├── src/courseascode/   # domain, manifests, git, content, catalog,
-│   │                       # deployment, moodle, api, web, cli
+│   ├── src/courseascode/   # app, api, edit, publish, git
 │   └── tests/
 ├── plugin/                 # plugin Moodle «Materiales Editables» (local_courseascode)
-├── docs/                   # arquitectura v1, spec mod_liamd, roadmap fork,
-│                           # guías, diagramas, tasklists
+├── docs/                   # arquitectura v1, spec mod_liamd, roadmaps,
+│                           # tasklist v1; historico/ = Course as Code
 ├── BITACORA.md             # estado del desarrollo (actualizar cada sesión)
 └── .github/workflows/      # CI del engine (ruff + mypy strict + pytest)
 ```
@@ -101,11 +98,11 @@ Requisitos: Python 3.12. En `engine/`:
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e .[dev]
 make check          # ruff + ruff format --check + mypy --strict + pytest
-courseascode --help
+CONTENT_REPO=/ruta/al/clon make serve
 ```
 
-Las credenciales nunca se commitean; el CLI falla ruidosamente si faltan las
-variables `MOODLE_URL`, `MOODLE_TOKEN`, `CONTENT_REPO_URL`, `CONTENT_REPO_KEY`.
+Las credenciales nunca se commitean: el push del engine usa las del
+`origin` del clon de contenidos. Detalle en [engine/README.md](engine/README.md).
 
 ## Documentación
 
@@ -113,9 +110,8 @@ variables `MOODLE_URL`, `MOODLE_TOKEN`, `CONTENT_REPO_URL`, `CONTENT_REPO_KEY`.
 - [Especificación `mod_liamd` v0.1.0](docs/cambio-curso-a-liascript.md) — requisitos funcionales, endpoints, BD, capacidades.
 - [Roadmap del fork LiveEditor](docs/roadmap-liveeditor-fork.md) — cambios C1–C10 sobre el editor, hitos LIV-1–6.
 - [Tasklist LiaEditor–Moodle v1](docs/Tasklist%20—%20Desarrollo%20LiaEditor–Moodle%20v1.md) — fases 1–3 con DoD, pistas engine/plugin/fork (LIA-001–055).
-- [Guía de autor](docs/Guía%20de%20autor.md) y [Guía de operación](docs/Guía%20de%20operación.md).
 - [Bitácora](BITACORA.md) — progreso real y registro de sesiones.
-- Documentación histórica (Course as Code): [Especificación v0.2](docs/Especificación%20Moodle%20Course%20as%20Code%20v0.2.md), [diagramas de secuencia](docs/Diagramas%20de%20secuencia%20—%20Moodle%20Course%20as%20Code.md), [tasklist del engine](docs/Tasklist%20—%20Desarrollo%20courseascode-engine.md).
+- Documentación histórica (Course as Code, flujo eliminado): [docs/historico/](docs/historico/).
 
 ## Licencia
 

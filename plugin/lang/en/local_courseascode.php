@@ -11,14 +11,9 @@
 $string['pluginname'] = 'Materiales Editables';
 $string['courseascode:viewcatalog'] = 'Ver el catálogo de materiales editables';
 $string['courseascode:deploy'] = 'Publicar y actualizar materiales editables';
-$string['courseascode:manage'] = 'Gestionar Materiales Editables (a nivel de sistema)';
 $string['courseascode:edit'] = 'Editar materiales LiaScript en el LiaEditor';
 $string['courseascode:editmain'] = 'Editar materiales directamente en la rama principal';
-$string['book_not_found'] = 'El libro no existe';
-$string['chapter_not_found'] = 'El capítulo no existe en este libro';
-$string['invalid_course'] = 'El curso no existe';
-$string['invalid_deployed_at'] = 'deployed_at no es una fecha ISO 8601 válida';
-$string['privacy:metadata:reason'] = 'El plugin solo almacena metadatos de publicación; los datos personales se gestionan en el registro de auditoría del servicio courseascode.';
+$string['privacy:metadata:reason'] = 'El plugin solo almacena metadatos de edición y publicación de materiales.';
 $string['servicenotconfigured'] = 'El servicio courseascode no está configurado. Establece $CFG->local_courseascode_service_url (ver README).';
 $string['servicerror'] = 'El servicio courseascode devolvió un error: {$a}';
 

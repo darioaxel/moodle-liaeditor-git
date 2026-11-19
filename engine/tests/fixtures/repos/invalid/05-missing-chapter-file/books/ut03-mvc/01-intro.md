@@ -1,4 +1,0 @@
-# Intro
-
-Texto del capítulo.
-

@@ -1,86 +1,66 @@
 # courseascode-engine
 
-Motor Python de **Moodle Course as Code**: un único renderer sirve la preview
-web, el catálogo y el despliegue idempotente de Books versionados en Git hacia
-Moodle. Ver el [README del repositorio](../../README.md) y la
-[especificación](../../docs/Especificación%20Moodle%20Course%20as%20Code%20v0.2.md).
+Engine del sistema **LiaEditor–Moodle**: el único componente que habla con
+Git (D2). El plugin Moodle «Materiales Editables» (`local_courseascode`) lo
+consume server-to-server para editar y publicar materiales LiaScript.
 
 ## Arquitectura
 
-| Módulo | Responsabilidad |
-|---|---|
-| `domain/` | Modelos puros (SemVer, ContentId, DeploymentPlan/State…). No importa de nadie. |
-| `manifests/` | Esquemas y validación de `course.yml`/`book.yml` (§20). |
-| `git/` | Abstracción Git (worktrees aislados, diff, resolución de versiones por tags). |
-| `content/` | Renderer único (§14): Markdown → HTML sanitizado, temas, resolvers de enlaces/assets, caché de renders. |
-| `catalog/` | Catálogo derivado del último tag de cada Book (nunca HEAD) + `SourceRegistry` con ACL. |
-| `moodle/` | `MoodleProvider` (REST sobre web services) + `FakeMoodleProvider` para tests; contrato del plugin en `functions.py`. |
-| `deployment/` | `Planner` (diff vs Moodle), `Executor` (idempotente, dos pasadas de assets), pipeline §17, estados (§19), export. |
-| `releases/` | Persistencia SQLite (SQLModel) de releases y auditoría; `SqlReleasePort`. |
-| `api/` | Routers: deployment, releases/afectados, webhook de Git. |
-| `web/` | App FastAPI: preview + catálogo + endpoints públicos. |
-| `cli/` | Comandos Typer (§29). |
+```text
+src/courseascode/
+├── app.py            # create_app(): monta /edit/*, /publish y /health
+├── serve.py          # arranque uvicorn configurado por entorno
+├── logging_config.py # structlog + correlation id por petición
+├── api/              # routers FastAPI (edit.py, publish.py)
+├── edit/             # ramas edicion/<user>/<file>, guardado por SHA, conflictos
+├── publish/          # artefactos H5P/ePub/PDF con liaex (Docker)
+└── git/              # GitProvider + LocalGitProvider (plumbing, worktrees)
+```
+
+## Endpoints
+
+| Método | Ruta | Uso |
+| --- | --- | --- |
+| `GET` | `/edit/files?branch=` | Materiales `.md` de la rama con su título LiaScript |
+| `GET` | `/edit/content?file=&branch=` | Contenido + SHA del HEAD |
+| `POST` | `/edit/open` | Asegura la rama `edicion/<user>/<file>` desde `main` (D4) |
+| `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha}` o `409` con rama `resolucion/...` (D5) |
+| `GET` | `/edit/state?file=&sha=&branch=` | `up_to_date` / `update_available` por comparación de SHAs |
+| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`) de un fichero en un SHA |
+| `GET` | `/health` | Healthcheck |
+
+Sin repo Git, `/edit/*` y `/publish` responden 503; sin Docker en el host,
+`/publish` responde 503.
 
 ## Desarrollo
+
+Requisitos: Python 3.12 y `git`.
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e .[dev]
-make check              # ruff + ruff format + mypy --strict + pytest
-make test-integration   # suite E2E contra moodle-docker (skip sin credenciales)
+make check          # ruff + ruff format --check + mypy --strict + pytest
+CONTENT_REPO=/ruta/al/clon make serve
 ```
-
-## CLI
-
-```text
-courseascode validate [path] [--ref]        # valida manifests, capítulos, assets, enlaces
-courseascode preview <book> [--ref] [--port 3000]
-courseascode info <book>                    # metadata, capítulos, assets, commit, tags
-courseascode build <book>                   # render a disco (build/<id>/) sin desplegar
-courseascode deploy --course C --book B [--version V | --ref R] [--yes] [--force]
-courseascode status --course C              # estado por Book (§19)
-courseascode export --course C              # deployments/<curso>.yml (vista exportable, §9)
-courseascode release mark <ref> --severity critical --recall --fixed-in V --reason R
-courseascode release list <book>
-```
-
-## Servicio web
-
-```bash
-CONTENT_REPO=/ruta/al/repo-de-contenidos \
-MOODLE_URL=https://moodle.example MOODLE_TOKEN=… \
-python -m courseascode.serve               # uvicorn en 0.0.0.0:8000 (HOST/PORT)
-```
-
-Endpoints principales: `/` (índice de books), `/books/{id}/{capítulo}`,
-`/catalog`, `/catalog/{fuente}/{book}/versions`, `/catalog/{fuente}/{book}/preview?ref=`,
-`POST /deploy`, `POST /deployment/plan`, `GET /deployment/status`, `GET /deployment/where`,
-`GET /releases/affected`, `POST /hooks/git`, `GET /audit`.
 
 ## Variables de entorno
 
-| Variable | Default | Para qué |
-|---|---|---|
-| `MOODLE_URL` / `MOODLE_TOKEN` | — (obligatorias para hablar con Moodle) | cuenta técnica del plugin |
-| `MOODLE_CONNECT_URL` | — | destino TCP alternativo para Moodle (forwarder en redes Docker con hairpin NAT roto); el header `Host` sigue siendo el de `MOODLE_URL` — Moodle exige que coincida con `$CFG->wwwroot` |
-| `CONTENT_REPO_URL` / `CONTENT_REPO_KEY` | — | repo remoto de contenidos (provisional, §25) |
-| `CONTENT_REPO` | — | ruta local del repo que sirve `python -m courseascode.serve` |
-| `COURSEASCODE_DB` | `~/.courseascode/courseascode.db` | releases y auditoría (ENG-090); acepta URL `sqlite:///…` o ruta de archivo pelada |
-| `COURSEASCODE_ADMIN_TOKEN` | — | rol coordinador: `release mark`, `GET /audit` |
-| `COURSEASCODE_WEBHOOK_SECRET` | — | firma HMAC de `POST /hooks/git` (sin él, 503) |
-| `COURSEASCODE_LOG_FORMAT` | `console` | `json` en producción; correlation id por operación |
+| Variable | Obligatoria | Descripción |
+| --- | --- | --- |
+| `CONTENT_REPO` | sí | Clon del repo de contenidos; su `origin` necesita credenciales de escritura (push de ramas, D1) |
+| `CONTENT_REPO_URL` | no | URL del repo en la forja, para la `diff_url` de los conflictos |
+| `COURSEASCODE_WORKDIR` / `COURSEASCODE_HOST_WORKDIR` | no | Traducción de rutas docker-in-docker para liaex (mismo bind mount visto desde el contenedor y desde el host) |
+| `COURSEASCODE_LOG_FORMAT` | no | `console` (defecto) o `json` |
+| `HOST` / `PORT` | no | Interfaz y puerto (defecto `0.0.0.0:8000`) |
 
 ## Docker
 
-```bash
-docker compose up --build   # raíz del repo: engine :8000 + Moodle :8080 + MariaDB
-```
-
-Imagen del servicio: `engine/Dockerfile` (usuario no-root, BD en volumen `/data`).
+`Dockerfile` (python:3.12-slim, `git` + `docker-cli`, usuario no-root,
+healthcheck en `/health`). Para publicar necesita el socket de Docker del
+host montado (`/var/run/docker.sock`) y el grupo `docker` (`--group-add`).
+El repo de contenidos se monta en `/content`.
 
 ## Integración continua
 
-`.github/workflows/ci.yml` corre `make check` en Python 3.12. La suite E2E de
-aceptación (§32) vive en `tests/integration/` bajo el mark `integration`: se
-salta sin `MOODLE_URL`/`MOODLE_TOKEN` de un moodle-docker; ver
-`tests/test_moodle_contract.py` para el patrón fake/Moodle real.
+`.github/workflows/ci.yml` en la raíz del repositorio: ruff, mypy strict y
+pytest sobre `engine/`.

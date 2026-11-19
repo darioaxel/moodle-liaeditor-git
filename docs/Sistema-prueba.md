@@ -10,7 +10,7 @@
      `public/local/` son bind mounts desde `/apps/8088-moodle-v5.3-beta-test/`.
    - Curso de pruebas existente: id 2, shortname `CAC-TEST`.
    - **Atención**: `config.php` NO es bind mount — los cambios en él se pierden
-     si se recrea el contenedor (ver Guía de operación para replicarlos).
+     si se recrea el contenedor (ver la sesión 20 de BITACORA.md para replicarlos).
 
  * **Engine courseascode** (desplegado 2026-11-06)
    - Contenedor `courseascode-engine` en la red interna del Moodle
@@ -39,4 +39,4 @@
 2. Crear una estructura inicial para prueba de contenidos con un libro en el módulo Desarrollo Web en Entorno Servidor en DAW. ✅ (repo sembrado)
 3. Establecer usuarios y roles. 🟡 (los datos los carga el equipo; rol técnico `courseascodesvc` ya completo)
 
-Seguimiento detallado: [Tasklist — Pruebas alpha](Tasklist%20—%20Pruebas%20alpha.md)
+Seguimiento detallado (fase alpha, flujo Course as Code): [Tasklist — Pruebas alpha](historico/Tasklist%20—%20Pruebas%20alpha.md)

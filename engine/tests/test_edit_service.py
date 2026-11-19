@@ -11,9 +11,9 @@ import pytest
 from courseascode.edit import EditError, EditService, SaveConflict, SaveOk, SaveRequest
 from courseascode.git import GitProviderError, LocalGitProvider
 
-FILE = "books/ut03-mvc/02-mvc.md"
+FILE = "materiales/ut03-mvc/02-mvc.md"
 USER = "ana"
-BRANCH = "edicion/ana/books-ut03-mvc-02-mvc"
+BRANCH = "edicion/ana/materiales-ut03-mvc-02-mvc"
 NOW = datetime(2026, 11, 17, 12, 0, 0, tzinfo=UTC)
 
 
@@ -55,7 +55,7 @@ def test_open_reutiliza_la_rama_existente(service: EditService, provider: LocalG
 
 def test_open_fichero_inexistente_en_main(service: EditService) -> None:
     with pytest.raises(EditError) as excinfo:
-        service.open(USER, "books/ut03-mvc/no-existe.md")
+        service.open(USER, "materiales/ut03-mvc/no-existe.md")
     assert excinfo.value.status_code == 404  # noqa: PLR2004
 
 
@@ -131,7 +131,9 @@ def test_save_conflicto_crea_rama_resolucion(
     result = service.save(_save(USER, BRANCH, opened.sha, "# Mío\n"))
 
     assert isinstance(result, SaveConflict)
-    assert result.resolution_branch == f"resolucion/{USER}/20261117-120000-books-ut03-mvc-02-mvc"
+    assert (
+        result.resolution_branch == f"resolucion/{USER}/20261117-120000-materiales-ut03-mvc-02-mvc"
+    )
     assert result.current_sha == provider.get_commit(BRANCH)
     # El trabajo del profesor no se pierde: queda en la rama de resolución.
     assert provider.get_file(result.resolution_branch, FILE) == "# Mío\n"
@@ -196,7 +198,7 @@ def test_state_up_to_date(service: EditService, provider: LocalGitProvider) -> N
 
 
 def test_state_update_available(service: EditService, provider: LocalGitProvider) -> None:
-    published = provider.get_commit("book/ut03-mvc/v1.1.0")
+    published = provider.get_commit("main~1")
     result = service.state(FILE, published)
     assert result.state == "update_available"
     assert result.commits_ahead is not None and result.commits_ahead > 0

@@ -8,10 +8,10 @@ El material es un fichero `.md` LiaScript versionado en Git — **nunca** una
 instancia `mod_book`. Se edita con el LiveEditor (LiaEdit) self-hosted y se
 publica en el curso como **H5P, ePub o PDF**.
 
-> **v2.0.0 (2026-11-18)**: retirada la UI del flujo legado "Course as Code"
-> (catálogo y despliegue de Books en `mod_book`). Los web services
-> `local_courseascode_*` del contrato antiguo se conservan temporalmente
-> por compatibilidad con el engine, pero no tienen UI.
+> **v2.1.0 (2026-11-19)**: eliminado por completo el flujo legado "Course
+> as Code" (`mod_book`): web services `local_courseascode_*`, tablas
+> `local_courseascode_deploy`/`_chapter`, área de ficheros `asset` y
+> capability `:manage`. El upgrade (2026111900) borra tablas y ficheros.
 
 Pensado para **Moodle 5.3+** (`$plugin->requires = 2026100600`); verificado
 en Moodle 6.0dev.
@@ -51,9 +51,8 @@ en Moodle 6.0dev.
    (`php admin/cli/upgrade.php --non-interactive`).
 2. Configurar en `config.php` (o equivalente):
    - `$CFG->local_courseascode_service_url` — URL interna del engine
-     (server-to-server), p. ej. `http://courseascode:8000`.
-   - `$CFG->local_courseascode_service_public_url` — URL pública del engine
-     para enlaces de navegador, p. ej. `https://engine.dominio.com`.
+     (server-to-server), p. ej. `http://courseascode:8000`. El navegador
+     nunca habla con el engine: no necesita URL pública.
 3. En *Administración del sitio → Plugins → Materiales Editables*: URL del
    editor LiaEdit self-hosted (obligatoria), origen CORS (opcional, se
    deriva del editor), TTL del token y tamaño máximo de material.

@@ -1,15 +1,15 @@
-"""Arranque del servicio web (ENG-105).
+"""Arranque del servicio web.
 
-Sirve la app FastAPI (preview + catálogo + deployment + releases) con uvicorn,
-configurada por entorno:
+Sirve la app FastAPI (edición + publicación) con uvicorn, configurada por
+entorno:
 
-- ``CONTENT_REPO`` (obligatoria): ruta al repo de contenidos (working tree).
-- ``MOODLE_URL`` / ``MOODLE_TOKEN`` (opcionales): habilitan los endpoints de
-  despliegue contra Moodle real; sin ellos responden 503.
-- ``COURSEASCODE_DB``: BD de releases/auditoría (default
-  ``~/.courseascode/courseascode.db``; en Docker, monta un volumen).
-- ``COURSEASCODE_WEBHOOK_SECRET`` / ``COURSEASCODE_ADMIN_TOKEN``: webhook y
-  auditoría (ENG-091/093).
+- ``CONTENT_REPO`` (obligatoria): ruta al clon del repo de contenidos (con
+  ``origin`` con credenciales de escritura para el push, D1).
+- ``CONTENT_REPO_URL`` (opcional): URL del repo en la forja, para la
+  ``diff_url`` de los conflictos.
+- ``COURSEASCODE_WORKDIR`` / ``COURSEASCODE_HOST_WORKDIR`` (opcionales):
+  traducción de rutas docker-in-docker para liaex.
+- ``COURSEASCODE_LOG_FORMAT``: ``console`` (defecto) o ``json``.
 - ``HOST`` / ``PORT``: interfaz y puerto de uvicorn (defaults 0.0.0.0:8000).
 
 Uso local: ``CONTENT_REPO=/ruta/al/repo python -m courseascode.serve``.
@@ -23,9 +23,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 
-from courseascode.moodle.rest_client import MoodleRestClient
-from courseascode.releases.store import ReleaseStore, default_db_url
-from courseascode.web import create_app
+from courseascode.app import create_app
 
 
 def build_app() -> FastAPI:
@@ -34,31 +32,16 @@ def build_app() -> FastAPI:
     if not content_repo:
         msg = "error: define CONTENT_REPO (ruta al repo de contenidos)"
         raise SystemExit(msg)
-
-    moodle: MoodleRestClient | None = None
-    url = os.environ.get("MOODLE_URL")
-    token = os.environ.get("MOODLE_TOKEN")
-    if url and token:
-        # MOODLE_CONNECT_URL (opcional): destino TCP alternativo para redes con
-        # hairpin NAT roto (Docker); el Host sigue siendo el de MOODLE_URL.
-        connect_url = os.environ.get("MOODLE_CONNECT_URL")
-        moodle = MoodleRestClient(url.rstrip("/"), token, connect_url=connect_url)
-
     return create_app(
         Path(content_repo),
-        moodle=moodle,
-        store=ReleaseStore(default_db_url()),
-        webhook_secret=os.environ.get("COURSEASCODE_WEBHOOK_SECRET"),
-        admin_token=os.environ.get("COURSEASCODE_ADMIN_TOKEN"),
         content_repo_url=os.environ.get("CONTENT_REPO_URL"),
     )
 
 
 def main() -> None:
     """Sirve la app con uvicorn (host/puerto por entorno)."""
-    app = build_app()
     uvicorn.run(
-        app,
+        build_app(),
         host=os.environ.get("HOST", "0.0.0.0"),
         port=int(os.environ.get("PORT", "8000")),
     )

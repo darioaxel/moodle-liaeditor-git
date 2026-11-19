@@ -1,4 +1,4 @@
-"""``LocalGitProvider``: GitPython sobre un repo local (ENG-021).
+"""``LocalGitProvider``: GitPython + plumbing de Git sobre un repo local.
 
 Los worktrees temporales usan el CLI de Git (``git worktree add``): GitPython no
 expone worktrees de forma fiable. El resto de operaciones van por la API tipada.
@@ -6,7 +6,6 @@ expone worktrees de forma fiable. El resto de operaciones van por la API tipada.
 
 from __future__ import annotations
 
-import fnmatch
 import os
 import subprocess
 import tempfile
@@ -18,17 +17,7 @@ from git import Repo
 from git.exc import BadName, GitCommandError, InvalidGitRepositoryError
 from git.objects import Blob, Commit, Tree
 
-from courseascode.domain import GitRef
-from courseascode.git.diff import ChangeStatus, Diff, FileChange
 from courseascode.git.provider import BranchMovedError, GitProvider, GitProviderError
-
-_STATUS_MAP: dict[str, ChangeStatus] = {
-    "A": "added",
-    "M": "modified",
-    "D": "deleted",
-    "R": "renamed",
-    "T": "modified",
-}
 
 # SHA del árbol vacío (constante bien conocida de Git), para crear
 # directorios intermedios al commitear un archivo en una ruta nueva.
@@ -47,14 +36,6 @@ class LocalGitProvider(GitProvider):
         self._root = Path(self._repo.working_tree_dir or self._repo.git_dir)
 
     # -- refs y checkouts -------------------------------------------------------
-
-    def get_ref(self, ref: str) -> GitRef:
-        try:
-            self._repo.commit(ref)
-        except BadName as exc:
-            msg = f"Referencia Git no encontrada: {ref!r}"
-            raise GitProviderError(msg) from exc
-        return GitRef.of(ref)
 
     @contextmanager
     def checkout_ref(self, ref: str) -> Iterator[Path]:
@@ -94,31 +75,7 @@ class LocalGitProvider(GitProvider):
     def get_commit(self, ref: str) -> str:
         return str(self._commit(ref).hexsha)
 
-    # -- tags y diffs --------------------------------------------------------------
-
-    def list_tags(self, pattern: str = "*") -> list[str]:
-        return sorted(tag.name for tag in self._repo.tags if fnmatch.fnmatch(tag.name, pattern))
-
-    def diff(self, ref_a: str, ref_b: str) -> Diff:
-        commit_a = self._commit(ref_a)
-        commit_b = self._commit(ref_b)
-        changes = []
-        for item in commit_a.diff(commit_b):
-            status = _STATUS_MAP.get(item.change_type or "", "modified")
-            path = item.b_path or item.a_path or ""
-            changes.append(FileChange(path=path, status=status))
-        return Diff(ref_a=ref_a, ref_b=ref_b, changes=tuple(changes))
-
-    def merge_base(self, ref_a: str, ref_b: str) -> str:
-        try:
-            bases = self._repo.merge_base(ref_a, ref_b)
-        except GitCommandError as exc:
-            msg = f"Referencia Git inválida: {exc}"
-            raise GitProviderError(msg) from exc
-        if not bases:
-            msg = f"Sin ancestro común entre {ref_a!r} y {ref_b!r}"
-            raise GitProviderError(msg)
-        return bases[0].hexsha
+    # -- historia --------------------------------------------------------------------
 
     def commits_ahead(self, base: str, ref: str) -> int:
         try:
@@ -135,14 +92,6 @@ class LocalGitProvider(GitProvider):
             msg = f"Referencia Git inválida: {exc}"
             raise GitProviderError(msg) from exc
         return bool(bases) and bases[0].hexsha == sha_a
-
-    def current_branch(self) -> str:
-        try:
-            branch = self._repo.active_branch
-        except TypeError as exc:
-            msg = "HEAD desacoplado: no hay rama actual"
-            raise GitProviderError(msg) from exc
-        return str(branch)
 
     # -- escritura (LIA-003/004) -------------------------------------------------
 

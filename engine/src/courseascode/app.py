@@ -1,0 +1,79 @@
+"""App FastAPI del engine LiaEditor-Moodle.
+
+Monta los dos routers que consume el plugin «Materiales Editables»:
+
+- ``/edit/*`` (``courseascode.api.edit``): ramas ``edicion/*``, contenido,
+  guardado con optimistic locking por SHA y estado (D2-D5).
+- ``/publish`` (``courseascode.api.publish``): artefactos H5P/ePub/PDF con
+  liaex (D7 fase 2).
+
+Más ``GET /health`` para el healthcheck del contenedor.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+from fastapi import FastAPI, Request
+from fastapi.responses import Response
+from starlette.middleware.base import RequestResponseEndpoint
+
+from courseascode.api.edit import EditApiDeps, create_edit_router
+from courseascode.api.publish import PublishApiDeps, create_publish_router
+from courseascode.git.local_provider import LocalGitProvider
+from courseascode.git.provider import GitProvider, GitProviderError
+from courseascode.logging_config import bound_correlation, configure_logging
+from courseascode.publish.service import ArtifactExecutor, LiaexDockerExecutor
+
+
+def create_app(
+    content_root: Path,
+    provider: GitProvider | None = None,
+    content_repo_url: str | None = None,
+    executor: ArtifactExecutor | None = None,
+) -> FastAPI:
+    """Crea la app sobre el repo de contenidos ``content_root``.
+
+    Args:
+        content_root: clon del repo de contenidos.
+        provider: provider Git; si es ``None`` se intenta ``LocalGitProvider``
+            y, si ``content_root`` no es un repo Git, los endpoints responden 503.
+        content_repo_url: URL del repo en la forja (``CONTENT_REPO_URL``) para
+            construir la ``diff_url`` de los conflictos 409.
+        executor: ejecutor de artefactos para ``POST /publish``; ``None`` →
+            ``LiaexDockerExecutor`` si hay Docker en el host, si no 503.
+    """
+    configure_logging()
+    if provider is None:
+        try:
+            provider = LocalGitProvider(content_root)
+        except GitProviderError:
+            provider = None
+    if executor is None:
+        # Docker-in-docker: WORKDIR/HOST_WORKDIR traducen las rutas de -v
+        # entre la vista del contenedor y la del demonio del host.
+        docker_executor = LiaexDockerExecutor(
+            workdir=os.environ.get("COURSEASCODE_WORKDIR"),
+            host_workdir=os.environ.get("COURSEASCODE_HOST_WORKDIR"),
+        )
+        executor = docker_executor if docker_executor.available() else None
+
+    app = FastAPI(title="courseascode engine", docs_url=None, redoc_url=None)
+
+    @app.middleware("http")
+    async def _correlation_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        """Correlation id por petición (header ``X-Correlation-Id`` o generado)."""
+        with bound_correlation(request.headers.get("X-Correlation-Id")):
+            return await call_next(request)
+
+    @app.get("/health")
+    def health() -> dict[str, bool]:
+        """Healthcheck: el proceso responde y si hay repo Git / ejecutor."""
+        return {"ok": True, "git": provider is not None, "publish": executor is not None}
+
+    app.include_router(create_edit_router(EditApiDeps(git=provider, repo_url=content_repo_url)))
+    app.include_router(create_publish_router(PublishApiDeps(git=provider, executor=executor)))
+    return app
