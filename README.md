@@ -106,10 +106,11 @@ Las credenciales nunca se commitean: el push del engine usa las del
 
 ## Documentación
 
+- [Flujos de datos — plugin, engine y editor](docs/Flujos%20de%20datos%20—%20plugin,%20engine%20y%20editor.md) — diagramas de abrir, guardar y publicar.
 - [Desarrollo LiaEditor–Moodle v1](docs/desarrollo-liaeditor-moodle-v1.md) — decisiones de arquitectura D1–D10 y fases.
 - [Especificación `mod_liamd` v0.1.0](docs/cambio-curso-a-liascript.md) — requisitos funcionales, endpoints, BD, capacidades.
 - [Roadmap del fork LiveEditor](docs/roadmap-liveeditor-fork.md) — cambios C1–C10 sobre el editor, hitos LIV-1–6.
-- [Tasklist LiaEditor–Moodle v1](docs/Tasklist%20—%20Desarrollo%20LiaEditor–Moodle%20v1.md) — fases 1–3 con DoD, pistas engine/plugin/fork (LIA-001–055).
+- [Tasklist](docs/Tasklist%20—%20Desarrollo%20LiaEditor–Moodle%20v1.md) — trabajo pendiente (v2): seguridad, editor, robustez del backend y producción.
 - [Bitácora](BITACORA.md) — progreso real y registro de sesiones.
 - Documentación histórica (Course as Code, flujo eliminado): [docs/historico/](docs/historico/).
 
