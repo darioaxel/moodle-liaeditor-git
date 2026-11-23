@@ -201,21 +201,23 @@ def test_liaex_nombre_alternativo_y_fichero_ausente(
     assert excinfo.value.status_code == 502  # noqa: PLR2004
 
 
-def test_liaex_scorm_2004_con_embed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_liaex_scorm_12_por_defecto_con_embed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     calls = _capture_docker(monkeypatch, tmp_path)
     assert LiaexDockerExecutor().generate(tmp_path, "a.md", "scorm") == b"ARTEFACTO"
     args = calls[0]
-    assert args[args.index("--format") + 1] == "scorm2004"
+    assert args[args.index("--format") + 1] == "scorm1.2"
     assert "--scorm-embed" in args
     assert not list(tmp_path.glob("artifact*"))
 
 
-def test_liaex_scorm_12_configurable_y_version_invalida(
+def test_liaex_scorm_2004_configurable_y_version_invalida(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     calls = _capture_docker(monkeypatch, tmp_path)
-    LiaexDockerExecutor(scorm_version="1.2").generate(tmp_path, "a.md", "scorm")
-    assert calls[0][calls[0].index("--format") + 1] == "scorm1.2"
+    LiaexDockerExecutor(scorm_version="2004").generate(tmp_path, "a.md", "scorm")
+    assert calls[0][calls[0].index("--format") + 1] == "scorm2004"
     with pytest.raises(ValueError, match="SCORM"):
         LiaexDockerExecutor(scorm_version="3")
 

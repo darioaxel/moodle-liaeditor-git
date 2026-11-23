@@ -28,6 +28,31 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 34: SCORM 1.2 como contenido y fix de H5P en la página Publicar
+
+- **Fallo reportado**: publicar en H5P desde la página Publicar daba
+  «Tipo de artefacto no válido: hp». Causa: `artifact_type` se leía con
+  `PARAM_ALPHA`, que solo conserva letras (`h5p` → `hp`). Ahora
+  `PARAM_ALPHANUM`. La prueba del navegador no lo detectó porque su
+  servidor simulado no limpia parámetros como Moodle.
+- **SCORM se veía como actividad con intentos y no a pantalla completa**:
+  es el comportamiento por defecto de `mod_scorm` (página de entrada con
+  intentos, índice y navegación de SCORM, marco con el alto de la
+  configuración). El plugin fija ahora, sobre los valores del sitio:
+  `skipview=2` (entra directo), `displayattemptstatus=0`, `hidetoc=3` (sin
+  índice), `nav=0`, `displaycoursestructure=0`, `hidebrowse=1`,
+  `displayactivityname=0`, ventana actual al 100 % (mod_scorm ajusta el
+  alto al de la ventana), intentos ilimitados. Constantes comprobadas en
+  el código de Moodle (`mod/scorm/lib.php` y `locallib.php`). Los intentos
+  siguen existiendo internamente (notas y finalización), pero no se ven.
+- **SCORM 1.2 por defecto** (decisión del usuario, compatibilidad): engine
+  `scorm_version="1.2"` (configurable a 2004). Verificado con liaex real:
+  `imsmanifest.xml` con `schemaversion` 1.2. Engine 79 tests ✓; plugin 8
+  tests (37 aserciones) con el arnés mínimo.
+- **Plugin 2.4.2 (2026112304)**. Los SCORM ya publicados toman los ajustes
+  nuevos al volver a publicarlos (`update_moduleinfo`).
+- **No verificado** en Moodle real.
+
 ### 2026-11-23 — Sesión 33: Progreso visible al publicar desde el plugin
 
 - **Problema reportado**: al publicar desde la página Publicar el navegador

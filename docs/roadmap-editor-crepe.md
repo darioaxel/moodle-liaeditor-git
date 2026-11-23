@@ -16,7 +16,7 @@
 | # | Decisión |
 |---|----------|
 | R1 | Alcance: **solo la capa de presentación-edición**. Se mantiene Markdown LiaScript como formato y todo el backend (plugin, engine, Git, liaex) |
-| R2 | Formatos de exportación: `h5p`, `epub`, `pdf` **y SCORM 2004** (revisada el 2026-11-23: SCORM vuelve a petición del usuario, generado con `--scorm-embed`; la versión es configurable a 1.2, que es la que usan los presets de liaex para Moodle) |
+| R2 | Formatos de exportación: `h5p`, `epub`, `pdf` **y SCORM 1.2** (revisada el 2026-11-23: SCORM vuelve a petición del usuario; se probó 2004 y se pasa a 1.2 por compatibilidad con Moodle, como los presets de liaex. Generado con `--scorm-embed` y publicado sin página de intentos, índice ni navegación de SCORM) |
 | R3 | El editor se desarrolla en un **repo propio, [`FPVirtual/fpvirtual-crepe-editor`](https://github.com/FPVirtual/fpvirtual-crepe-editor)** (prompt de desarrollo: `docs/prompts/desarrollo-crepe-editor.md`); este repo mantiene plugin, engine y docs, y sus cambios para el editor van en la rama `feature/editor-crepe` |
 | R4 | **Sin preview LiaScript completa**: la vista WYSIWYG del editor es la única preview. Los constructos propios de LiaScript (quizzes, ejecutables) se muestran como tarjetas/placeholders y su comportamiento real solo se comprueba en el artefacto publicado |
 | R5 | Colaboración multi-autor: **fuera de alcance** (el modelo de ramas por usuario D4 ya cubre el aislamiento) |

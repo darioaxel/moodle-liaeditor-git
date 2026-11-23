@@ -43,11 +43,11 @@ class LiaexDockerExecutor(ArtifactExecutor):
     la imagen es ``liaex`` y acepta ``--input``/``--format``/``--output``.
     PDF necesita Chromium → se ejecuta con ``--shm-size=1g`` (spec §11).
 
-    **SCORM**: el formato ``scorm`` de la API se genera como SCORM 2004
-    (``scorm_version``, configurable a ``1.2`` con
-    ``MATERIALES_LIASCRIPT_SCORM_VERSION``) con ``--scorm-embed``, el modo que
-    liaex recomienda para Moodle (restricciones de carga dinámica). Sale
-    como ``.zip``.
+    **SCORM**: el formato ``scorm`` de la API se genera como SCORM 1.2 (la
+    versión que Moodle soporta por completo y la de los presets de liaex para
+    Moodle 3/4/5) con ``--scorm-embed`` (restricciones de carga dinámica de
+    Moodle). Configurable a ``2004`` con ``MATERIALES_LIASCRIPT_SCORM_VERSION``.
+    Sale como ``.zip``.
 
     **Red**: por defecto el contenedor no tiene red (``none``). Los materiales
     con ``import:`` de plantillas LiaScript la necesitan, porque liaex las
@@ -71,7 +71,7 @@ class LiaexDockerExecutor(ArtifactExecutor):
         workdir: str | None = None,
         host_workdir: str | None = None,
         network: str = "none",
-        scorm_version: str = "2004",
+        scorm_version: str = "1.2",
     ) -> None:
         if scorm_version not in SCORM_VERSIONS:
             msg = f"versión de SCORM no soportada: {scorm_version!r} (usa 2004 o 1.2)"

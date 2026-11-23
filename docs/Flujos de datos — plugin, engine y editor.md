@@ -254,7 +254,7 @@ sequenceDiagram
 Mismo camino que el editor (`publisher::publish_generated`), con sesión de
 Moodle en lugar de token. El profesor elige la versión (la última de su
 rama de edición, es decir, su HEAD, o la oficial de `main`), el formato
-(H5P, ePub, PDF o SCORM 2004), el nombre y la sección; el SHA lo resuelve
+(H5P, ePub, PDF o SCORM 1.2), el nombre y la sección; el SHA lo resuelve
 el servidor. «Descargar sin publicar» genera el mismo fichero y lo entrega
 al navegador sin crear módulo ni registro.
 

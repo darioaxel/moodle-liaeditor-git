@@ -24,7 +24,7 @@ ARTIFACT_EXTENSIONS: dict[str, str] = {
 }
 
 #: Versiones de SCORM que admite liaex (``--format scorm1.2`` / ``scorm2004``).
-SCORM_VERSIONS = ("2004", "1.2")
+SCORM_VERSIONS = ("1.2", "2004")
 
 
 class PublishError(RuntimeError):

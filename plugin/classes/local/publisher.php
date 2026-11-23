@@ -6,7 +6,8 @@
  * generado del material (H5P, ePub, PDF) y registra el despliegue
  * curso↔SHA↔cmid en ``local_liamateriales_deploy`` (trazabilidad D6).
  *
- * Mapeo tipo → módulo: ``scorm`` → mod_scorm (SCORM 2004 de liaex) ·
+ * Mapeo tipo → módulo: ``scorm`` → mod_scorm (SCORM 1.2 de liaex, mostrado
+ * como contenido: sin página de intentos, índice ni navegación) ·
  * ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
  * mod_resource (descarga accesible). Desde Materiales Editables v2.0 los
  * formatos de publicación son solo H5P, ePub y PDF.
@@ -139,23 +140,55 @@ class publisher {
     }
 
     /**
-     * Paquete SCORM subido (SCORM_TYPE_LOCAL) con los ajustes por defecto
-     * del sitio, como haría el formulario de mod_scorm.
+     * Ajustes de visualización del SCORM: el material se ve como un
+     * contenido, no como un examen. Valores de mod_scorm (lib.php/locallib.php):
+     * SCORM_SKIPVIEW_ALWAYS = 2, SCORM_TOC_DISABLED = 3, SCORM_NAV_DISABLED = 0,
+     * SCORM_DISPLAY_ATTEMPTSTATUS_NO = 0, SCORM_FORCEATTEMPT_NO = 0.
      */
-    private static function apply_scorm_defaults(\stdClass $moduleinfo): void {
-        $config = get_config('scorm');
-        $moduleinfo->scormtype = 'local';
-        $moduleinfo->cmidnumber = '';
-        $moduleinfo->timeopen = 0;
-        $moduleinfo->timeclose = 0;
+    private const SCORM_DISPLAY = [
+        'skipview' => 2,               // Entra directo al contenido, sin página de intentos.
+        'displayattemptstatus' => 0,   // No muestra el estado de los intentos.
+        'hidetoc' => 3,                // Sin índice de SCORM: todo el ancho para el contenido.
+        'nav' => 0,                    // Sin botones de navegación de SCORM (LiaScript tiene los suyos).
+        'displaycoursestructure' => 0, // Sin estructura del curso en la página de entrada.
+        'hidebrowse' => 1,             // Sin modo «previsualizar».
+        'displayactivityname' => 0,    // Sin el título encima del reproductor.
+        'popup' => 0,                  // Ventana actual: el alto se ajusta al de la ventana.
+        'width' => 100,                // 100 % (mod_scorm trata ≤ 100 como porcentaje).
+        'height' => 100,
+        'maxattempt' => 0,             // Intentos ilimitados.
+        'forcenewattempt' => 0,
+        'lastattemptlock' => 0,
+    ];
+
+    /**
+     * Ajustes del módulo SCORM: los valores por defecto del sitio (como el
+     * formulario de mod_scorm) y, encima, la visualización de contenido.
+     *
+     * @param \stdClass $siteconfig get_config('scorm')
+     * @return array<string, mixed>
+     */
+    public static function scorm_settings(\stdClass $siteconfig): array {
+        $settings = [
+            'scormtype' => 'local',    // Paquete subido (SCORM_TYPE_LOCAL).
+            'cmidnumber' => '',
+            'timeopen' => 0,
+            'timeclose' => 0,
+            'updatefreq' => 0,
+        ];
         foreach (self::SCORM_DEFAULTS as $key) {
-            if (isset($config->$key)) {
-                $moduleinfo->$key = $config->$key;
+            if (isset($siteconfig->$key)) {
+                $settings[$key] = $siteconfig->$key;
             }
         }
-        $moduleinfo->width = $config->framewidth ?? 100;
-        $moduleinfo->height = $config->frameheight ?? 500;
-        $moduleinfo->updatefreq = 0;
+        return array_merge($settings, self::SCORM_DISPLAY);
+    }
+
+    /** Aplica scorm_settings() al moduleinfo. */
+    private static function apply_scorm_defaults(\stdClass $moduleinfo): void {
+        foreach (self::scorm_settings(get_config('scorm')) as $key => $value) {
+            $moduleinfo->$key = $value;
+        }
     }
 
     /** Tiempo máximo de generación del artefacto (s). PDF con Chromium tarda ~20 s en frío. */

@@ -26,4 +26,21 @@ final class publisher_test extends \advanced_testcase {
         $this->assertSame('pdf', publisher::extension('pdf'));
         $this->assertSame('epub', publisher::extension('epub'));
     }
+
+    public function test_scorm_se_muestra_como_contenido(): void {
+        // La configuración del sitio no puede volver a mostrar intentos ni índice.
+        $site = (object) ['skipview' => 0, 'hidetoc' => 0, 'nav' => 1, 'displayattemptstatus' => 1,
+            'maxgrade' => 100, 'grademethod' => 1];
+        $settings = publisher::scorm_settings($site);
+        $this->assertSame('local', $settings['scormtype']);
+        $this->assertSame(2, $settings['skipview']);
+        $this->assertSame(3, $settings['hidetoc']);
+        $this->assertSame(0, $settings['nav']);
+        $this->assertSame(0, $settings['displayattemptstatus']);
+        $this->assertSame(100, $settings['width']);
+        $this->assertSame(100, $settings['height']);
+        // La calificación sigue los valores del sitio.
+        $this->assertSame(100, $settings['maxgrade']);
+        $this->assertSame(1, $settings['grademethod']);
+    }
 }

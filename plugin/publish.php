@@ -101,7 +101,8 @@ if (data_submitted() && confirm_sesskey()) {
     $mode = optional_param('mode', 'generate', PARAM_ALPHA);
 
     try {
-        $artifacttype = required_param('artifact_type', PARAM_ALPHA);
+        // PARAM_ALPHANUM: con PARAM_ALPHA «h5p» llegaba como «hp» (solo letras).
+        $artifacttype = required_param('artifact_type', PARAM_ALPHANUM);
         $versionkey = required_param('version', PARAM_ALPHA);
         $name = trim(optional_param('name', '', PARAM_TEXT));
         $section = optional_param('section', 0, PARAM_INT);

@@ -11,8 +11,8 @@ entorno:
   traducción de rutas docker-in-docker para liaex.
 - ``MATERIALES_LIASCRIPT_LIAEX_NETWORK`` (opcional, defecto ``none``): red del
   contenedor de liaex; ``bridge`` si los materiales importan plantillas.
-- ``MATERIALES_LIASCRIPT_SCORM_VERSION`` (opcional, defecto ``2004``): versión
-  de SCORM del formato ``scorm`` (``2004`` o ``1.2``).
+- ``MATERIALES_LIASCRIPT_SCORM_VERSION`` (opcional, defecto ``1.2``): versión
+  de SCORM del formato ``scorm`` (``1.2`` o ``2004``).
 - ``MATERIALES_LIASCRIPT_LOG_FORMAT``: ``console`` (defecto) o ``json``.
 - ``HOST`` / ``PORT``: interfaz y puerto de uvicorn (defaults 0.0.0.0:8000).
 
