@@ -1,7 +1,8 @@
 # Roadmap — Generación web estática y PDF de contenido desde LiaScript
 
-**Versión**: 0.2 · **Fecha**: 2026-11-23 · **Estado**: Fase 0 (prototipo)
-hecha en la rama `feature/generacion-web` (ver §8)
+**Versión**: 0.3 · **Fecha**: 2026-11-23 · **Estado**: Fase 4 (integración)
+desplegada y en pruebas en el Moodle de pruebas, rama `feature/generacion-web`
+(ver §8, §9 y §10)
 
 ## 1. Objetivo
 
@@ -138,6 +139,18 @@ Plantilla `fpvirtual.latex` y `content-boxes.tex` de
 `fpvirtual-markdown-a-pdf`: el PDF de contenido se ve igual que los PDF de
 FP Virtual de hoy.
 
+**Bloques de código** (desde la v0.3): caja con fondo `#F7F7F7` y borde gris,
+como Eisvogel, partible entre páginas (`tcolorbox`, en `content-boxes.tex`),
+para los bloques resaltados (`Shaded`) y para los que no tienen lenguaje
+(`verbatim`, con cortes de línea). Se mantiene el resaltado de Pandoc
+(`--syntax-highlighting=default`) y **no** se usa `listings`: el estilo
+Eisvogel de la plantilla depende de él, pero `listings` descoloca los
+caracteres multibyte (los diagramas con `─ │ └ ▶` acaban al final de la
+línea). Fuente de código **Source Code Pro** (`content-boxes.yaml`), cargada
+por fichero porque `pandoc/extra` no tiene fontconfig: Latin Modern Mono no
+tiene los caracteres de dibujo de cajas y XeLaTeX los omitía sin error (172
+en la demo, 46 en UT03, 26 en UT04).
+
 ## 4. Publicación en Moodle
 
 - **Web**: `mod_resource` con todos los ficheros del paquete en
@@ -242,6 +255,8 @@ desde la página Publicar en el Moodle de pruebas, con registro de SHA y
 | Mantenimiento de `liamat.js` | Sin dependencias, alcance acotado a §3.2 y pruebas en navegador |
 | Enlaces y recursos dentro de `pluginfile.php` | Solo rutas relativas; prueba en el Moodle de pruebas desde la Fase 0 |
 | Dos versiones de la plantilla FP Virtual | La extensión usa la de `fpvirtual-markdown-a-pdf` como origen único |
+| Imágenes sin URL en el material (el editor Crepe guarda un bloque de imagen vacío como `![1.00]()`) | `web.lua` las omite con aviso del lector (antes `chunkedhtml` fallaba: «File '.' not found in resource path»). Falta corregir el origen en el editor |
+| XeLaTeX omite sin error los caracteres que la fuente no tiene | Fuentes con cobertura amplia (Source Code Pro para el código); revisar los avisos «Missing character» del log al añadir materiales nuevos |
 
 ## 7. Decisiones pendientes
 
@@ -327,3 +342,41 @@ verde del editor como acento: barra superior fija, barra lateral con el
 código One Light/One Dark con el lenguaje, navegación en tarjetas, portada
 con «Empezar» y modo claro/oscuro. Así queda resuelta en parte la decisión
 pendiente nº 1: la marca FP Virtual sigue siendo solo del PDF.
+
+## 10. Estado — Pruebas en el Moodle de pruebas (2026-11-23)
+
+Desplegado en el servidor de pruebas (Moodle 8088, engine 8091, editor
+8092) con la rama `feature/generacion-web` (`42c4e2a`) y la imagen
+`pandoc/extra:latest` (Pandoc 3.14) descargada en el host.
+
+**Funciona**:
+
+- `web` y `pdfcontenido` con los 5 materiales de `contenidos-test`
+  (`main`): web en menos de 1 s (zip con una página por sección e
+  `index.html`), PDF de contenido en ~3 s. Los formatos de liaex (H5P, ePub,
+  PDF, SCORM) siguen igual.
+- Página Publicar: los seis formatos en el desplegable y ajustes de la web
+  en la configuración del plugin.
+- «Descargar sin publicar» en web desde la página Publicar con la versión de
+  la rama de edición del usuario, con los avisos del lector.
+
+**Errores encontrados y corregidos**:
+
+1. **Web fallaba con imágenes sin URL** (`![1.00]()`, guardadas por el
+   editor desde un bloque de imagen vacío): `chunkedhtml` intenta copiar
+   `.`. `web.lua` las omite con aviso y quita la figura que queda vacía. De
+   paso, `--mathml` → `--math-method=mathml` (opción obsoleta en Pandoc 3.14).
+2. **PDF de contenido: código sin caja y caracteres perdidos**: ver §3.4.
+3. **Página Publicar sin botón para volver**: botón «Regresar a Edición
+   Materiales v2» bajo el título (cadena `backto` del núcleo).
+
+**Pendiente**:
+
+- Criterio de salida de la Fase 4: **publicar** (crear la actividad) los dos
+  formatos desde la página Publicar y desde el editor, y comprobar la web
+  dentro de `mod_resource`.
+- Editor Crepe: no guardar bloques de imagen sin URL.
+- PDF de contenido: `①` `②` en comentarios en cursiva no existen en Source
+  Code Pro Italic (4 caracteres en UT03); valorar una fuente de respaldo.
+- Avisos sin número de línea salen con un separador inicial (` · imagen ·
+  …`); quitarlo en `pandoc_export.py`.

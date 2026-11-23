@@ -76,6 +76,29 @@ function Div(el)
   end
 end
 
+-- Imágenes sin URL (p. ej. un bloque de imagen del editor guardado sin
+-- fichero: `![1.00]()`). chunkedhtml copia cada imagen local a la salida, con
+-- la URL vacía intenta copiar "." y Pandoc falla («File '.' not found in
+-- resource path»). Se omiten con un aviso del lector.
+function Image(el)
+  if (el.src or ''):match('^%s*$') then
+    io.stderr:write(('AVISO-LIASCRIPT\t\timagen\timagen sin URL omitida (texto alternativo: «%s»)\n')
+      :format(pandoc.utils.stringify(el.caption)))
+    return {}
+  end
+end
+
+-- La figura que contenía solo una imagen omitida queda vacía: se quita entera
+-- (si no, quedaría su pie suelto). Los filtros de Inline corren antes que los
+-- de Block, así que aquí la imagen ya no está.
+function Figure(el)
+  local imagenes = 0
+  el.content:walk({ Image = function() imagenes = imagenes + 1 end })
+  if imagenes == 0 and pandoc.utils.stringify(el.content):match('^%s*$') then
+    return {}
+  end
+end
+
 function Link(el)
   for _, tipo in ipairs({ 'video', 'audio', 'embed' }) do
     if el.classes:includes(tipo) then

@@ -28,6 +28,31 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 38: Pruebas de la Fase 4 en el Moodle de pruebas y correcciones
+
+- **Despliegue** de `feature/generacion-web` (`42c4e2a`) en el servidor de
+  pruebas: plugin 2.5.0 en Moodle 8088, engine 8091 reconstruido, imagen
+  `pandoc/extra:latest` (Pandoc 3.14) descargada en el host. `web` y
+  `pdfcontenido` funcionan con los 5 materiales; «Descargar sin publicar»
+  en web probado desde la página Publicar.
+- **Engine — web con imágenes sin URL**: el editor Crepe guarda un bloque de
+  imagen vacío como `![1.00]()` y `chunkedhtml` fallaba («File '.' not found
+  in resource path»). `web.lua` omite esas imágenes con aviso del lector y
+  quita la figura vacía. `--mathml` → `--math-method=mathml`.
+- **Engine — PDF de contenido**: bloques de código en caja (fondo y borde,
+  aspecto Eisvogel, `tcolorbox` en `content-boxes.tex`) conservando el
+  resaltado de Pandoc, sin `listings` (descoloca los multibyte). Fuente de
+  código Source Code Pro (`content-boxes.yaml`): Latin Modern Mono no tenía
+  `─ │ └ ▶` y XeLaTeX los omitía sin error (172 caracteres en la demo).
+- **Plugin — Publicar**: botón «Regresar a Edición Materiales v2» bajo el
+  título (antes solo había «Cancelar» al final del formulario).
+- **Roadmap** de generación web 0.3: §3.4 (código), riesgos nuevos y §10
+  (estado de las pruebas).
+- **Pendiente**: publicar (crear la actividad) `web` y `pdfcontenido` desde
+  Publicar y desde el editor; corregir en el editor el bloque de imagen
+  vacío; `①` `②` en cursiva sin glifo; separador inicial en los avisos sin
+  línea.
+
 ### 2026-11-23 — Sesión 37: Generación web y PDF de contenido — Fase 4 (integración)
 
 - **Engine**: formatos `web` (zip) y `pdfcontenido` (PDF) en `POST /publish`
