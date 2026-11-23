@@ -261,6 +261,23 @@ completa; quedan:
 
 ---
 
+## FASE W — Generación web estática y PDF de contenido
+
+Detallada en [docs/generacion_web/roadmap.md](generacion_web/roadmap.md).
+
+- [ ] **LIA-110** (L) Fase 0: prototipo del lector LiaScript para Pandoc,
+  salida web y PDF de contenido con `ut05` y la demo (go/no-go).
+- [ ] **LIA-111** (L) Fase 1: lector completo, lenguaje intermedio
+  especificado y conformidad con liaex en todo el corpus.
+- [ ] **LIA-112** (L) Fase 2: salida web (plantilla, `liamat.js`,
+  accesibilidad).
+- [ ] **LIA-113** (M) Fase 3: PDF de contenido con la plantilla FP Virtual
+  (sin quizzes ni estructuras dinámicas).
+- [ ] **LIA-114** (M) Fase 4: formatos `web` y `pdf-contenido` en engine,
+  plugin y editor.
+
+---
+
 ## FASE B — Robustez del backend (⚙️🔌)
 
 Problemas detectados en el análisis técnico (sesión 24) que siguen
