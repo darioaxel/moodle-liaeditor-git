@@ -275,8 +275,9 @@ Detallada en [docs/generacion_web/roadmap.md](generacion_web/roadmap.md).
   accesibilidad).
 - [ ] **LIA-113** (M) Fase 3: PDF de contenido con la plantilla FP Virtual
   (sin quizzes ni estructuras dinámicas).
-- [ ] **LIA-114** (M) Fase 4: formatos `web` y `pdf-contenido` en engine,
-  plugin y editor.
+- [~] **LIA-114** (M) Fase 4: formatos `web` y `pdfcontenido` en engine,
+  plugin (2.5.0) y editor (sesión 37). Falta el criterio de salida: publicar
+  y descargar los dos formatos en el Moodle de pruebas.
 
 ---
 

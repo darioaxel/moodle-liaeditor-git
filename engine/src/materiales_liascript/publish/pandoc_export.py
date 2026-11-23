@@ -1,6 +1,7 @@
 """Web estática y PDF de contenido con Pandoc (roadmap docs/generacion_web).
 
-Ejecuta Pandoc en Docker (imagen ``fpvirtual-pandoc``) con la extensión de
+Ejecuta Pandoc en Docker (por defecto ``pandoc/extra``, configurable con
+``MATERIALES_LIASCRIPT_PANDOC_IMAGE``) con la extensión de
 ``publish/pandoc/``: el lector LiaScript (``liascript.lua``), el filtro de cada
 salida (``web.lua`` / ``contenido.lua``), la plantilla web y sus recursos
 (``assets/liamat.css`` y ``liamat.js``).
@@ -8,8 +9,9 @@ salida (``web.lua`` / ``contenido.lua``), la plantilla web y sus recursos
 - **Web**: ``chunkedhtml`` (una página por sección, ``index.html``), más los
   recursos de la web y las imágenes del material; se devuelve como zip.
 - **PDF de contenido**: plantilla FP Virtual (``fpvirtual.latex`` +
-  ``content-boxes``) de ``fpvirtual-markdown-a-pdf``, sin quizzes ni
-  estructuras dinámicas.
+  ``content-boxes``), sin quizzes ni estructuras dinámicas. Por defecto, la
+  copia incluida en ``pandoc/fpvirtual-theme/`` (de ``fpvirtual-markdown-a-pdf``);
+  otra con ``MATERIALES_LIASCRIPT_PDF_THEME_DIR``.
 
 Como liaex, trabaja sobre la copia temporal del SHA. La extensión y la
 plantilla se copian dentro de esa copia (``.liamat-pandoc/``) para que el
@@ -30,7 +32,8 @@ from pathlib import Path
 
 from materiales_liascript.publish.models import PublishError
 
-_IMAGE = "fpvirtual-pandoc:latest"
+#: Imagen pública con Pandoc ≥ 3 (chunkedhtml), XeLaTeX y pandoc-latex-environment.
+_IMAGE = "pandoc/extra:latest"
 _TIMEOUT = 180
 _WORK = ".liamat-pandoc"
 _AVISO = "AVISO-LIASCRIPT"
@@ -102,11 +105,8 @@ class PandocExporter:
 
     def content_pdf(self, checkout: Path, file: str) -> PandocResult:
         """PDF solo con el contenido, con la plantilla FP Virtual."""
-        if self._theme_dir is None:
-            msg = "PDF de contenido no disponible: falta la plantilla FP Virtual (theme_dir)"
-            raise PublishError(503, msg)
         work = self._prepare(checkout)
-        shutil.copytree(self._theme_dir, work / "theme")
+        shutil.copytree(self._theme_dir or work / "ext" / "fpvirtual-theme", work / "theme")
         output = work / "contenido.pdf"
         try:
             avisos = self._pandoc(

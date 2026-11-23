@@ -1,8 +1,8 @@
 """Generación web y PDF de contenido con Pandoc (roadmap docs/generacion_web, Fase 0).
 
-Tests de integración: necesitan Docker y la imagen ``fpvirtual-pandoc`` (y,
-para la conformidad, ``liascript/exporter``; para el PDF, la plantilla FP
-Virtual en ``MATERIALES_LIASCRIPT_PDF_THEME_DIR``). Se saltan si faltan.
+Tests de integración: necesitan Docker y la imagen de Pandoc
+(``MATERIALES_LIASCRIPT_PANDOC_IMAGE``, por defecto ``pandoc/extra:latest``) y,
+para la conformidad, ``liascript/exporter``. Se saltan si faltan.
 
 Criterio de la Fase 0: los quizzes que detecta el lector LiaScript coinciden,
 sección a sección y por tipo, con los que reconoce el parser real de LiaScript
@@ -27,7 +27,7 @@ from materiales_liascript.publish.pandoc_export import PandocExporter, _extensio
 
 FIXTURES = Path(__file__).parent / "fixtures" / "liascript"
 MATERIALES = sorted(p.name for p in FIXTURES.glob("*.md"))
-PANDOC_IMAGE = "fpvirtual-pandoc:latest"
+PANDOC_IMAGE = os.environ.get("MATERIALES_LIASCRIPT_PANDOC_IMAGE", "pandoc/extra:latest")
 LIAEX_IMAGE = "liascript/exporter:latest"
 LIAEX_TIPOS = {
     "SingleChoice": "single",
@@ -171,7 +171,7 @@ def test_conformidad_con_liascript(material: Path, nombre: str) -> None:
 @requiere_pandoc
 @pytest.mark.parametrize("nombre", MATERIALES)
 def test_web_sin_restos_de_liascript(material: Path, nombre: str) -> None:
-    resultado = PandocExporter().web(material, f"materiales/{nombre}")
+    resultado = PandocExporter(PANDOC_IMAGE).web(material, f"materiales/{nombre}")
     paquete = zipfile.ZipFile(io.BytesIO(resultado.content))
     nombres = paquete.namelist()
     assert {"index.html", "liamat.js", "liamat.css"} <= set(nombres)
@@ -188,13 +188,9 @@ def test_web_sin_restos_de_liascript(material: Path, nombre: str) -> None:
 
 
 @requiere_pandoc
-@pytest.mark.skipif(
-    not os.environ.get("MATERIALES_LIASCRIPT_PDF_THEME_DIR"),
-    reason="sin plantilla FP Virtual (MATERIALES_LIASCRIPT_PDF_THEME_DIR)",
-)
 @pytest.mark.parametrize("nombre", MATERIALES)
 def test_pdf_de_contenido_sin_preguntas(material: Path, nombre: str) -> None:
-    exportador = PandocExporter(theme_dir=Path(os.environ["MATERIALES_LIASCRIPT_PDF_THEME_DIR"]))
+    exportador = PandocExporter(PANDOC_IMAGE)  # plantilla FP Virtual incluida
     resultado = exportador.content_pdf(material, f"materiales/{nombre}")
     assert resultado.content[:4] == b"%PDF"
     pdf = material / "salida.pdf"

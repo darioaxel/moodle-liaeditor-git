@@ -296,3 +296,26 @@ Rama `feature/generacion-web`. Código en
 **Pendiente del criterio de salida**: comprobar la web dentro de
 `mod_resource` en el Moodle de pruebas (requiere la Fase 4 o subirla a mano).
 
+
+## 9. Estado — Fase 4 (integración)
+
+Rama `feature/generacion-web` en este repo y en `fpvirtual-crepe-editor`.
+
+- **Engine**: `POST /publish` con `format: "web"` (zip con `index.html` en la
+  raíz) y `format: "pdfcontenido"`. El formato se llama `pdfcontenido` (sin
+  guion: el plugin valida los tipos con `PARAM_ALPHANUM`). Avisos del lector
+  en la cabecera `X-Liamat-Avisos`. Imagen `pandoc/extra:latest` (pública;
+  ya trae XeLaTeX y `pandoc-latex-environment`), configurable con
+  `MATERIALES_LIASCRIPT_PANDOC_IMAGE`; la plantilla FP Virtual va incluida
+  (`pandoc/fpvirtual-theme/`), así que no hace falta construir
+  `fpvirtual-pandoc`.
+- **Plugin 2.5.0**: web como recurso «Archivo» con todos sus ficheros e
+  `index.html` como principal; visualización configurable en los ajustes
+  del plugin (por defecto ventana emergente de 1200×600, decisión pendiente
+  nº 2). Avisos en la actividad publicada, en «Descargar sin publicar» y en
+  `publish_api.php`.
+- **Editor**: los dos formatos en el desplegable de Publicar; avisos en el
+  banner.
+
+**Pendiente del criterio de salida**: publicar y descargar los dos formatos
+en el Moodle de pruebas, desde la página Publicar y desde el editor.

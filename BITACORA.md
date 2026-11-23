@@ -28,6 +28,29 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 37: Generación web y PDF de contenido — Fase 4 (integración)
+
+- **Engine**: formatos `web` (zip) y `pdfcontenido` (PDF) en `POST /publish`
+  con `PandocExporter`. Avisos del lector en la cabecera `X-Liamat-Avisos`
+  (lista JSON). Imagen por defecto pública `pandoc/extra:latest`
+  (`MATERIALES_LIASCRIPT_PANDOC_IMAGE`) y plantilla FP Virtual incluida en
+  `publish/pandoc/fpvirtual-theme/` (copia de `fpvirtual-markdown-a-pdf`
+  2f39291; otra con `MATERIALES_LIASCRIPT_PDF_THEME_DIR`). `/health` informa
+  de `pandoc`. Sin Docker, 503 en esos formatos.
+- **Plugin 2.5.0** (2026112305): `publisher` admite `web` (mod_resource con
+  todos los ficheros del zip, extraídos con `zip_packer`, e `index.html` como
+  principal; visualización de los ajustes nuevos, por defecto ventana
+  emergente 1200×600 como eXeLearning) y `pdfcontenido` (mod_resource).
+  Avisos del lector en la actividad publicada, en la descarga (página
+  Publicar) y en la respuesta de `publish_api.php`.
+- **Editor** (rama `feature/generacion-web`): formatos nuevos en Publicar y
+  avisos en el banner.
+- **Tests**: engine 102 ✓ (ruff, mypy); editor 114 ✓ y build; plugin: lint y
+  funciones puras (ajustes web, avisos); `stage_web` tiene test PHPUnit que
+  se ejecuta en el Moodle de pruebas.
+- **Pendiente**: probar en el Moodle de pruebas (criterio de salida de la
+  Fase 4); decisiones de aspecto y visualización.
+
 ### 2026-11-23 — Sesión 36: Generación web y PDF de contenido — Fase 0 (prototipo)
 
 - **Rama `feature/generacion-web`** (se unirá a `main` más adelante).

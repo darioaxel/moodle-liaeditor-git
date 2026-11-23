@@ -10,7 +10,8 @@
  * crea/actualiza el módulo del curso (mod_h5pactivity / mod_resource) y
  * registra el despliegue curso↔SHA↔cmid (D6).
  *
- * Respuestas: 200 ``{status, cmid, url}`` · 403 token inválido · 400
+ * Respuestas: 200 ``{status, cmid, url, avisos}`` (avisos del lector
+ * LiaScript en web y PDF de contenido) · 403 token inválido · 400
  * petición incompleta · 502 error del engine.
  *
  * @package    local_liamateriales
@@ -106,4 +107,5 @@ publish_respond(200, [
     'url' => ($cm = get_coursemodule_from_id('', $cmid, 0, false, IGNORE_MISSING))
         ? (new \moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cmid]))->out(false)
         : (new \moodle_url('/course/view.php', ['id' => $tokendata->courseid]))->out(false),
+    'avisos' => publisher::last_avisos(),
 ]);

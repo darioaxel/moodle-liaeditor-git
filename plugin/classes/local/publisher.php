@@ -8,9 +8,11 @@
  *
  * Mapeo tipo → módulo: ``scorm`` → mod_scorm (SCORM 1.2 de liaex, mostrado
  * como contenido: sin página de intentos, índice ni navegación) ·
- * ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
- * mod_resource (descarga accesible). Desde Materiales Editables v2.0 los
- * formatos de publicación son solo H5P, ePub y PDF.
+ * ``h5p`` → mod_h5pactivity · ``epub``/``pdf``/``pdfcontenido`` →
+ * mod_resource (descarga accesible) · ``web`` → mod_resource con todos los
+ * ficheros de la web estática (Pandoc + lector LiaScript) e ``index.html``
+ * como fichero principal, abierta en ventana emergente como los sitios de
+ * eXeLearning (configurable; docs/generacion_web).
  *
  * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -30,6 +32,8 @@ class publisher {
         'epub' => ['resource', 'files'],
         'pdf' => ['resource', 'files'],
         'scorm' => ['scorm', 'packagefile'],
+        'web' => ['resource', 'files'],
+        'pdfcontenido' => ['resource', 'files'],
     ];
 
     /** Extensión del fichero de cada formato (SCORM es un .zip). */
@@ -38,7 +42,18 @@ class publisher {
         'epub' => 'epub',
         'pdf' => 'pdf',
         'scorm' => 'zip',
+        'web' => 'zip',
+        'pdfcontenido' => 'pdf',
     ];
+
+    /** Visualización por defecto de la web (RESOURCELIB_DISPLAY_POPUP, como eXeLearning). */
+    public const WEB_DISPLAY_DEFAULT = 6;
+
+    /** Modos de visualización ofrecidos para la web: automático, incrustar, abrir, emergente, nueva ventana. */
+    public const WEB_DISPLAYS = [0, 1, 5, 6, 3];
+
+    /** Avisos del lector LiaScript de la última generación (cabecera X-Liamat-Avisos). */
+    private static array $lastavisos = [];
 
     /**
      * Ajustes de mod_scorm que su formulario toma de la configuración del
@@ -51,7 +66,7 @@ class publisher {
         'displayactivityname', 'auto', 'autocommit', 'masteryoverride',
     ];
 
-    /** Formatos publicables (h5p, epub, pdf, scorm). */
+    /** Formatos publicables (h5p, epub, pdf, scorm, web, pdfcontenido). */
     public static function types(): array {
         return array_keys(self::TYPES);
     }
@@ -110,6 +125,11 @@ class publisher {
         ];
         if ($modulename === 'scorm') {
             self::apply_scorm_defaults($moduleinfo);
+        }
+        if ($artifacttype === 'web') {
+            foreach (self::web_settings(get_config('local_liamateriales')) as $key => $value) {
+                $moduleinfo->$key = $value;
+            }
         }
 
         if ($existingcmid > 0) {
@@ -191,6 +211,33 @@ class publisher {
         }
     }
 
+    /**
+     * Ajustes de mod_resource para la web: visualización de los ajustes del
+     * plugin (por defecto, ventana emergente de 1200×600 como eXeLearning),
+     * sin filtros sobre los ficheros (el HTML ya está generado) ni descripción.
+     *
+     * @param \stdClass $config get_config('local_liamateriales')
+     * @return array<string, int>
+     */
+    public static function web_settings(\stdClass $config): array {
+        $display = isset($config->web_display) ? (int) $config->web_display : self::WEB_DISPLAY_DEFAULT;
+        if (!in_array($display, self::WEB_DISPLAYS, true)) {
+            $display = self::WEB_DISPLAY_DEFAULT;
+        }
+        $width = (int) ($config->web_popupwidth ?? 0);
+        $height = (int) ($config->web_popupheight ?? 0);
+        return [
+            'display' => $display,
+            'popupwidth' => $width > 0 ? $width : 1200,
+            'popupheight' => $height > 0 ? $height : 600,
+            'printintro' => 0,
+            'showsize' => 0,
+            'showtype' => 0,
+            'showdate' => 0,
+            'filterfiles' => 0,
+        ];
+    }
+
     /** Tiempo máximo de generación del artefacto (s). PDF con Chromium tarda ~20 s en frío. */
     private const GENERATE_TIMEOUT = 330;
 
@@ -199,14 +246,15 @@ class publisher {
      *
      * @param string $sourcefile ruta del .md en el repo
      * @param string $sha commit exacto a exportar
-     * @param string $artifacttype h5p | epub | pdf | scorm
-     * @return string bytes del artefacto
+     * @param string $artifacttype h5p | epub | pdf | scorm | web | pdfcontenido
+     * @return string bytes del artefacto (los avisos del lector, en last_avisos())
      * @throws \moodle_exception con el motivo si el engine no lo genera
      */
     public static function generate_artifact(string $sourcefile, string $sha, string $artifacttype): string {
         if (!isset(self::TYPES[$artifacttype])) {
             throw new \moodle_exception('invalidartifacttype', 'local_liamateriales', '', $artifacttype);
         }
+        self::$lastavisos = [];
         // La generación puede superar el límite de ejecución PHP por defecto.
         \core_php_time_limit::raise(self::GENERATE_TIMEOUT + 30);
         $curl = new \curl();
@@ -226,7 +274,30 @@ class publisher {
             }
             throw new \moodle_exception('publishgenerateerror', 'local_liamateriales', '', $detail);
         }
+        self::$lastavisos = self::parse_avisos($curl->getResponse());
         return $response;
+    }
+
+    /**
+     * Avisos del lector LiaScript (sintaxis que la web o el PDF no
+     * representan) de la cabecera ``X-Liamat-Avisos`` (lista JSON).
+     *
+     * @param array $headers cabeceras de la respuesta (curl::getResponse)
+     * @return string[]
+     */
+    public static function parse_avisos(array $headers): array {
+        foreach ($headers as $key => $value) {
+            if (strcasecmp(trim((string) $key), 'x-liamat-avisos') === 0) {
+                $decoded = json_decode(trim((string) $value));
+                return is_array($decoded) ? array_values(array_map('strval', array_filter($decoded, 'is_scalar'))) : [];
+            }
+        }
+        return [];
+    }
+
+    /** Avisos del lector de la última generación (vacío si no hubo o no aplica). */
+    public static function last_avisos(): array {
+        return self::$lastavisos;
     }
 
     /**
@@ -246,13 +317,51 @@ class publisher {
         return $draftitemid;
     }
 
+    /**
+     * Deja el artefacto en el área de borrador según su formato: la web se
+     * descomprime (todos sus ficheros, con ``index.html`` como principal); el
+     * resto es un único fichero.
+     */
+    public static function stage_artifact(int $userid, string $filename, string $bytes, string $artifacttype): int {
+        return $artifacttype === 'web' ? self::stage_web($userid, $bytes) : self::stage_draft($userid, $filename, $bytes);
+    }
+
+    /**
+     * Descomprime la web en un área de borrador. El extractor de Moodle
+     * (zip_packer) limpia las rutas (sin «..» ni rutas absolutas).
+     * ``index.html`` lleva sortorder 1: mod_resource lo toma como principal.
+     *
+     * @throws \moodle_exception si el zip no es válido o no tiene index.html
+     */
+    public static function stage_web(int $userid, string $bytes): int {
+        $zippath = make_request_directory() . '/web.zip';
+        file_put_contents($zippath, $bytes);
+        $draftitemid = file_get_unused_draft_itemid();
+        $contextid = \context_user::instance($userid)->id;
+        $result = get_file_packer('application/zip')->extract_to_storage(
+            $zippath, $contextid, 'user', 'draft', $draftitemid, '/', $userid
+        );
+        $fs = get_file_storage();
+        if ($result === false || !$fs->file_exists($contextid, 'user', 'draft', $draftitemid, '/', 'index.html')) {
+            throw new \moodle_exception('publishwebinvalid', 'local_liamateriales');
+        }
+        file_set_sortorder($contextid, 'user', 'draft', $draftitemid, '/', 'index.html', 1);
+        return $draftitemid;
+    }
+
     /** Nombre por defecto del módulo: el actual si ya existe, si no el del material y el formato. */
     public static function default_name(int $courseid, string $sourcefile, string $artifacttype): string {
         $cmid = self::reusable_cmid($courseid, $sourcefile, $artifacttype);
         $cms = get_fast_modinfo($courseid)->get_cms();
         return $cmid && isset($cms[$cmid])
             ? $cms[$cmid]->name
-            : basename($sourcefile, '.md') . ' (' . strtoupper($artifacttype) . ')';
+            : basename($sourcefile, '.md') . ' (' . self::label($artifacttype) . ')';
+    }
+
+    /** Etiqueta corta de un formato (nombres de módulo y progreso). */
+    public static function label(string $artifacttype): string {
+        return ['web' => 'Web', 'pdfcontenido' => 'PDF de contenido', 'epub' => 'ePub'][$artifacttype]
+            ?? strtoupper($artifacttype);
     }
 
     /**
@@ -271,10 +380,11 @@ class publisher {
         \stdClass $user
     ): int {
         $bytes = self::generate_artifact($sourcefile, $sha, $artifacttype);
-        $draftitemid = self::stage_draft(
+        $draftitemid = self::stage_artifact(
             (int) $user->id,
             basename($sourcefile, '.md') . '@' . substr($sha, 0, 8) . '.' . self::extension($artifacttype),
-            $bytes
+            $bytes,
+            $artifacttype
         );
         return self::publish(
             $courseid,

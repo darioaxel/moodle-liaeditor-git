@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,6 +14,7 @@ from materiales_liascript.app import create_app
 from materiales_liascript.edit import EditService
 from materiales_liascript.git import LocalGitProvider
 from materiales_liascript.publish.models import PublishError, PublishRequest
+from materiales_liascript.publish.pandoc_export import PandocExporter, PandocResult
 from materiales_liascript.publish.service import (
     ArtifactExecutor,
     LiaexDockerExecutor,
@@ -230,3 +232,65 @@ def test_publish_scorm_por_api(
     assert response.headers["content-type"] == "application/zip"
     assert f'@{material_sha[:8]}.zip"' in response.headers["content-disposition"]
     assert executor.calls[-1] == (FILE, "scorm")
+
+
+# -- Web estática y PDF de contenido (Pandoc) -----------------------------------
+
+
+class FakePandoc(PandocExporter):
+    """Devuelve artefactos prefijados y avisos, sin Docker."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[tuple[str, str]] = []
+
+    def web(self, checkout: Path, file: str) -> PandocResult:
+        self.calls.append(("web", file))
+        assert (checkout / file).is_file()
+        return PandocResult(b"PK-WEB", ["macro · @Pyodide.eval no se puede expandir"])
+
+    def content_pdf(self, checkout: Path, file: str) -> PandocResult:
+        self.calls.append(("pdfcontenido", file))
+        return PandocResult(b"%PDF-CONTENIDO", [])
+
+
+def test_publish_web_con_avisos(
+    git_repo: Path, provider: LocalGitProvider, material_sha: str
+) -> None:
+    pandoc = FakePandoc()
+    client = TestClient(
+        create_app(git_repo, provider=provider, executor=FakeExecutor(), pandoc=pandoc)
+    )
+    response = client.post("/publish", json={"file": FILE, "sha": material_sha, "format": "web"})
+    assert response.status_code == HTTP_OK
+    assert response.content == b"PK-WEB"
+    assert response.headers["content-type"] == "application/zip"
+    assert f'@{material_sha[:8]}.zip"' in response.headers["content-disposition"]
+    assert json.loads(response.headers["x-liamat-avisos"]) == [
+        "macro · @Pyodide.eval no se puede expandir"
+    ]
+    assert pandoc.calls == [("web", FILE)]
+
+
+def test_publish_pdf_de_contenido(
+    git_repo: Path, provider: LocalGitProvider, material_sha: str
+) -> None:
+    client = TestClient(
+        create_app(git_repo, provider=provider, executor=FakeExecutor(), pandoc=FakePandoc())
+    )
+    response = client.post(
+        "/publish", json={"file": FILE, "sha": material_sha, "format": "pdfcontenido"}
+    )
+    assert response.status_code == HTTP_OK
+    assert response.content == b"%PDF-CONTENIDO"
+    assert response.headers["content-type"] == "application/pdf"
+    assert "x-liamat-avisos" not in response.headers
+
+
+def test_publish_web_sin_pandoc_es_503(
+    material_sha: str, git_repo: Path, provider: LocalGitProvider
+) -> None:
+    service = PublishService(provider, FakeExecutor(), pandoc=None)
+    with pytest.raises(PublishError) as excinfo:
+        service.publish(PublishRequest(file=FILE, sha=material_sha, format="web"))
+    assert excinfo.value.status_code == HTTP_UNAVAILABLE

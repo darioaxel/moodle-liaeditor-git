@@ -53,6 +53,8 @@ CONTENT_REPO=/ruta/al/clon make serve
 | `MATERIALES_LIASCRIPT_LIAEX_NETWORK` | no | Red del contenedor de liaex (defecto `none`). `bridge` si los materiales usan `import:` de plantillas, que liaex descarga al exportar |
 | `MATERIALES_LIASCRIPT_SCORM_VERSION` | no | Versión de SCORM del formato `scorm`: `1.2` (defecto; la que Moodle soporta por completo y la de los presets de liaex para Moodle) o `2004` |
 | `MATERIALES_LIASCRIPT_THEME` | no | Tema de los contenidos exportados: `verde` (defecto, el del editor) o `none` (aspecto original de LiaScript). Las hojas están en `publish/themes/` y se generan desde el editor con `npm run theme:liascript` |
+| `MATERIALES_LIASCRIPT_PANDOC_IMAGE` | no | Imagen de Pandoc de los formatos `web` y `pdfcontenido` (defecto `pandoc/extra:latest`; requiere Pandoc ≥ 3, XeLaTeX y `pandoc-latex-environment`) |
+| `MATERIALES_LIASCRIPT_PDF_THEME_DIR` | no | Plantilla del PDF de contenido (`fpvirtual.latex`, `content-boxes.*`). Defecto: la copia incluida en `publish/pandoc/fpvirtual-theme/` |
 | `MATERIALES_LIASCRIPT_LOG_FORMAT` | no | `console` (defecto) o `json` |
 | `HOST` / `PORT` | no | Interfaz y puerto (defecto `0.0.0.0:8000`) |
 

@@ -116,6 +116,43 @@
         box.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
 
+    // Avisos del lector LiaScript (web y PDF de contenido) tras descargar.
+    function showAvisos(avisos) {
+        var box = document.getElementById('liamat-publish-avisos');
+        if (box) {
+            box.remove();
+        }
+        if (!avisos || !avisos.length) {
+            return;
+        }
+        box = document.createElement('div');
+        box.id = 'liamat-publish-avisos';
+        box.className = 'alert alert-warning';
+        box.setAttribute('role', 'status');
+        var p = document.createElement('p');
+        p.className = 'mb-1';
+        p.textContent = t('progress_avisos');
+        var list = document.createElement('ul');
+        list.className = 'mb-0';
+        avisos.forEach(function (aviso) {
+            var li = document.createElement('li');
+            li.textContent = aviso;
+            list.appendChild(li);
+        });
+        box.appendChild(p);
+        box.appendChild(list);
+        form.parentNode.insertBefore(box, form);
+    }
+
+    function avisosFrom(response) {
+        try {
+            var list = JSON.parse(response.headers.get('X-Liamat-Avisos') || '[]');
+            return Array.isArray(list) ? list : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
     function setBusy(busy) {
         running = busy;
         Array.prototype.forEach.call(form.querySelectorAll('button, input, select'), function (el) {
@@ -202,6 +239,7 @@
                         URL.revokeObjectURL(url);
                     }, 60000);
                     progress.done(t('progress_downloaded'));
+                    showAvisos(avisosFrom(response));
                     setBusy(false);
                     window.setTimeout(progress.close, 2000);
                 });
