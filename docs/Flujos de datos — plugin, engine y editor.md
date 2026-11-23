@@ -228,7 +228,7 @@ sequenceDiagram
     participant D as Docker (liaex)
     participant C as Curso de Moodle
 
-    P->>B: elige formato (H5P, ePub o PDF) y Publicar
+    P->>B: elige formato (H5P, ePub, PDF o SCORM) y Publicar
     Note over B: si hay cambios sin guardar,<br/>pide guardar primero
     B->>M: POST publish_api.php {file, sha, format, token}
     Note over M: token de escritura con curso de origen<br/>actúa como el usuario del token<br/>comprueba :deploy y manageactivities
@@ -242,7 +242,7 @@ sequenceDiagram
     alt ya hay un módulo de ese formato para el fichero y sigue existiendo
         M->>C: update_moduleinfo (actualiza el módulo)
     else primera vez, otro formato o módulo borrado
-        M->>C: add_moduleinfo (crea mod_h5pactivity o mod_resource)
+        M->>C: add_moduleinfo (mod_h5pactivity, mod_resource o mod_scorm)
     end
     Note over M: inserta en deploy {curso, fichero, sha, formato, cmid}
     M-->>B: 200 {cmid, url del módulo}
@@ -252,9 +252,11 @@ sequenceDiagram
 ### 4.2 Publicación desde la página Publicar del plugin
 
 Mismo camino que el editor (`publisher::publish_generated`), con sesión de
-Moodle en lugar de token. El profesor elige la versión (su última guardada
-o la oficial de `main`), el formato, el nombre y la sección; el SHA lo
-resuelve el servidor.
+Moodle en lugar de token. El profesor elige la versión (la última de su
+rama de edición, es decir, su HEAD, o la oficial de `main`), el formato
+(H5P, ePub, PDF o SCORM 2004), el nombre y la sección; el SHA lo resuelve
+el servidor. «Descargar sin publicar» genera el mismo fichero y lo entrega
+al navegador sin crear módulo ni registro.
 
 ```mermaid
 sequenceDiagram
@@ -265,9 +267,9 @@ sequenceDiagram
 
     P->>M: GET publish.php?id=curso&file=...
     Note over M: sesión Moodle, :deploy y manageactivities
-    M->>E: GET /edit/content?file&branch=main
-    E-->>M: {sha} de la versión oficial
-    M-->>P: formulario: versión (guardada / main), formato, nombre, sección
+    M->>E: GET /edit/content (rama del usuario y main)
+    E-->>M: {sha, committed_at} de cada versión
+    M-->>P: formulario: versión (mi rama / main), formato, nombre, sección
     P->>M: POST Generar y publicar + sesskey
     M->>E: POST /publish {file, sha, format}
     E-->>M: bytes del artefacto

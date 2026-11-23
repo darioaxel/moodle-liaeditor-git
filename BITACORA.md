@@ -28,6 +28,29 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 32: SCORM 2004 y «Descargar sin publicar»
+
+- **Decisiones del usuario**: SCORM **2004** (no 1.2) y versión = **la
+  última de la rama de edición del usuario** (HEAD de `edicion/*`, no el
+  último SHA anotado en `editsess`). R2 del roadmap revisada.
+- **Hallazgo**: los presets de liaex probados para Moodle 3/4/5 usan SCORM
+  1.2 con `--scorm-embed`; Moodle soporta SCORM 2004 solo en parte. Por eso
+  la versión queda configurable (`MATERIALES_LIASCRIPT_SCORM_VERSION`).
+- **Engine**: formato `scorm` en `/publish` → `liaex --format scorm2004
+  --scorm-embed`, salida `.zip` (tabla de extensiones por formato).
+  Verificado con liaex real: SCORM 2004 4th Edition, 7,6 MB, con
+  `imsmanifest.xml`. 79 tests ✓.
+- **Plugin 2.4.0 (2026112302)**: `mod_scorm` con `scormtype=local` y los
+  ajustes por defecto del sitio (como su formulario); `publish_api.php`
+  acepta `scorm`; página Publicar con SCORM, versión = HEAD de la rama del
+  usuario (con fecha del commit) o `main`, y botón **«Descargar sin
+  publicar»** (`send_file`, sin módulo ni registro). Tests: 7 (28
+  aserciones) con el arnés mínimo.
+- **Editor**: opción SCORM 2004 en el desplegable de Publicar.
+- **No verificado** en Moodle real: la creación de `mod_scorm` (nunca se
+  ha probado en este proyecto) y que el seguimiento de SCORM 2004 funcione
+  en Moodle 6.
+
 ### 2026-11-23 — Sesión 31: Publicar en PDF/H5P roto + página Publicar con generación automática
 
 - **Fallo reportado**: publicar en PDF desde el editor no daba resultado.

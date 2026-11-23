@@ -146,7 +146,8 @@ def _capture_docker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[lis
         # Como liaex real: añade la extensión del formato al nombre base.
         base = args[args.index("--output") + 1].removeprefix("/work/")
         fmt = args[args.index("--format") + 1]
-        (tmp_path / f"{base}.{fmt}").write_bytes(b"ARTEFACTO")
+        ext = "zip" if fmt.startswith("scorm") else fmt  # SCORM sale como .zip
+        (tmp_path / f"{base}.{ext}").write_bytes(b"ARTEFACTO")
         return _Completed()
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -198,3 +199,32 @@ def test_liaex_nombre_alternativo_y_fichero_ausente(
     with pytest.raises(PublishError) as excinfo:
         LiaexDockerExecutor().generate(tmp_path, "a.md", "pdf")
     assert excinfo.value.status_code == 502  # noqa: PLR2004
+
+
+def test_liaex_scorm_2004_con_embed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    calls = _capture_docker(monkeypatch, tmp_path)
+    assert LiaexDockerExecutor().generate(tmp_path, "a.md", "scorm") == b"ARTEFACTO"
+    args = calls[0]
+    assert args[args.index("--format") + 1] == "scorm2004"
+    assert "--scorm-embed" in args
+    assert not list(tmp_path.glob("artifact*"))
+
+
+def test_liaex_scorm_12_configurable_y_version_invalida(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls = _capture_docker(monkeypatch, tmp_path)
+    LiaexDockerExecutor(scorm_version="1.2").generate(tmp_path, "a.md", "scorm")
+    assert calls[0][calls[0].index("--format") + 1] == "scorm1.2"
+    with pytest.raises(ValueError, match="SCORM"):
+        LiaexDockerExecutor(scorm_version="3")
+
+
+def test_publish_scorm_por_api(
+    client: TestClient, executor: FakeExecutor, material_sha: str
+) -> None:
+    response = client.post("/publish", json={"file": FILE, "sha": material_sha, "format": "scorm"})
+    assert response.status_code == HTTP_OK
+    assert response.headers["content-type"] == "application/zip"
+    assert f'@{material_sha[:8]}.zip"' in response.headers["content-disposition"]
+    assert executor.calls[-1] == (FILE, "scorm")

@@ -16,7 +16,9 @@ from pathlib import Path
 from materiales_liascript.edit.branches import EditError, validate_file_path
 from materiales_liascript.git.provider import GitProvider, GitProviderError
 from materiales_liascript.publish.models import (
+    ARTIFACT_EXTENSIONS,
     ARTIFACT_MEDIA_TYPES,
+    SCORM_VERSIONS,
     PublishError,
     PublishRequest,
     PublishResult,
@@ -41,6 +43,12 @@ class LiaexDockerExecutor(ArtifactExecutor):
     la imagen es ``liaex`` y acepta ``--input``/``--format``/``--output``.
     PDF necesita Chromium → se ejecuta con ``--shm-size=1g`` (spec §11).
 
+    **SCORM**: el formato ``scorm`` de la API se genera como SCORM 2004
+    (``scorm_version``, configurable a ``1.2`` con
+    ``MATERIALES_LIASCRIPT_SCORM_VERSION``) con ``--scorm-embed``, el modo que
+    liaex recomienda para Moodle (restricciones de carga dinámica). Sale
+    como ``.zip``.
+
     **Red**: por defecto el contenedor no tiene red (``none``). Los materiales
     con ``import:`` de plantillas LiaScript la necesitan, porque liaex las
     descarga en cada ejecución; en ese caso se configura ``network``
@@ -63,9 +71,14 @@ class LiaexDockerExecutor(ArtifactExecutor):
         workdir: str | None = None,
         host_workdir: str | None = None,
         network: str = "none",
+        scorm_version: str = "2004",
     ) -> None:
+        if scorm_version not in SCORM_VERSIONS:
+            msg = f"versión de SCORM no soportada: {scorm_version!r} (usa 2004 o 1.2)"
+            raise ValueError(msg)
         self._image = image
         self._network = network
+        self._scorm_version = scorm_version
         self._timeout = timeout
         self._docker = docker_binary
         self._workdir = workdir
@@ -98,13 +111,19 @@ class LiaexDockerExecutor(ArtifactExecutor):
         ]
         if artifact_format == "pdf":
             args += ["--shm-size=1g"]
+        liaex_format = artifact_format
+        extra: list[str] = []
+        if artifact_format == "scorm":
+            liaex_format = f"scorm{self._scorm_version}"
+            extra = ["--scorm-embed"]
         args += [
             self._image,
             "liaex",
             "--input",
             f"/work/{file}",
             "--format",
-            artifact_format,
+            liaex_format,
+            *extra,
             "--output",
             f"/work/{output_base}",
         ]
@@ -114,7 +133,7 @@ class LiaexDockerExecutor(ArtifactExecutor):
         if result.returncode != 0:
             msg = f"liaex falló ({artifact_format}): {result.stderr.strip()[:500]}"
             raise PublishError(502, msg)
-        produced = _find_artifact(checkout, output_base, artifact_format)
+        produced = _find_artifact(checkout, output_base, ARTIFACT_EXTENSIONS[artifact_format])
         try:
             if produced is None:
                 msg = f"liaex no generó el fichero {artifact_format} esperado"
@@ -125,13 +144,13 @@ class LiaexDockerExecutor(ArtifactExecutor):
                 leftover.unlink(missing_ok=True)
 
 
-def _find_artifact(directory: Path, base: str, artifact_format: str) -> Path | None:
-    """Fichero generado por liaex: ``<base>.<formato>`` o, si una versión de
-    liaex lo nombra de otra forma, cualquier ``<base>*.<formato>``."""
-    expected = directory / f"{base}.{artifact_format}"
+def _find_artifact(directory: Path, base: str, extension: str) -> Path | None:
+    """Fichero generado por liaex: ``<base>.<extensión>`` o, si una versión de
+    liaex lo nombra de otra forma, cualquier ``<base>*.<extensión>``."""
+    expected = directory / f"{base}.{extension}"
     if expected.is_file():
         return expected
-    candidates = sorted(directory.glob(f"{base}*.{artifact_format}"))
+    candidates = sorted(directory.glob(f"{base}*.{extension}"))
     return candidates[0] if candidates else None
 
 
@@ -155,7 +174,7 @@ class PublishService:
             content = self._executor.generate(checkout, file, request.format)
         slug = file.removesuffix(".md").replace("/", "-")
         return PublishResult(
-            filename=f"{slug}@{request.sha[:8]}.{request.format}",
+            filename=f"{slug}@{request.sha[:8]}.{ARTIFACT_EXTENSIONS[request.format]}",
             media_type=ARTIFACT_MEDIA_TYPES[request.format],
             content=content,
         )

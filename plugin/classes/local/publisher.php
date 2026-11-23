@@ -6,7 +6,8 @@
  * generado del material (H5P, ePub, PDF) y registra el despliegue
  * curso↔SHA↔cmid en ``local_liamateriales_deploy`` (trazabilidad D6).
  *
- * Mapeo tipo → módulo: ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
+ * Mapeo tipo → módulo: ``scorm`` → mod_scorm (SCORM 2004 de liaex) ·
+ * ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
  * mod_resource (descarga accesible). Desde Materiales Editables v2.0 los
  * formatos de publicación son solo H5P, ePub y PDF.
  *
@@ -27,7 +28,37 @@ class publisher {
         'h5p' => ['h5pactivity', 'packagefile'],
         'epub' => ['resource', 'files'],
         'pdf' => ['resource', 'files'],
+        'scorm' => ['scorm', 'packagefile'],
     ];
+
+    /** Extensión del fichero de cada formato (SCORM es un .zip). */
+    private const EXTENSIONS = [
+        'h5p' => 'h5p',
+        'epub' => 'epub',
+        'pdf' => 'pdf',
+        'scorm' => 'zip',
+    ];
+
+    /**
+     * Ajustes de mod_scorm que su formulario toma de la configuración del
+     * sitio; scorm_add_instance los lee, así que se rellenan igual.
+     */
+    private const SCORM_DEFAULTS = [
+        'maxgrade', 'grademethod', 'whatgrade', 'maxattempt', 'forcecompleted', 'forcenewattempt',
+        'lastattemptlock', 'displayattemptstatus', 'displaycoursestructure', 'popup', 'skipview',
+        'hidebrowse', 'hidetoc', 'nav', 'navpositionleft', 'navpositiontop', 'collapsetocwinsize',
+        'displayactivityname', 'auto', 'autocommit', 'masteryoverride',
+    ];
+
+    /** Formatos publicables (h5p, epub, pdf, scorm). */
+    public static function types(): array {
+        return array_keys(self::TYPES);
+    }
+
+    /** Extensión del fichero de un formato. */
+    public static function extension(string $artifacttype): string {
+        return self::EXTENSIONS[$artifacttype] ?? $artifacttype;
+    }
 
     /**
      * Publica el artefacto subido (área de borrador del usuario) como módulo
@@ -36,7 +67,7 @@ class publisher {
      * @param int $courseid curso destino
      * @param int $section sección del curso (0 = general)
      * @param string $sourcefile ruta del .md en el repo
-     * @param string $artifacttype h5p | epub | pdf
+     * @param string $artifacttype h5p | epub | pdf | scorm
      * @param string $sha SHA del material publicado (trazabilidad)
      * @param int $draftitemid área de borrador con el paquete subido
      * @param string $name nombre visible del módulo
@@ -76,6 +107,9 @@ class publisher {
             'introformat' => FORMAT_HTML,
             $filefield => $draftitemid,
         ];
+        if ($modulename === 'scorm') {
+            self::apply_scorm_defaults($moduleinfo);
+        }
 
         if ($existingcmid > 0) {
             $cm = get_coursemodule_from_id('', $existingcmid, 0, false, MUST_EXIST);
@@ -104,6 +138,26 @@ class publisher {
         return $cmid;
     }
 
+    /**
+     * Paquete SCORM subido (SCORM_TYPE_LOCAL) con los ajustes por defecto
+     * del sitio, como haría el formulario de mod_scorm.
+     */
+    private static function apply_scorm_defaults(\stdClass $moduleinfo): void {
+        $config = get_config('scorm');
+        $moduleinfo->scormtype = 'local';
+        $moduleinfo->cmidnumber = '';
+        $moduleinfo->timeopen = 0;
+        $moduleinfo->timeclose = 0;
+        foreach (self::SCORM_DEFAULTS as $key) {
+            if (isset($config->$key)) {
+                $moduleinfo->$key = $config->$key;
+            }
+        }
+        $moduleinfo->width = $config->framewidth ?? 100;
+        $moduleinfo->height = $config->frameheight ?? 500;
+        $moduleinfo->updatefreq = 0;
+    }
+
     /** Tiempo máximo de generación del artefacto (s). PDF con Chromium tarda ~20 s en frío. */
     private const GENERATE_TIMEOUT = 330;
 
@@ -112,7 +166,7 @@ class publisher {
      *
      * @param string $sourcefile ruta del .md en el repo
      * @param string $sha commit exacto a exportar
-     * @param string $artifacttype h5p | epub | pdf
+     * @param string $artifacttype h5p | epub | pdf | scorm
      * @return string bytes del artefacto
      * @throws \moodle_exception con el motivo si el engine no lo genera
      */
@@ -186,7 +240,7 @@ class publisher {
         $bytes = self::generate_artifact($sourcefile, $sha, $artifacttype);
         $draftitemid = self::stage_draft(
             (int) $user->id,
-            basename($sourcefile, '.md') . '@' . substr($sha, 0, 8) . '.' . $artifacttype,
+            basename($sourcefile, '.md') . '@' . substr($sha, 0, 8) . '.' . self::extension($artifacttype),
             $bytes
         );
         return self::publish(

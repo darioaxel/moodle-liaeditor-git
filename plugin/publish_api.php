@@ -53,7 +53,7 @@ $body = json_decode(file_get_contents('php://input') ?: '');
 if (!is_object($body) || empty($body->file) || empty($body->sha) || empty($body->format) || empty($body->token)) {
     publish_respond(400, ['status' => 'error', 'message' => 'petición incompleta']);
 }
-if (!in_array($body->format, ['h5p', 'epub', 'pdf'], true)) {
+if (!in_array($body->format, publisher::types(), true)) {
     publish_respond(400, ['status' => 'error', 'message' => 'formato no soportado: ' . $body->format]);
 }
 

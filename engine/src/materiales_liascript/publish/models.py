@@ -6,13 +6,25 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-ArtifactFormat = Literal["h5p", "epub", "pdf"]
+ArtifactFormat = Literal["h5p", "epub", "pdf", "scorm"]
 
 ARTIFACT_MEDIA_TYPES: dict[str, str] = {
     "h5p": "application/zip",
     "epub": "application/epub+zip",
     "pdf": "application/pdf",
+    "scorm": "application/zip",
 }
+
+#: Extensión del fichero que genera liaex para cada formato de la API.
+ARTIFACT_EXTENSIONS: dict[str, str] = {
+    "h5p": "h5p",
+    "epub": "epub",
+    "pdf": "pdf",
+    "scorm": "zip",
+}
+
+#: Versiones de SCORM que admite liaex (``--format scorm1.2`` / ``scorm2004``).
+SCORM_VERSIONS = ("2004", "1.2")
 
 
 class PublishError(RuntimeError):

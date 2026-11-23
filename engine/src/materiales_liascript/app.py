@@ -57,6 +57,7 @@ def create_app(
             workdir=os.environ.get("MATERIALES_LIASCRIPT_WORKDIR"),
             host_workdir=os.environ.get("MATERIALES_LIASCRIPT_HOST_WORKDIR"),
             network=os.environ.get("MATERIALES_LIASCRIPT_LIAEX_NETWORK", "none"),
+            scorm_version=os.environ.get("MATERIALES_LIASCRIPT_SCORM_VERSION", "2004"),
         )
         executor = docker_executor if docker_executor.available() else None
 

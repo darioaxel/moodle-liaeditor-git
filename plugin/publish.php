@@ -10,11 +10,13 @@
  * el despliegue curso↔SHA↔cmid. Es el mismo camino que el botón Publicar
  * del editor.
  *
- * Alternativa: subir un fichero generado por cuenta propia (p. ej. con el
- * LiaScript Exporter en el navegador), con el mismo registro.
+ * También: **descargar** el fichero generado sin publicarlo, y subir un
+ * fichero generado por cuenta propia (p. ej. con el LiaScript Exporter en
+ * el navegador), con el mismo registro.
  *
- * La versión se elige entre la última guardada por el usuario y la oficial
- * (`main`); el SHA lo resuelve el servidor, no llega del formulario.
+ * Formatos: H5P, ePub, PDF y SCORM 2004 (mod_scorm). La versión se elige
+ * entre la última de la rama de edición del usuario y la oficial (`main`);
+ * el SHA lo resuelve el servidor, no llega del formulario.
  *
  * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -41,40 +43,42 @@ $PAGE->set_context($context);
 $PAGE->set_title(get_string('material_publish', 'local_liamateriales'));
 $PAGE->set_heading(format_string(get_course($courseid)->fullname));
 
-// Versiones publicables: la última guardada por el usuario y la oficial.
+// Versiones publicables: la última de la rama de edición del usuario (HEAD
+// de edicion/<usuario>/<material>, no solo lo último que anotó el plugin) y
+// la oficial (main). El SHA lo resuelve siempre el servidor.
 $versions = [];
 $session = $DB->get_record('local_liamateriales_editsess', [
     'userid' => $USER->id,
     'file' => $file,
     'closed_at' => null,
 ]);
-if ($session && strlen((string) $session->last_sha) === 40) {
-    $versions['saved'] = (object) [
-        'sha' => $session->last_sha,
-        'label' => get_string('publish_version_saved', 'local_liamateriales', (object) [
-            'branch' => $session->branch,
-            'date' => $session->last_save ? userdate($session->last_save) : '—',
+$branches = $session && $session->branch !== 'main' ? ['branch' => $session->branch] : [];
+$branches['main'] = 'main';
+foreach ($branches as $key => $branchname) {
+    try {
+        $head = local_liamateriales_service_get('/edit/content', ['file' => $file, 'branch' => $branchname]);
+    } catch (\moodle_exception $e) {
+        // Rama borrada, fichero ausente o engine caído: esa versión no se ofrece.
+        debugging("publish.php: no se pudo leer {$branchname}: " . $e->getMessage(), DEBUG_DEVELOPER);
+        continue;
+    }
+    if (empty($head->sha) || strlen($head->sha) !== 40) {
+        continue;
+    }
+    $date = local_liamateriales_commit_date($head->committed_at ?? null);
+    $versions[$key] = (object) [
+        'sha' => $head->sha,
+        'label' => get_string($key === 'main' ? 'publish_version_main' : 'publish_version_branch', 'local_liamateriales', (object) [
+            'branch' => $branchname,
+            'date' => $date ? userdate((new \DateTimeImmutable($date))->getTimestamp()) : '—',
         ]),
     ];
 }
-try {
-    $main = local_liamateriales_service_get('/edit/content', ['file' => $file, 'branch' => 'main']);
-    if (!empty($main->sha) && strlen($main->sha) === 40) {
-        $versions['main'] = (object) [
-            'sha' => $main->sha,
-            'label' => get_string('publish_version_main', 'local_liamateriales'),
-        ];
-    }
-} catch (\moodle_exception $e) {
-    // Sin engine o sin el fichero en main: solo queda la versión guardada.
-    debugging('publish.php: no se pudo leer main: ' . $e->getMessage(), DEBUG_DEVELOPER);
-}
 
-$types = [
-    'h5p' => get_string('publish_type_h5p', 'local_liamateriales'),
-    'epub' => get_string('publish_type_epub', 'local_liamateriales'),
-    'pdf' => get_string('publish_type_pdf', 'local_liamateriales'),
-];
+$types = [];
+foreach (publisher::types() as $type) {
+    $types[$type] = get_string('publish_type_' . $type, 'local_liamateriales');
+}
 
 if (data_submitted() && confirm_sesskey()) {
     $mode = optional_param('mode', 'generate', PARAM_ALPHA);
@@ -92,6 +96,19 @@ if (data_submitted() && confirm_sesskey()) {
     $sha = $versions[$versionkey]->sha;
 
     try {
+        if ($mode === 'download') {
+            // Descargar: genera el fichero desde el Markdown sin publicarlo.
+            $bytes = publisher::generate_artifact($file, $sha, $artifacttype);
+            send_file(
+                $bytes,
+                basename($file, '.md') . '@' . substr($sha, 0, 8) . '.' . publisher::extension($artifacttype),
+                0,
+                0,
+                true,
+                true
+            );
+            die;
+        }
         if ($mode === 'upload') {
             $upload = $_FILES['artifact'] ?? null;
             if (!$upload || !is_uploaded_file($upload['tmp_name']) || $upload['error'] !== UPLOAD_ERR_OK) {
@@ -204,6 +221,8 @@ echo html_writer::tag('p', get_string('publish_generate_hint', 'local_liamateria
 echo html_writer::tag('p',
     html_writer::tag('button', get_string('publish_generate', 'local_liamateriales'), [
         'type' => 'submit', 'name' => 'mode', 'value' => 'generate', 'class' => 'btn btn-primary',
+    ]) . ' ' . html_writer::tag('button', get_string('publish_download', 'local_liamateriales'), [
+        'type' => 'submit', 'name' => 'mode', 'value' => 'download', 'class' => 'btn btn-outline-primary',
     ]) . ' ' . html_writer::link($returnurl, get_string('cancel'), ['class' => 'btn btn-secondary'])
 );
 
@@ -212,7 +231,7 @@ echo html_writer::start_tag('details', ['class' => 'mt-4']);
 echo html_writer::tag('summary', get_string('publish_upload_alt', 'local_liamateriales'));
 echo html_writer::div(html_writer::tag('label', get_string('publish_file', 'local_liamateriales'), ['for' => 'artifact'])
     . html_writer::empty_tag('input', [
-        'type' => 'file', 'name' => 'artifact', 'id' => 'artifact', 'class' => 'form-control', 'accept' => '.h5p,.epub,.pdf',
+        'type' => 'file', 'name' => 'artifact', 'id' => 'artifact', 'class' => 'form-control', 'accept' => '.h5p,.epub,.pdf,.zip',
     ]), 'mt-2 mb-2');
 echo html_writer::tag('button', get_string('publish_upload_button', 'local_liamateriales'), [
     'type' => 'submit', 'name' => 'mode', 'value' => 'upload', 'class' => 'btn btn-outline-secondary',
