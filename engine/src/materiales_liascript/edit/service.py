@@ -94,7 +94,14 @@ class EditService:
             content = self._git.get_file(branch, file)
         except GitProviderError as exc:
             raise EditError(404, str(exc)) from exc
-        return EditContent(file=file, branch=branch, sha=sha, content=content, stale=stale)
+        return EditContent(
+            file=file,
+            branch=branch,
+            sha=sha,
+            content=content,
+            stale=stale,
+            committed_at=self._git.commit_date(sha),
+        )
 
     def save(self, request: SaveRequest) -> SaveResult:
         """Guarda el contenido en la rama (D5: conflicto → rama ``resolucion/...``).
@@ -134,7 +141,7 @@ class EditService:
                 current_sha=current,
                 diff_url=build_compare_url(self._repo_url, request.original_sha, target),
             )
-        return SaveOk(branch=target, new_sha=new_sha)
+        return SaveOk(branch=target, new_sha=new_sha, committed_at=self._git.commit_date(new_sha))
 
     def list_materials(self, branch: str | None = None) -> MaterialList:
         """Materiales ``.md`` de la rama, con título de la cabecera LiaScript.

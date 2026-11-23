@@ -226,3 +226,46 @@ def test_update_ref_cas_falla_si_la_rama_avanzo(provider: LocalGitProvider) -> N
 
     with pytest.raises(GitProviderError):
         provider._git("update-ref", "refs/heads/edicion/test/cas", base, base)
+
+
+# -- committed_at (fecha del commit para el editor) ---------------------------------
+
+
+def _log_date(repo: Path, sha: str) -> str:
+    out = subprocess.run(
+        ["git", "-C", str(repo), "log", "-1", "--format=%cI", sha],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return out.stdout.strip()
+
+
+def test_content_incluye_fecha_del_commit(service: EditService, git_repo: Path) -> None:
+    result = service.content(FILE, "main")
+    assert result.committed_at == _log_date(git_repo, result.sha)
+    assert result.committed_at is not None
+    assert datetime.fromisoformat(result.committed_at).tzinfo is not None
+
+
+def test_save_ok_incluye_fecha_del_nuevo_commit(service: EditService, git_repo: Path) -> None:
+    opened = service.open(USER, FILE)
+    result = service.save(_save(USER, BRANCH, opened.sha, "# Nuevo\n"))
+    assert isinstance(result, SaveOk)
+    assert result.committed_at == _log_date(git_repo, result.new_sha)
+
+
+class _SinFecha(LocalGitProvider):
+    """Provider cuyo Git no da la fecha: el campo se omite sin error."""
+
+    def commit_date(self, ref: str) -> str | None:
+        return None
+
+
+def test_sin_fecha_el_contenido_y_el_guardado_siguen_funcionando(git_repo: Path) -> None:
+    service = EditService(_SinFecha(git_repo), now=lambda: NOW)
+    opened = service.open(USER, FILE)
+    assert opened.committed_at is None
+    result = service.save(_save(USER, BRANCH, opened.sha, "# Nuevo\n"))
+    assert isinstance(result, SaveOk)
+    assert result.committed_at is None

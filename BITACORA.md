@@ -28,6 +28,41 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 30: `committed_at` (fecha de la versión) para el editor
+
+- **Contrato** (opcional y compatible hacia atrás): `committed_at`, fecha
+  del commit en ISO 8601 con zona, en el bloque `liascript-lms` (tras `sha`)
+  y en la respuesta 200 de `save.php`. El editor la muestra en la barra en
+  lugar del SHA.
+- **Engine**: `GitProvider.commit_date()` (`git show -s --format=%cI`,
+  `None` si falla o el formato no es válido); `EditContent` y `SaveOk` la
+  incluyen. 6 tests nuevos → 74 ✓, ruff ✓, mypy ✓.
+- **Plugin 2.2.1 (2026112300)**: `local_liamateriales_commit_date()` (solo
+  ISO 8601 con zona en una línea; evita saltos de línea en el bloque YAML),
+  `local_liamateriales_lms_config()` y `local_liamateriales_save_ok_body()`.
+  Sin cambios de BD. Primer test PHPUnit del plugin (`tests/lib_test.php`,
+  5 tests): ejecutado con un arnés mínimo en php:8.3-cli (23 aserciones ✓),
+  pendiente de pasar en `moodle-plugin-ci` (LIA-099).
+- **No verificado** contra el Moodle de pruebas (requiere despliegue): la
+  comprobación manual de la barra del editor.
+
+### 2026-11-20 — Sesión 29: Flujos de datos y tasklist v2 (seguridad)
+
+- **Documento nuevo**: `docs/Flujos de datos — plugin, engine y editor.md`,
+  con 8 diagramas Mermaid de abrir, guardar y publicar, más canales,
+  almacenamiento de datos y limitaciones. Sin validar el renderizado (se
+  bloqueó mermaid-cli): revisado a mano.
+- **Superficie expuesta del plugin** revisada: sin web services, cuatro
+  scripts sin sesión protegidos por token (`content.php`, `save.php`,
+  `token.php`, `publish_api.php`) y una llamada saliente al engine.
+- **Tasklist reescrito (v2)**: quitadas las tareas hechas; nueva **Fase S
+  de seguridad** (LIA-060…071: HMAC plugin→engine, engine solo interno,
+  código de apertura en el fragmento de la URL, cabeceras, límites 429,
+  bloqueo de publicación, limpieza, auditoría); Fase E del editor
+  (LIA-080…088); Fase B de robustez (LIA-090…100) y Fase P de producción.
+  Se detecta que el «rate limiting» de LIA-013 constaba como hecho y nunca
+  se implementó; LIA-054 (parche upstream del fork) se retira.
+
 ### 2026-11-19 — Sesión 28: M1 del editor Crepe + arreglos de Publicar y alcance del token
 
 - **Editor** (`fpvirtual-crepe-editor`, `main`): guardar contra `save.php`

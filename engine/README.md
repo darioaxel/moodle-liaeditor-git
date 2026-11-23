@@ -22,9 +22,9 @@ src/materiales_liascript/
 | Método | Ruta | Uso |
 | --- | --- | --- |
 | `GET` | `/edit/files?branch=` | Materiales `.md` de la rama con su título LiaScript |
-| `GET` | `/edit/content?file=&branch=` | Contenido + SHA del HEAD |
+| `GET` | `/edit/content?file=&branch=` | Contenido + SHA del HEAD + `committed_at` (fecha del commit, ISO 8601 con zona) |
 | `POST` | `/edit/open` | Asegura la rama `edicion/<user>/<file>` desde `main` (D4) |
-| `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha}` o `409` con rama `resolucion/...` (D5) |
+| `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha, committed_at}` o `409` con rama `resolucion/...` (D5) |
 | `GET` | `/edit/state?file=&sha=&branch=` | `up_to_date` / `update_available` por comparación de SHAs |
 | `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`) de un fichero en un SHA |
 | `GET` | `/health` | Healthcheck |

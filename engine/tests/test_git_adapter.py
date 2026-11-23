@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -74,3 +76,26 @@ def test_checkout_ref_aislado(provider: LocalGitProvider, git_repo: Path) -> Non
 def test_checkout_ref_invalido(provider: LocalGitProvider) -> None:
     with pytest.raises(GitProviderError), provider.checkout_ref("ref-imposible"):
         pass
+
+
+def _git_log_date(repo: Path, ref: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo), "log", "-1", "--format=%cI", ref],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def test_commit_date_iso_con_zona(provider: LocalGitProvider, git_repo: Path) -> None:
+    sha = provider.get_commit("main")
+    value = provider.commit_date(sha)
+    assert value == _git_log_date(git_repo, sha)
+    assert value is not None
+    assert datetime.fromisoformat(value).tzinfo is not None
+
+
+def test_commit_date_ref_invalida_devuelve_none(provider: LocalGitProvider) -> None:
+    assert provider.commit_date("ref-imposible") is None
+    assert provider.commit_date("0" * 40) is None

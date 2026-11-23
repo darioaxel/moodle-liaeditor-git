@@ -76,7 +76,8 @@ $baseurl = (new \moodle_url('/local/liamateriales/save.php'))->out(false);
 $tokenurl = (new \moodle_url('/local/liamateriales/token.php'))->out(false);
 $returnurl = (new \moodle_url('/my/courses.php'))->out(false);
 
-$lmsconfig = [
+// committed_at (fecha del commit sha) solo si el engine la da en ISO 8601.
+$lmsconfig = local_liamateriales_lms_config([
     'save_endpoint' => $baseurl,
     'token_refresh_endpoint' => $tokenurl,
     'file' => $file,
@@ -85,7 +86,7 @@ $lmsconfig = [
     'token' => $token,
     'readonly' => (bool) $readonly,
     'return_url' => $returnurl,
-];
+], $result->committed_at ?? null);
 // Publicación en un clic (D7 fase 2): solo si el token conoce el curso de
 // origen — el editor muestra el botón Publicar solo si hay publish_endpoint.
 if (!$readonly && (int) $tokendata->courseid > 0) {

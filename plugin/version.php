@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026111901;        // Token con alcance (solo lectura), arreglos de Publicar desde el editor.
+$plugin->version = 2026112300;        // committed_at (fecha del commit) en el bloque liascript-lms y en save.php.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.2.0';
+$plugin->release = '2.2.1';

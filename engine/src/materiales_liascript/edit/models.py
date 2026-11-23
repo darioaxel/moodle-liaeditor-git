@@ -30,6 +30,7 @@ class EditContent(BaseModel):
     sha: str
     content: str
     stale: bool = False  # el fichero ya no existe en main (rama desactualizada)
+    committed_at: str | None = None  # fecha del commit ``sha`` (ISO 8601 con zona)
 
 
 class SaveRequest(BaseModel):
@@ -50,6 +51,7 @@ class SaveOk(BaseModel):
     branch: str
     new_sha: str
     diff_url: str | None = None
+    committed_at: str | None = None  # fecha del commit ``new_sha`` (ISO 8601 con zona)
 
 
 class SaveConflict(BaseModel):

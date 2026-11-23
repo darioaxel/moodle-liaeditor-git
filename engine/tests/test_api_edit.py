@@ -179,3 +179,23 @@ def test_endpoints_sin_provider_git(tmp_path: Path) -> None:
     client = TestClient(create_app(tmp_path))
     response = client.get("/edit/content", params={"file": FILE, "branch": "main"})
     assert response.status_code == HTTP_UNAVAILABLE
+
+
+def test_api_devuelve_committed_at(client: TestClient, provider: LocalGitProvider) -> None:
+    content = client.get("/edit/content", params={"file": FILE, "branch": "main"}).json()
+    assert content["committed_at"] == provider.commit_date(content["sha"])
+
+    opened = client.post("/edit/open", json={"user": USER, "file": FILE}).json()
+    saved = client.post(
+        "/edit/save",
+        json={
+            "user": USER,
+            "file": FILE,
+            "branch": BRANCH,
+            "original_sha": opened["sha"],
+            "content": "# Cambio\n",
+        },
+    )
+    assert saved.status_code == HTTP_OK
+    body = saved.json()
+    assert body["committed_at"] == provider.commit_date(body["new_sha"])

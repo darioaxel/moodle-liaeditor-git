@@ -7,6 +7,7 @@ expone worktrees de forma fiable. El resto de operaciones van por la API tipada.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import tempfile
 from collections.abc import Iterator
@@ -18,6 +19,9 @@ from git.exc import BadName, GitCommandError, InvalidGitRepositoryError
 from git.objects import Blob, Commit, Tree
 
 from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
+
+# Fecha ISO 8601 con zona horaria, como la da `git --format=%cI`.
+_ISO_8601 = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})")
 
 # SHA del árbol vacío (constante bien conocida de Git), para crear
 # directorios intermedios al commitear un archivo en una ruta nueva.
@@ -74,6 +78,13 @@ class LocalGitProvider(GitProvider):
 
     def get_commit(self, ref: str) -> str:
         return str(self._commit(ref).hexsha)
+
+    def commit_date(self, ref: str) -> str | None:
+        try:
+            value = self._git("show", "-s", "--format=%cI", f"{ref}^{{commit}}")
+        except GitProviderError:
+            return None
+        return value if _ISO_8601.fullmatch(value) else None
 
     # -- historia --------------------------------------------------------------------
 

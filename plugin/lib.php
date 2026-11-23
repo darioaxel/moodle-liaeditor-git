@@ -164,6 +164,72 @@ function local_liamateriales_inject_lms_block(string $markdown, array $config): 
 }
 
 /**
+ * Fecha de commit válida para el editor, o null.
+ *
+ * Acepta solo ISO 8601 con zona horaria en una línea (formato de
+ * `git --format=%cI`, p. ej. ``2026-11-20T09:05:00+01:00``). Cualquier otra
+ * cosa se descarta: el campo ``committed_at`` es opcional en el contrato y,
+ * además, así nunca puede colar un salto de línea en el bloque YAML.
+ *
+ * @param mixed $value valor recibido del engine
+ */
+function local_liamateriales_commit_date($value): ?string {
+    if (!is_string($value)) {
+        return null;
+    }
+    return preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/D', $value) ? $value : null;
+}
+
+/**
+ * Configuración del bloque ``liascript-lms`` (contrato editor↔plugin).
+ *
+ * ``committed_at`` va justo después de ``sha`` y solo si el engine dio una
+ * fecha válida para ese commit; si no, la clave se omite.
+ *
+ * @param array<string, string|bool> $fields campos del bloque en su orden
+ * @param mixed $committedat fecha del commit ``sha`` según el engine
+ * @return array<string, string|bool>
+ */
+function local_liamateriales_lms_config(array $fields, $committedat): array {
+    $date = local_liamateriales_commit_date($committedat);
+    if ($date === null) {
+        return $fields;
+    }
+    $config = [];
+    foreach ($fields as $key => $value) {
+        $config[$key] = $value;
+        if ($key === 'sha') {
+            $config['committed_at'] = $date;
+        }
+    }
+    return $config;
+}
+
+/**
+ * Cuerpo de la respuesta de guardado correcto (save.php, HTTP 200).
+ *
+ * @param \stdClass $result respuesta del engine (``new_sha`` y, opcional, ``committed_at``)
+ * @param string $branch rama guardada
+ * @param string $token token renovado
+ * @param string $message mensaje para el usuario
+ * @return array<string, string>
+ */
+function local_liamateriales_save_ok_body(\stdClass $result, string $branch, string $token, string $message): array {
+    $body = [
+        'status' => 'ok',
+        'new_sha' => $result->new_sha,
+        'branch' => $branch,
+        'token' => $token,
+        'message' => $message,
+    ];
+    $date = local_liamateriales_commit_date($result->committed_at ?? null);
+    if ($date !== null) {
+        $body['committed_at'] = $date;
+    }
+    return $body;
+}
+
+/**
  * URL de apertura del editor para una content.php dada (LIA-016).
  *
  * Ruta editable del fork (``?/open/file/:fileUrl``, C1). OJO con la

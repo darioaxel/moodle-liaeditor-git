@@ -10,7 +10,7 @@
  * (trazabilidad antes/después del commit) y devuelve un token renovado en
  * cada 200 (contrato C6 del roadmap del fork).
  *
- * Respuestas: 200 ``{status: ok, new_sha, token}`` · 409 ``{status:
+ * Respuestas: 200 ``{status: ok, new_sha, token, committed_at?}`` · 409 ``{status:
  * conflict, resolution_branch, current_sha, diff_url}`` · 403 token
  * inválido · 502 error del engine.
  *
@@ -89,13 +89,13 @@ if ($status === 200) {
     local_liamateriales_record_save((int) $user->id, $file, $branch, $result->new_sha);
     // Contrato C6: token renovado en cada respuesta 200.
     $newtoken = token_manager::refresh($body->token, $file, $branch);
-    save_respond(200, [
-        'status' => 'ok',
-        'new_sha' => $result->new_sha,
-        'branch' => $branch,
-        'token' => $newtoken->token,
-        'message' => get_string('savedok', 'local_liamateriales'),
-    ]);
+    // committed_at del nuevo commit si el engine lo da (opcional en el contrato).
+    save_respond(200, local_liamateriales_save_ok_body(
+        $result,
+        $branch,
+        $newtoken->token,
+        get_string('savedok', 'local_liamateriales')
+    ));
 }
 
 if ($status === 409) {

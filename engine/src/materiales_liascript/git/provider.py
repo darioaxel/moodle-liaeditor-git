@@ -39,6 +39,14 @@ class GitProvider(ABC):
     def get_commit(self, ref: str) -> str:
         """SHA completo del commit al que apunta ``ref`` (peela tags)."""
 
+    def commit_date(self, ref: str) -> str | None:
+        """Fecha del commit (committer date) en ISO 8601 con zona horaria.
+
+        ``None`` si no se puede obtener: es un dato informativo para la
+        interfaz y nunca debe hacer fallar una operación.
+        """
+        return None
+
     @abstractmethod
     def commits_ahead(self, base: str, ref: str) -> int:
         """Commits de ``ref`` que no están en ``base``."""
