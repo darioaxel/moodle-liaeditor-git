@@ -27,6 +27,19 @@ require_once(__DIR__ . '/lib.php');
 
 use local_liamateriales\local\publisher;
 
+/**
+ * Respuesta JSON para las peticiones en segundo plano de la página y fin.
+ *
+ * @param int $status código HTTP
+ * @param array $body cuerpo
+ */
+function local_liamateriales_publish_json(int $status, array $body): void {
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($body);
+    die;
+}
+
 $courseid = required_param('id', PARAM_INT);
 $file = required_param('file', PARAM_PATH);
 $context = context_course::instance($courseid);
@@ -81,21 +94,25 @@ foreach (publisher::types() as $type) {
 }
 
 if (data_submitted() && confirm_sesskey()) {
+    // ajax=1: petición en segundo plano de js/publish_progress.js, que
+    // muestra el progreso; responde JSON (o el fichero, al descargar).
+    // Sin JavaScript, el formulario funciona igual con redirecciones.
+    $ajax = optional_param('ajax', 0, PARAM_BOOL);
     $mode = optional_param('mode', 'generate', PARAM_ALPHA);
-    $artifacttype = required_param('artifact_type', PARAM_ALPHA);
-    $versionkey = required_param('version', PARAM_ALPHA);
-    $name = trim(optional_param('name', '', PARAM_TEXT));
-    $section = optional_param('section', 0, PARAM_INT);
-
-    if (!isset($types[$artifacttype])) {
-        throw new \moodle_exception('invalidartifacttype', 'local_liamateriales', '', $artifacttype);
-    }
-    if (!isset($versions[$versionkey])) {
-        throw new \moodle_exception('publishnosha', 'local_liamateriales');
-    }
-    $sha = $versions[$versionkey]->sha;
 
     try {
+        $artifacttype = required_param('artifact_type', PARAM_ALPHA);
+        $versionkey = required_param('version', PARAM_ALPHA);
+        $name = trim(optional_param('name', '', PARAM_TEXT));
+        $section = optional_param('section', 0, PARAM_INT);
+        if (!isset($types[$artifacttype])) {
+            throw new \moodle_exception('invalidartifacttype', 'local_liamateriales', '', $artifacttype);
+        }
+        if (!isset($versions[$versionkey])) {
+            throw new \moodle_exception('publishnosha', 'local_liamateriales');
+        }
+        $sha = $versions[$versionkey]->sha;
+
         if ($mode === 'download') {
             // Descargar: genera el fichero desde el Markdown sin publicarlo.
             $bytes = publisher::generate_artifact($file, $sha, $artifacttype);
@@ -137,16 +154,21 @@ if (data_submitted() && confirm_sesskey()) {
             );
         }
     } catch (\moodle_exception $e) {
+        if ($ajax) {
+            local_liamateriales_publish_json(502, ['status' => 'error', 'message' => $e->getMessage()]);
+        }
         redirect($pageurl, $e->getMessage(), null, \core\output\notification::NOTIFY_ERROR);
     }
 
     $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
-    redirect(
-        new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cmid]),
-        get_string('publishok', 'local_liamateriales', format_string($cm->name)),
-        null,
-        \core\output\notification::NOTIFY_SUCCESS
-    );
+    $target = new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cmid]);
+    $message = get_string('publishok', 'local_liamateriales', format_string($cm->name));
+    if ($ajax) {
+        // El aviso de éxito se muestra en la actividad a la que navega el JS.
+        \core\notification::success($message);
+        local_liamateriales_publish_json(200, ['status' => 'published', 'url' => $target->out(false), 'message' => $message]);
+    }
+    redirect($target, $message, null, \core\output\notification::NOTIFY_SUCCESS);
 }
 
 // Formulario (GET).
@@ -171,11 +193,31 @@ if (!$versions) {
     exit;
 }
 
+// Progreso en el navegador (js/publish_progress.js): duración habitual de
+// cada formato en el servidor (medida: H5P/SCORM ~3 s, ePub/PDF ~18 s) y
+// textos traducidos. Un porcentaje real no existe: liaex no informa de su
+// avance, así que se muestra tiempo transcurrido frente al habitual.
+$progress = [
+    'estimates' => ['h5p' => 6, 'scorm' => 6, 'epub' => 25, 'pdf' => 30, 'upload' => 6],
+    'strings' => [],
+];
+foreach (['progress_generate', 'progress_download', 'progress_upload', 'progress_elapsed',
+        'progress_estimate', 'progress_slow', 'progress_keepopen', 'progress_published',
+        'progress_downloaded', 'progress_error', 'progress_nofile'] as $key) {
+    $progress['strings'][$key] = get_string($key, 'local_liamateriales');
+}
+foreach (['h5p' => 'H5P', 'epub' => 'ePub', 'pdf' => 'PDF', 'scorm' => 'SCORM'] as $type => $label) {
+    $progress['strings']['type_' . $type] = $label;
+}
+$PAGE->requires->js(new moodle_url('/local/liamateriales/js/publish_progress.js'));
+
 echo html_writer::start_tag('form', [
     'method' => 'post',
     'enctype' => 'multipart/form-data',
     'action' => $pageurl->out(false),
     'class' => 'mform',
+    'id' => 'liamat-publish-form',
+    'data-progress' => json_encode($progress),
 ]);
 echo html_writer::input_hidden_params($pageurl);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);

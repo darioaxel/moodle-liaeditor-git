@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112302;        // SCORM 2004 y descarga sin publicar; versión = HEAD de la rama del usuario.
+$plugin->version = 2026112303;        // Progreso al publicar/descargar (spinner y tiempo) en segundo plano.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.4.0';
+$plugin->release = '2.4.1';

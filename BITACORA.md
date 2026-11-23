@@ -28,6 +28,23 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 33: Progreso visible al publicar desde el plugin
+
+- **Problema reportado**: al publicar desde la página Publicar el navegador
+  parecía bloqueado (POST síncrono; PDF/ePub ~18–20 s).
+- **Plugin 2.4.1 (2026112303)**: `js/publish_progress.js` (JS plano, sin
+  compilación AMD) envía el formulario en segundo plano (`fetch`, `ajax=1`)
+  y muestra un diálogo con spinner, tiempo transcurrido, duración habitual
+  del formato y barra **aproximada** (liaex no informa de su avance), con
+  aviso si supera 1,5 × lo habitual. Publicar navega a la actividad;
+  Descargar entrega el fichero sin recargar; los errores salen en la
+  página sin perder lo elegido; controles bloqueados y aviso al salir
+  mientras trabaja. `publish.php` responde JSON cuando `ajax=1`. Sin JS,
+  todo funciona como antes.
+- **Verificado** en Chrome headless contra un servidor simulado
+  (`plugin/tests/js/publish_progress_e2e.mjs`, 14/14). No verificado en
+  Moodle real (estilos Bootstrap de Moodle y `send_file` con `fetch`).
+
 ### 2026-11-23 — Sesión 32: SCORM 2004 y «Descargar sin publicar»
 
 - **Decisiones del usuario**: SCORM **2004** (no 1.2) y versión = **la
