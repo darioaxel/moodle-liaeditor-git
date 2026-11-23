@@ -23,6 +23,11 @@ from materiales_liascript.publish.models import (
     PublishRequest,
     PublishResult,
 )
+from materiales_liascript.publish.theme import (
+    THEME_FILENAME,
+    add_stylesheet_link,
+    append_css_to_epub,
+)
 
 _DOCKER_TIMEOUT = 300  # segundos por formato (spec mod_liamd RF-05)
 _DOCKER_IMAGE = "liascript/exporter:latest"
@@ -49,6 +54,11 @@ class LiaexDockerExecutor(ArtifactExecutor):
     Moodle). Configurable a ``2004`` con ``MATERIALES_LIASCRIPT_SCORM_VERSION``.
     Sale como ``.zip``.
 
+    **Tema**: con ``theme_css`` (``MATERIALES_LIASCRIPT_THEME``, ver
+    ``publish/theme.py``) los contenidos salen con el aspecto del editor: se
+    añade ``link:`` a la cabecera en la copia temporal y la hoja junto al
+    material; en ePub, la hoja se añade a sus estilos tras generarlo.
+
     **Red**: por defecto el contenedor no tiene red (``none``). Los materiales
     con ``import:`` de plantillas LiaScript la necesitan, porque liaex las
     descarga en cada ejecución; en ese caso se configura ``network``
@@ -72,6 +82,7 @@ class LiaexDockerExecutor(ArtifactExecutor):
         host_workdir: str | None = None,
         network: str = "none",
         scorm_version: str = "1.2",
+        theme_css: str | None = None,
     ) -> None:
         if scorm_version not in SCORM_VERSIONS:
             msg = f"versión de SCORM no soportada: {scorm_version!r} (usa 2004 o 1.2)"
@@ -79,6 +90,7 @@ class LiaexDockerExecutor(ArtifactExecutor):
         self._image = image
         self._network = network
         self._scorm_version = scorm_version
+        self._theme_css = theme_css
         self._timeout = timeout
         self._docker = docker_binary
         self._workdir = workdir
@@ -96,6 +108,25 @@ class LiaexDockerExecutor(ArtifactExecutor):
         return path
 
     def generate(self, checkout: Path, file: str, artifact_format: str) -> bytes:
+        if self._theme_css is None:
+            return self._run_liaex(checkout, file, artifact_format)
+        source = checkout / file
+        original = source.read_bytes()
+        stylesheet = source.parent / THEME_FILENAME
+        try:
+            themed = add_stylesheet_link(original.decode("utf-8"), THEME_FILENAME)
+            source.write_bytes(themed.encode("utf-8"))
+            stylesheet.write_text(self._theme_css, encoding="utf-8")
+            data = self._run_liaex(checkout, file, artifact_format)
+        finally:
+            # La copia es temporal, pero se deja como estaba (y sin la hoja).
+            source.write_bytes(original)
+            stylesheet.unlink(missing_ok=True)
+        if artifact_format == "epub":
+            data = append_css_to_epub(data, self._theme_css)
+        return data
+
+    def _run_liaex(self, checkout: Path, file: str, artifact_format: str) -> bytes:
         # Nombre base SIN extensión: liaex añade la del formato. Si se le pasa
         # `artifact.pdf` genera `artifact.pdf.pdf` (igual con h5p; con epub
         # no), y el engine no encontraba el fichero (500 al publicar en PDF/H5P).

@@ -249,6 +249,21 @@ sequenceDiagram
     B-->>P: Publicado en el curso + enlace
 ```
 
+### 4.1b Tema visual de los contenidos
+
+Los contenidos los renderiza LiaScript, no el editor. Para que tengan el
+mismo aspecto, el engine aplica al exportar la hoja del tema del editor
+(`publish/themes/verde.css`, generada desde el editor con
+`npm run theme:liascript`; `MATERIALES_LIASCRIPT_THEME`, defecto `verde`):
+
+- SCORM, H5P y PDF: añade `link:` a la cabecera **en la copia temporal** y
+  copia la hoja junto al material. liaex la empaqueta (SCORM), la incrusta
+  en la cabecera (H5P) o la aplica al renderizar (PDF).
+- ePub: liaex ignora `link:`; el engine añade la hoja a las hojas de estilo
+  del ePub ya generado.
+
+El material en Git no cambia.
+
 ### 4.2 Publicación desde la página Publicar del plugin
 
 Mismo camino que el editor (`publisher::publish_generated`), con sesión de

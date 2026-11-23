@@ -250,6 +250,11 @@ completa; quedan:
 - [ ] **LIA-087** (L) **Assets** (Fase 3 del roadmap): subida de imágenes
   (`upload.php`), commit único `.md` + assets y `asset.php` para verlas al
   editar.
+- [ ] **LIA-089** (S) **Logo del centro en los contenidos exportados**: el
+  tema ya da colores y tipografía del editor, pero `logo:` de LiaScript es
+  la imagen de portada, no el icono de la barra superior. Sustituir el
+  pájaro de LiaScript por CSS en `publish/themes/<tema>.css` y verificarlo
+  en SCORM y H5P.
 - [ ] **LIA-088** (S) **Corpus real**: añadir a los fixtures materiales de
   producción y un tema real de más de 50 páginas (condición del *go* de la
   Fase 0).

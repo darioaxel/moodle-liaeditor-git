@@ -1,0 +1,43 @@
+/* Tema «verde» del editor FP Virtual para el runtime de LiaScript.
+ * Generado desde fpvirtual-crepe-editor (src/theme/liascript.ts) con
+ * «npm run theme:liascript». No editar a mano. */
+
+:root,
+[class*="lia-theme-"] {
+  --color-highlight: 42, 125, 87 !important;
+  --color-highlight-dark: 32, 94, 65 !important;
+  --color-highlight-menu: 42, 125, 87 !important;
+  --color-text: 44, 62, 80 !important;
+  --color-border: 226, 230, 234 !important;
+  --global-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+  --global-font-headline: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+  --global-font-mono: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', ui-monospace, monospace !important;
+}
+
+body, .lia-canvas {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .lia-accordion__headline, .lia-card__subtitle {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+  font-weight: 600 !important;
+  color: #2c3e50;
+}
+
+.lia-code, code, pre, kbd, samp {
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', ui-monospace, monospace !important;
+}
+
+h2 {
+  border-bottom: 1px solid #e2e6ea;
+  padding-bottom: .3em;
+}
+
+a {
+  color: #2a7d57;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}

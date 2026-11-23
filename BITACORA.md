@@ -28,6 +28,30 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 35: Tema del editor en los contenidos exportados
+
+- **Revisión**: los contenidos (SCORM, H5P, ePub, PDF) usaban el tema por
+  defecto de LiaScript (turquesa, títulos con serifa Source Serif, pájaro
+  de LiaScript) y no el del editor (`verde`, fuentes del sistema): nada del
+  tema del editor llegaba a la exportación.
+- **Prueba** con el tema `verde` (capturas de SCORM, PDF y ePub): `link:`
+  en la cabecera funciona en SCORM (la empaqueta), H5P (la incrusta como
+  `data:text/css`) y PDF; **el ePub lo ignora**; `logo:` no cambia el icono
+  de la barra superior (es la portada).
+- **Editor**: `src/theme/liascript.ts` genera la hoja de LiaScript desde
+  los tokens del tema (acento `primary-fill` #2a7d57, AA con texto blanco,
+  y no el #3eaf7c decorativo; fuentes con valores literales, válidas en
+  ePub; rechaza temas oscuros). `npm run theme:liascript`. 113 tests ✓.
+- **Engine**: `publish/themes/verde.css` (generada, incluida en el
+  paquete) y `publish/theme.py`. Al exportar añade `link:` y la hoja en la
+  copia temporal y en ePub la añade a su `style.css` (conserva `mimetype`
+  primero y sin comprimir). El material se restaura byte a byte incluso si
+  liaex falla. `MATERIALES_LIASCRIPT_THEME` (defecto `verde`; `none` para
+  el aspecto original). 87 tests ✓. Verificado con liaex real en los
+  cuatro formatos (`ut05`).
+- **Pendiente**: logo del centro en lugar del pájaro de LiaScript
+  (LIA-089); comprobar el H5P dentro de Moodle y el ePub en lectores reales.
+
 ### 2026-11-23 — Sesión 34: SCORM 1.2 como contenido y fix de H5P en la página Publicar
 
 - **Fallo reportado**: publicar en H5P desde la página Publicar daba

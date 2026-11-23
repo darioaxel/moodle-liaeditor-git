@@ -13,6 +13,9 @@ entorno:
   contenedor de liaex; ``bridge`` si los materiales importan plantillas.
 - ``MATERIALES_LIASCRIPT_SCORM_VERSION`` (opcional, defecto ``1.2``): versión
   de SCORM del formato ``scorm`` (``1.2`` o ``2004``).
+- ``MATERIALES_LIASCRIPT_THEME`` (opcional, defecto ``verde``): tema visual de
+  los contenidos exportados (``publish/themes/<tema>.css``); ``none`` deja el
+  aspecto original de LiaScript.
 - ``MATERIALES_LIASCRIPT_LOG_FORMAT``: ``console`` (defecto) o ``json``.
 - ``HOST`` / ``PORT``: interfaz y puerto de uvicorn (defaults 0.0.0.0:8000).
 

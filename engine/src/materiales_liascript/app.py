@@ -25,6 +25,7 @@ from materiales_liascript.git.local_provider import LocalGitProvider
 from materiales_liascript.git.provider import GitProvider, GitProviderError
 from materiales_liascript.logging_config import bound_correlation, configure_logging
 from materiales_liascript.publish.service import ArtifactExecutor, LiaexDockerExecutor
+from materiales_liascript.publish.theme import load_theme_css
 
 
 def create_app(
@@ -58,6 +59,7 @@ def create_app(
             host_workdir=os.environ.get("MATERIALES_LIASCRIPT_HOST_WORKDIR"),
             network=os.environ.get("MATERIALES_LIASCRIPT_LIAEX_NETWORK", "none"),
             scorm_version=os.environ.get("MATERIALES_LIASCRIPT_SCORM_VERSION", "1.2"),
+            theme_css=load_theme_css(os.environ.get("MATERIALES_LIASCRIPT_THEME", "verde")),
         )
         executor = docker_executor if docker_executor.available() else None
 
