@@ -143,8 +143,10 @@ def _capture_docker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[lis
 
     def fake_run(args: list[str], **_: object) -> _Completed:
         calls.append(args)
-        out = tmp_path / args[args.index("--output") + 1].removeprefix("/work/")
-        out.write_bytes(b"ARTEFACTO")
+        # Como liaex real: añade la extensión del formato al nombre base.
+        base = args[args.index("--output") + 1].removeprefix("/work/")
+        fmt = args[args.index("--format") + 1]
+        (tmp_path / f"{base}.{fmt}").write_bytes(b"ARTEFACTO")
         return _Completed()
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -169,3 +171,30 @@ def test_liaex_red_configurable_y_pdf(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert args[args.index("--network") + 1] == "bridge"
     assert "--shm-size=1g" in args
     assert args[args.index("-v") + 1] == f"/host/tmp/{tmp_path.name}:/work"
+
+
+def test_liaex_salida_sin_extension_y_limpieza(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls = _capture_docker(monkeypatch, tmp_path)
+    for fmt in ("pdf", "h5p", "epub"):
+        assert LiaexDockerExecutor().generate(tmp_path, "a.md", fmt) == b"ARTEFACTO"
+        args = calls[-1]
+        assert args[args.index("--output") + 1] == "/work/artifact"
+    assert not list(tmp_path.glob("artifact*"))  # no deja ficheros en el checkout
+
+
+def test_liaex_nombre_alternativo_y_fichero_ausente(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def doble_extension(args: list[str], **_: object) -> _Completed:
+        (tmp_path / "artifact.pdf.pdf").write_bytes(b"PDF")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", doble_extension)
+    assert LiaexDockerExecutor().generate(tmp_path, "a.md", "pdf") == b"PDF"
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _Completed())
+    with pytest.raises(PublishError) as excinfo:
+        LiaexDockerExecutor().generate(tmp_path, "a.md", "pdf")
+    assert excinfo.value.status_code == 502  # noqa: PLR2004

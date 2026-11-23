@@ -81,63 +81,20 @@ if (!has_capability('local/liamateriales:deploy', $coursecontext, $user)
     publish_respond(403, ['status' => 'error', 'message' => get_string('publishnocap', 'local_liamateriales')]);
 }
 
-// El artefacto es binario: petición directa, sin el wrapper JSON del cliente.
-$curl = new \curl();
-$curl->setHeader('Content-Type: application/json');
-$curl->setHeader('Accept: application/octet-stream');
-$response = $curl->post(
-    local_liamateriales_service_url() . '/publish',
-    json_encode(['file' => $body->file, 'sha' => $body->sha, 'format' => $body->format])
-);
-$status = (int) ($curl->get_info()['http_code'] ?? 0);
-if ($curl->get_errno() || $status !== 200 || !is_string($response) || $response === '') {
-    $detail = 'error del engine al generar el artefacto';
-    $decoded = json_decode(is_string($response) ? $response : '');
-    if (is_object($decoded) && !empty($decoded->detail)) {
-        $detail = $decoded->detail;
-    }
-    publish_respond(502, ['status' => 'error', 'message' => $detail]);
-}
-
-// El binario pasa por un fichero temporal al área de borrador (contrato
-// filemanager de add_moduleinfo/update_moduleinfo).
-$tempfile = tempnam(sys_get_temp_dir(), 'lia');
-file_put_contents($tempfile, $response);
-$draftitemid = file_get_unused_draft_itemid();
-$fs = get_file_storage();
-$fs->create_file_from_pathname([
-    'contextid' => \context_user::instance($user->id)->id,
-    'component' => 'user',
-    'filearea' => 'draft',
-    'itemid' => $draftitemid,
-    'filepath' => '/',
-    'filename' => clean_filename(
-        basename($body->file, '.md') . '@' . substr($body->sha, 0, 8) . '.' . $body->format
-    ),
-], $tempfile);
-@unlink($tempfile);
-
-// Solo se actualiza el módulo del mismo formato que siga existiendo; si no,
-// se crea uno nuevo (antes se reutilizaba el último cmid fuera cual fuera su
-// tipo, y fallaba si el profesor lo había borrado).
-$existingcmid = publisher::reusable_cmid((int) $tokendata->courseid, $body->file, $body->format);
-$cms = get_fast_modinfo((int) $tokendata->courseid)->get_cms();
-$defaultname = $existingcmid && isset($cms[$existingcmid])
-    ? $cms[$existingcmid]->name
-    : basename($body->file, '.md') . ' (' . strtoupper($body->format) . ')';
-
+// Genera el artefacto en el engine y crea o actualiza el módulo (mismo
+// camino que la página Publicar del plugin).
 try {
-    $cmid = publisher::publish(
+    $cmid = publisher::publish_generated(
         (int) $tokendata->courseid,
         0,
         $body->file,
         $body->format,
         $body->sha,
-        $draftitemid,
-        $defaultname,
-        $existingcmid,
-        $user->username
+        null,
+        $user
     );
+} catch (\moodle_exception $e) {
+    publish_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
 } catch (\Throwable $e) {
     publish_respond(500, ['status' => 'error', 'message' => $e->getMessage()]);
 }

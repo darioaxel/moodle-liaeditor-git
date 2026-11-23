@@ -83,7 +83,10 @@ class LiaexDockerExecutor(ArtifactExecutor):
         return path
 
     def generate(self, checkout: Path, file: str, artifact_format: str) -> bytes:
-        output_name = f"artifact.{artifact_format}"
+        # Nombre base SIN extensión: liaex añade la del formato. Si se le pasa
+        # `artifact.pdf` genera `artifact.pdf.pdf` (igual con h5p; con epub
+        # no), y el engine no encontraba el fichero (500 al publicar en PDF/H5P).
+        output_base = "artifact"
         args = [
             self._docker,
             "run",
@@ -103,7 +106,7 @@ class LiaexDockerExecutor(ArtifactExecutor):
             "--format",
             artifact_format,
             "--output",
-            f"/work/{output_name}",
+            f"/work/{output_base}",
         ]
         result = subprocess.run(
             args, capture_output=True, text=True, check=False, timeout=self._timeout
@@ -111,11 +114,25 @@ class LiaexDockerExecutor(ArtifactExecutor):
         if result.returncode != 0:
             msg = f"liaex falló ({artifact_format}): {result.stderr.strip()[:500]}"
             raise PublishError(502, msg)
-        artifact = checkout / output_name
+        produced = _find_artifact(checkout, output_base, artifact_format)
         try:
-            return artifact.read_bytes()
+            if produced is None:
+                msg = f"liaex no generó el fichero {artifact_format} esperado"
+                raise PublishError(502, msg)
+            return produced.read_bytes()
         finally:
-            artifact.unlink(missing_ok=True)
+            for leftover in checkout.glob(f"{output_base}*"):
+                leftover.unlink(missing_ok=True)
+
+
+def _find_artifact(directory: Path, base: str, artifact_format: str) -> Path | None:
+    """Fichero generado por liaex: ``<base>.<formato>`` o, si una versión de
+    liaex lo nombra de otra forma, cualquier ``<base>*.<formato>``."""
+    expected = directory / f"{base}.{artifact_format}"
+    if expected.is_file():
+        return expected
+    candidates = sorted(directory.glob(f"{base}*.{artifact_format}"))
+    return candidates[0] if candidates else None
 
 
 class PublishService:

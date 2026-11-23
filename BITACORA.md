@@ -28,6 +28,30 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 31: Publicar en PDF/H5P roto + página Publicar con generación automática
+
+- **Fallo reportado**: publicar en PDF desde el editor no daba resultado.
+  Reproducido contra el engine del servidor: ePub 200 (1,4 MB, 17,6 s),
+  **PDF 500** sin mensaje.
+- **Causa**: liaex añade la extensión al nombre de salida en PDF y H5P
+  (`--output artifact.pdf` → `artifact.pdf.pdf`; en ePub no), así que el
+  engine no encontraba el fichero y lanzaba una excepción no controlada.
+  **PDF y H5P nunca habían funcionado**; solo se había probado ePub.
+- **Engine**: nombre base sin extensión (`--output /work/artifact`, liaex
+  genera `artifact.<formato>` en los tres), búsqueda de respaldo
+  `artifact*.<formato>` y 502 con mensaje si no hay fichero; limpieza de
+  restos. Verificado con liaex real: PDF 161 KB (17,7 s), H5P 7,5 MB
+  (3,3 s), ePub 1,4 MB (18 s). 76 tests ✓.
+- **Plugin 2.3.0 (2026112301)**: la página Publicar pasa a **generar y
+  publicar** desde el Markdown (versión guardada o `main`, el SHA lo
+  resuelve el servidor); subir un fichero propio queda como alternativa
+  plegada. Generación común en `publisher::publish_generated()`, que
+  también usa `publish_api.php`, con tiempo de espera de 330 s y límite de
+  ejecución PHP elevado (PDF tarda ~20 s). La subida manual ya no reutiliza
+  el módulo de otro formato.
+- **No verificado** en el Moodle de pruebas (requiere desplegar plugin y
+  engine).
+
 ### 2026-11-23 — Sesión 30: `committed_at` (fecha de la versión) para el editor
 
 - **Contrato** (opcional y compatible hacia atrás): `committed_at`, fecha

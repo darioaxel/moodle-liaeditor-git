@@ -249,24 +249,36 @@ sequenceDiagram
     B-->>P: Publicado en el curso + enlace
 ```
 
-### 4.2 Publicación manual (página Publicar del plugin)
+### 4.2 Publicación desde la página Publicar del plugin
 
-Vía de respaldo sin editor: el profesor sube un artefacto generado por su
-cuenta (por ejemplo, con el LiaScript Exporter en el navegador).
+Mismo camino que el editor (`publisher::publish_generated`), con sesión de
+Moodle en lugar de token. El profesor elige la versión (su última guardada
+o la oficial de `main`), el formato, el nombre y la sección; el SHA lo
+resuelve el servidor.
 
 ```mermaid
 sequenceDiagram
     actor P as Profesor
     participant M as Plugin (publish.php)
+    participant E as Engine
     participant C as Curso de Moodle
 
     P->>M: GET publish.php?id=curso&file=...
-    Note over M: sesión Moodle y capacidad :deploy<br/>propone el SHA del último despliegue<br/>o el último guardado (editsess)
-    P->>M: POST formulario (tipo, nombre, sección, SHA, fichero) + sesskey
+    Note over M: sesión Moodle, :deploy y manageactivities
+    M->>E: GET /edit/content?file&branch=main
+    E-->>M: {sha} de la versión oficial
+    M-->>P: formulario: versión (guardada / main), formato, nombre, sección
+    P->>M: POST Generar y publicar + sesskey
+    M->>E: POST /publish {file, sha, format}
+    E-->>M: bytes del artefacto
     M->>C: add_moduleinfo o update_moduleinfo
     Note over M: inserta en deploy {curso, fichero, sha, tipo, cmid}
-    M-->>P: redirige con el aviso de publicación
+    M-->>P: redirige al módulo publicado
 ```
+
+Como alternativa plegada, se puede **subir un fichero generado por cuenta
+propia** (por ejemplo con el LiaScript Exporter en el navegador); se
+registra igual.
 
 ### 4.3 Estado de lo publicado
 
