@@ -28,6 +28,30 @@
 
 ## Registro de sesiones
 
+### 2026-11-23 — Sesión 36: Generación web y PDF de contenido — Fase 0 (prototipo)
+
+- **Rama `feature/generacion-web`** (se unirá a `main` más adelante).
+- **Extensión Pandoc** en `engine/.../publish/pandoc/`: lector LiaScript en
+  Lua (cabecera y macros, quizzes de todos los tipos con pistas y solución,
+  encuestas, cajas, fragmentos, narración, multimedia, código ejecutable;
+  avisos de lo no convertido), filtros `web.lua` y `contenido.lua`,
+  plantilla `web.html` y `liamat.js`/`liamat.css` (tema verde).
+  `PandocExporter` (`publish/pandoc_export.py`) la ejecuta en Docker con la
+  imagen `fpvirtual-pandoc`, como liaex (copia temporal, docker-in-docker).
+- **Resultados**: conformidad con `liaex -f fullJson` 4/4 materiales;
+  web de `ut05` 17 KB en 0,6 s (liaex `web`: 24 MB); PDF de contenido con
+  la plantilla FP Virtual sin quizzes, encuestas ni sus enunciados;
+  comportamiento en Chrome 12/12 sin errores de JavaScript.
+- **Hallazgos y arreglos**: Pandoc escribe `type` sin `data-` (atributo HTML
+  válido), así que el lenguaje intermedio usa `tipo`; identificadores ASCII
+  para los nombres de página; el CSS del resaltado se añade a la plantilla.
+- **Tests**: `tests/test_pandoc_export.py` (12, de integración: se saltan
+  sin Docker o sin imágenes; el PDF requiere
+  `MATERIALES_LIASCRIPT_PDF_THEME_DIR`) y `tests/web/liamat_e2e.mjs`.
+  Engine 99 tests ✓, ruff ✓, mypy ✓.
+- **Pendiente**: web dentro de `mod_resource` en el Moodle de pruebas;
+  decisiones de aspecto y visualización; Fases 1–4 del roadmap.
+
 ### 2026-11-23 — Sesión 35: Tema del editor en los contenidos exportados
 
 - **Revisión**: los contenidos (SCORM, H5P, ePub, PDF) usaban el tema por

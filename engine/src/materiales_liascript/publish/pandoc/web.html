@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="$if(lang)$$lang$$else$es$endif$">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="materiales_liascript-git (Pandoc + lector LiaScript)" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+$for(author-meta)$
+  <meta name="author" content="$author-meta$" />
+$endfor$
+  <title>$pagetitle$$if(title)$ · $title$$endif$</title>
+$if(highlighting-css)$
+  <style>
+$highlighting-css$
+  </style>
+$endif$
+  <link rel="stylesheet" href="liamat.css" />
+$if(math)$
+  $math$
+$endif$
+</head>
+<body>
+<a class="lia-saltar" href="#lia-contenido">Ir al contenido</a>
+<header class="lia-cabecera">
+  <button class="lia-menu-boton" type="button" aria-controls="lia-indice" aria-expanded="false">Índice</button>
+  <a class="lia-titulo" href="$if(top.url)$$top.url$$else$index.html$endif$">$if(title)$$title$$else$$pagetitle$$endif$</a>
+</header>
+<div class="lia-marco">
+  <nav id="lia-indice" class="lia-indice" aria-label="Índice del material">
+$if(table-of-contents)$
+$table-of-contents$
+$endif$
+  </nav>
+  <main id="lia-contenido" class="lia-contenido">
+$if(top)$
+$else$
+$if(title)$
+    <header class="lia-portada">
+      <h1>$title$</h1>
+$for(author)$
+      <p class="lia-autor">$author$</p>
+$endfor$
+$if(description)$
+      <p class="lia-descripcion">$description$</p>
+$endif$
+    </header>
+$endif$
+$endif$
+$body$
+    <nav class="lia-paginacion" aria-label="Páginas">
+$if(previous.url)$
+      <a class="lia-anterior" href="$previous.url$" rel="prev">← $previous.title$</a>
+$endif$
+$if(next.url)$
+      <a class="lia-siguiente" href="$next.url$" rel="next">$next.title$ →</a>
+$endif$
+    </nav>
+  </main>
+</div>
+<script src="liamat.js"></script>
+</body>
+</html>

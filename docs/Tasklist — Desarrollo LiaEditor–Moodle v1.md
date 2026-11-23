@@ -265,8 +265,10 @@ completa; quedan:
 
 Detallada en [docs/generacion_web/roadmap.md](generacion_web/roadmap.md).
 
-- [ ] **LIA-110** (L) Fase 0: prototipo del lector LiaScript para Pandoc,
-  salida web y PDF de contenido con `ut05` y la demo (go/no-go).
+- [x] **LIA-110** (L) Fase 0: prototipo del lector LiaScript para Pandoc,
+  salida web y PDF de contenido (rama `feature/generacion-web`, sesión 36).
+  Conformidad con liaex 4/4 y comportamiento en Chrome 12/12. Queda
+  comprobar la web en `mod_resource` del Moodle de pruebas.
 - [ ] **LIA-111** (L) Fase 1: lector completo, lenguaje intermedio
   especificado y conformidad con liaex en todo el corpus.
 - [ ] **LIA-112** (L) Fase 2: salida web (plantilla, `liamat.js`,

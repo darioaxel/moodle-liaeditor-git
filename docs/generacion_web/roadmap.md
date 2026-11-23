@@ -1,7 +1,7 @@
 # Roadmap — Generación web estática y PDF de contenido desde LiaScript
 
-**Versión**: 0.1-draft · **Fecha**: 2026-11-23 · **Estado**: propuesta,
-pendiente del prototipo (Fase 0)
+**Versión**: 0.2 · **Fecha**: 2026-11-23 · **Estado**: Fase 0 (prototipo)
+hecha en la rama `feature/generacion-web` (ver §8)
 
 ## 1. Objetivo
 
@@ -85,14 +85,14 @@ Comark/MDC en Nuxt):
 
 | LiaScript | Lenguaje intermedio |
 | --- | --- |
-| `[( )] …` / `[(X)] …` | `::: {.quiz type="single"}` con las opciones (`.opcion`, `correcta="true"`) |
-| `[[ ]] …` / `[[X]] …` | `.quiz type="multiple"` |
-| `[[respuesta]]` | `.quiz type="text"` con `respuesta="…"` |
+| `[( )] …` / `[(X)] …` | `::: {.quiz tipo="single"}` con las opciones (`.opcion`, `correcta="true"`) |
+| `[[ ]] …` / `[[X]] …` | `.quiz tipo="multiple"` |
+| `[[respuesta]]` | `.quiz tipo="text"` con `respuesta="…"` |
 | `[[a \| (b) \| c]]` en línea | `[…]{.quiz-select}` (span) con las opciones |
-| `[[Sí] (No)]` + filas | `.quiz type="matrix"` |
+| `[[Sí] (No)]` + filas | `.quiz tipo="matrix"` |
 | `[[?]] pista` | `::: pista` dentro del quiz |
 | Bloque `****` tras un quiz | `::: solucion` dentro del quiz |
-| `[(1)]`, `[[1]]`, `[[___]]` (encuestas) | `.encuesta type="single|multiple|text"` |
+| `[(1)]`, `[[1]]`, `[[___]]` (encuestas) | `.encuesta tipo="single|multiple|text"` |
 | `@nota(…)`, `@aviso(…)`, `@error(…)` | `::: nota`, `::: aviso`, `::: error` (mismas clases que `content-boxes`) |
 | `{{n}}` + bloque `****`, `{n}{texto}` | `::: {.fragmento paso="n"}` / `[…]{.fragmento paso="n"}` |
 | `--{{n}}--` (narración) | `::: {.narracion paso="n"}` |
@@ -251,3 +251,48 @@ desde la página Publicar en el Moodle de pruebas, con registro de SHA y
    recursos de eXeLearning, o «Abrir» en la propia ventana.
 3. **Formatos de liaex** (`pdf`, `epub`): mantenerlos junto a los nuevos o
    retirarlos cuando la web y el PDF de contenido estén en producción.
+
+## 8. Estado — Fase 0 (prototipo)
+
+Rama `feature/generacion-web`. Código en
+`engine/src/materiales_liascript/publish/`:
+
+| Pieza | Fichero |
+| --- | --- |
+| Lector LiaScript | `pandoc/liascript.lua` |
+| Filtro web | `pandoc/web.lua` |
+| Filtro PDF de contenido | `pandoc/contenido.lua` |
+| Plantilla web | `pandoc/web.html` |
+| Comportamiento y estilo de la web | `pandoc/assets/liamat.js`, `pandoc/assets/liamat.css` |
+| Ejecución en Docker (web en zip y PDF) | `pandoc_export.py` (`PandocExporter`) |
+
+**Resultados con el corpus** (`ut03-mvc`, `ut04-pdo`, `ut05-sesiones`,
+`demo-liascript`):
+
+- **Conformidad con LiaScript: 4/4.** Mismas secciones y mismos quizzes por
+  tipo que `liaex -f fullJson` (`tests/test_pandoc_export.py`).
+- **Web**: `ut05` en 17 KB comprimida (12 ficheros) en 0,6 s; la demo en
+  31 KB. Sin restos de sintaxis LiaScript, nombres de página ASCII y sin
+  avisos del lector.
+- **Comportamiento en Chrome: 12/12** (`tests/web/liamat_e2e.mjs`): opción
+  única y múltiple, selección en línea, matriz y texto, con pistas, «Ver
+  respuesta» y solución; encuesta sin guardar; índice con la página actual;
+  sin errores de JavaScript.
+- **PDF de contenido**: `ut05` en 37 KB en 5 s, con la plantilla FP Virtual.
+  Sin quizzes, encuestas ni sus enunciados; las secciones que solo tenían
+  preguntas («Autoevaluación», «Tu opinión») desaparecen.
+
+**Decisiones tomadas en el prototipo** (revisables):
+
+- La web usa el **tema verde** del editor (decisión pendiente nº 1).
+- En el PDF, el **enunciado** de cada quiz (el párrafo inmediatamente
+  anterior) se omite con el quiz, y los párrafos con selección en línea se
+  omiten enteros; los títulos que se quedan sin contenido desaparecen.
+- La caja `error` se dibuja como `importante` en el PDF (`content-boxes.tex`
+  solo define `nota`, `aviso` e `importante`).
+- Atributo `tipo` (no `type`) en el lenguaje intermedio: Pandoc no prefija
+  con `data-` los atributos HTML válidos como `type`.
+
+**Pendiente del criterio de salida**: comprobar la web dentro de
+`mod_resource` en el Moodle de pruebas (requiere la Fase 4 o subirla a mano).
+
