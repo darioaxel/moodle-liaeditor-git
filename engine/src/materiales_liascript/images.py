@@ -29,6 +29,8 @@ READ_TYPES = {
 UPLOAD_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif"})
 #: Tamaño máximo de una imagen (bytes), al leerla o subirla.
 MAX_IMAGE_BYTES = 2 * 1024 * 1024
+#: Tamaño máximo del conjunto de imágenes de un guardado (bytes).
+MAX_SAVE_BYTES = 10 * 1024 * 1024
 #: Extensiones que XeLaTeX no admite y se convierten a PNG en el PDF.
 PDF_CONVERT = frozenset({".webp", ".gif"})
 

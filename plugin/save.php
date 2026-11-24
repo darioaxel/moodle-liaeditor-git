@@ -49,6 +49,13 @@ try {
 }
 local_liamateriales_api_limit('save', (int) $tokendata->userid);
 
+// Imágenes nuevas que viajan con el guardado (docs/imagenes, fase 2).
+try {
+    $images = local_liamateriales_validate_images($body->images ?? null);
+} catch (\moodle_exception $e) {
+    local_liamateriales_api_respond(400, ['status' => 'error', 'message' => $e->getMessage()]);
+}
+
 $user = \core_user::get_user($tokendata->userid);
 
 try {
@@ -59,6 +66,7 @@ try {
         'original_sha' => $body->original_sha,
         'content' => $body->content,
         'message' => $body->commit_message ?? null,
+        'images' => $images,
     ]);
 } catch (\moodle_exception $e) {
     local_liamateriales_api_internal_error('save.php: ' . $e->getMessage());
@@ -71,6 +79,7 @@ if ($status === 200) {
         'file' => $file,
         'branch' => $branch,
         'sha' => $result->new_sha,
+        'images' => count($images),
     ]);
     // Contrato C6: token renovado en cada respuesta 200.
     $newtoken = token_manager::refresh($body->token, $file, $branch);

@@ -10,7 +10,7 @@ import os
 import re
 import subprocess
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -140,14 +140,29 @@ class LocalGitProvider(GitProvider):
         message: str,
         author: str,
     ) -> str:
+        return self.commit_files(branch, {path: content}, message, author)
+
+    def commit_files(
+        self,
+        branch: str,
+        files: Mapping[str, str | bytes],
+        message: str,
+        author: str,
+    ) -> str:
         if not self.branch_exists(branch):
             msg = f"La rama no existe: {branch!r}"
+            raise GitProviderError(msg)
+        if not files:
+            msg = "commit sin archivos"
             raise GitProviderError(msg)
         author_name, _, email_part = author.partition("<")
         author_email = email_part.rstrip("> ") or f"{author_name.strip()}@liaeditor.local"
         base = self.get_commit(branch)
-        blob = self._git_in(["hash-object", "-w", "--stdin"], content)
-        tree = self._replace_tree_entry(f"{base}^{{tree}}", path.split("/"), blob)
+        tree = f"{base}^{{tree}}"
+        for path, content in files.items():
+            data = content.encode("utf-8") if isinstance(content, str) else content
+            blob = self._hash_blob(data)
+            tree = self._replace_tree_entry(tree, path.split("/"), blob)
         env = {
             "GIT_AUTHOR_NAME": author_name.strip(),
             "GIT_AUTHOR_EMAIL": author_email,
@@ -158,10 +173,24 @@ class LocalGitProvider(GitProvider):
         try:
             self._git("update-ref", f"refs/heads/{branch}", commit, base)
         except GitProviderError as exc:
+            paths = ", ".join(files)
             raise BranchMovedError(
-                f"la rama {branch!r} avanzó durante el commit de {path}"
+                f"la rama {branch!r} avanzó durante el commit de {paths}"
             ) from exc
         return commit
+
+    def _hash_blob(self, data: bytes) -> str:
+        """Escribe ``data`` como blob (binario intacto) y devuelve su SHA."""
+        result = subprocess.run(
+            ["git", "-C", str(self._root), "hash-object", "-w", "--stdin"],
+            input=data,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            msg = f"git hash-object falló: {result.stderr.decode(errors='replace').strip()}"
+            raise GitProviderError(msg)
+        return result.stdout.decode().strip()
 
     def push_branch(self, branch: str) -> None:
         if not any(remote.name == "origin" for remote in self._repo.remotes):

@@ -418,6 +418,63 @@ function local_liamateriales_record_save(int $userid, string $file, string $bran
     }
 }
 
+/** Imágenes por guardado, tamaño por imagen y total (docs/imagenes, D7; mismos límites que el engine). */
+const LOCAL_LIAMATERIALES_MAX_IMAGES = 20;
+/** Tamaño máximo de una imagen ya decodificada (bytes). */
+const LOCAL_LIAMATERIALES_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+/** Tamaño máximo del conjunto de imágenes de un guardado (bytes). */
+const LOCAL_LIAMATERIALES_MAX_IMAGES_BYTES = 10 * 1024 * 1024;
+/** Extensión → tipo MIME de las imágenes que se pueden subir (sin SVG ni WebP). */
+const LOCAL_LIAMATERIALES_UPLOAD_TYPES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif'];
+
+/**
+ * Valida las imágenes nuevas de un guardado (docs/imagenes, fase 2) y las
+ * devuelve listas para el engine. Comprueba número y tamaños, la ruta
+ * (relativa, sin «..», caracteres seguros), la extensión y el tipo real del
+ * contenido (finfo y getimagesize), sin fiarse de lo que declare el cliente.
+ * El engine repite la validación (ruta dentro de la carpeta del material y
+ * firma de bytes).
+ *
+ * @param mixed $images valor recibido (``images`` del cuerpo)
+ * @return array<int, array{path: string, content_base64: string}>
+ * @throws \moodle_exception imageinvalid (con la ruta) o imagestoomany / imagestoobig
+ */
+function local_liamateriales_validate_images($images): array {
+    if ($images === null) {
+        return [];
+    }
+    if (!is_array($images) || count($images) > LOCAL_LIAMATERIALES_MAX_IMAGES) {
+        throw new \moodle_exception('imagestoomany', 'local_liamateriales', '', LOCAL_LIAMATERIALES_MAX_IMAGES);
+    }
+    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+    $result = [];
+    $total = 0;
+    foreach ($images as $image) {
+        $path = is_object($image) && isset($image->path) && is_string($image->path) ? $image->path : '';
+        $encoded = is_object($image) && isset($image->content_base64) && is_string($image->content_base64)
+            ? $image->content_base64 : '';
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $data = base64_decode($encoded, true);
+        $valid = preg_match('#^[A-Za-z0-9._/-]{1,200}$#D', $path)
+            && $path[0] !== '/'
+            && !in_array('..', explode('/', $path), true)
+            && isset(LOCAL_LIAMATERIALES_UPLOAD_TYPES[$ext])
+            && is_string($data) && $data !== ''
+            && strlen($data) <= LOCAL_LIAMATERIALES_MAX_IMAGE_BYTES
+            && $finfo->buffer($data) === LOCAL_LIAMATERIALES_UPLOAD_TYPES[$ext]
+            && @getimagesizefromstring($data) !== false;
+        if (!$valid) {
+            throw new \moodle_exception('imageinvalid', 'local_liamateriales', '', s($path));
+        }
+        $total += strlen($data);
+        if ($total > LOCAL_LIAMATERIALES_MAX_IMAGES_BYTES) {
+            throw new \moodle_exception('imagestoobig', 'local_liamateriales', '', LOCAL_LIAMATERIALES_MAX_IMAGES_BYTES / 1048576);
+        }
+        $result[] = ['path' => $path, 'content_base64' => $encoded];
+    }
+    return $result;
+}
+
 /**
  * Validación de ruta de fichero en el lado plugin (espejo de las reglas del
  * engine: relativa, sin traversal, extensión .md). Lanza moodle_exception.

@@ -137,3 +137,6 @@ $string['event_published'] = 'Material publicado en el curso';
 $string['internalerror'] = 'No se pudo completar la operación por un error del servidor. Si se repite, avisa al administrador con la incidencia {$a}.';
 $string['settings_ratelimit_asset'] = 'Imágenes que el editor pide para mostrarlas';
 $string['assetnotfound'] = 'Imagen no encontrada.';
+$string['imageinvalid'] = 'La imagen «{$a}» no es válida: se admiten PNG, JPEG y GIF de hasta 2 MB, en una ruta sin espacios.';
+$string['imagestoomany'] = 'Demasiadas imágenes nuevas en un guardado (máximo {$a}). Guarda en varias veces.';
+$string['imagestoobig'] = 'Las imágenes nuevas superan {$a} MB en un guardado. Guarda en varias veces.';

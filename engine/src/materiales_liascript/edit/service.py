@@ -8,6 +8,8 @@ sesión) que delega en estos métodos vía HTTP.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import re
 from collections.abc import Callable
 from datetime import datetime
@@ -118,6 +120,7 @@ class EditService:
         file = validate_file_path(request.file)
         if not self._git.branch_exists(request.branch):
             raise EditError(404, f"la rama no existe: {request.branch!r}")
+        files: dict[str, str | bytes] = {file: request.content, **self._uploads(file, request)}
         current = self._git.get_commit(request.branch)
         message = request.message or f"Editado desde Moodle por {request.user}"
         target = request.branch
@@ -130,10 +133,10 @@ class EditService:
                 target = f"{target}-{current[:8]}"
                 self._git.create_branch(target, current)
         try:
-            new_sha = self._git.commit_file(
+            # Markdown e imágenes nuevas en un único commit (docs/imagenes, D2).
+            new_sha = self._git.commit_files(
                 target,
-                file,
-                request.content,
+                files,
                 message,
                 author=f"{request.user} <{request.user}@liaeditor.local>",
             )
@@ -147,6 +150,26 @@ class EditService:
                 diff_url=build_compare_url(self._repo_url, request.original_sha, target),
             )
         return SaveOk(branch=target, new_sha=new_sha, committed_at=self._git.commit_date(new_sha))
+
+    @staticmethod
+    def _uploads(file: str, request: SaveRequest) -> dict[str, bytes]:
+        """Imágenes del guardado, validadas: ruta en la carpeta del material,
+        formato que se puede subir, firma de bytes y tamaño (400 si no)."""
+        uploads: dict[str, bytes] = {}
+        total = 0
+        for image in request.images:
+            try:
+                path = images.resolve(file, image.path)
+                data = base64.b64decode(image.content_base64, validate=True)
+                images.check(path, data, upload=True)
+            except (images.ImageError, binascii.Error, ValueError) as exc:
+                _log.info("imagen_subida_rechazada", file=file, ref=image.path, motivo=str(exc))
+                raise EditError(400, f"imagen no válida: {image.path}") from exc
+            total += len(data)
+            if total > images.MAX_SAVE_BYTES:
+                raise EditError(400, "las imágenes del guardado superan el tamaño máximo")
+            uploads[path] = data
+        return uploads
 
     def asset(self, file: str, branch: str, ref: str) -> tuple[bytes, str]:
         """Imagen ``ref`` (ruta del Markdown de ``file``) en ``branch``: bytes y tipo MIME.
