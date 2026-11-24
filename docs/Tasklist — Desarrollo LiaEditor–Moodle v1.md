@@ -67,9 +67,17 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
 **Orden:** LIA-060 → LIA-061 → LIA-062/063 → LIA-064…066 → resto. LIA-071
 (infraestructura) puede pedirse ya, en paralelo.
 
+**Estado (sesión 39, rama `feature/seguridad` en este repo y en el
+editor):** código hecho y probado en todas las tareas (engine 113 tests;
+editor 127 tests y e2e 18/18; plugin con lint, vectores de firma
+cruzados PHP↔Python y tests PHPUnit nuevos que se ejecutan en el Moodle de
+pruebas). Quedan en el servidor: quitar el puerto publicado del engine
+(LIA-061), el límite del proxy (LIA-071) y el e2e real del criterio de
+salida. Plugin 2.6.0 (2026112403).
+
 ### Canal plugin → engine
 
-- [ ] **LIA-060** (M) 🔌⚙️ **Autenticación entre plugin y engine.**
+- [x] **LIA-060** (M) 🔌⚙️ **Autenticación entre plugin y engine.**
   - *Motivo:* hoy cualquiera que alcance el puerto del engine puede hacer
     commits en cualquier rama (incluida `main`) o lanzar contenedores con
     `/publish`, y el engine tiene el socket de Docker (equivale a root en
@@ -85,7 +93,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
   - *Hecho cuando:* una petición sin firma, con firma errónea o repetida
     pasados 60 s recibe 401; los tests del engine cubren los tres casos y
     el flujo completo sigue funcionando.
-- [ ] **LIA-061** (S) ⚙️ **El engine solo en la red interna.**
+- [~] **LIA-061** (S) ⚙️ **El engine solo en la red interna.**
   - *Motivo:* el puerto 8091 está publicado en la red del servidor, y el
     navegador nunca necesita hablar con el engine.
   - *Qué:* quitar la publicación del puerto (o atarla a `127.0.0.1`),
@@ -96,7 +104,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
 
 ### Token de edición
 
-- [ ] **LIA-062** (M) 🔌✏️ **Código de apertura de un solo uso, en el
+- [x] **LIA-062** (M) 🔌✏️ **Código de apertura de un solo uso, en el
   fragmento de la URL.**
   - *Motivo:* el token de edición (válido 15 min para guardar y publicar)
     viaja hoy en la URL del editor: queda en los registros de acceso de
@@ -119,7 +127,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
   - *Hecho cuando:* ninguna URL registrada contiene un token válido; un
     código usado o caducado da 403; el e2e del editor pasa con el flujo
     nuevo.
-- [ ] **LIA-063** (S) 🔌✏️ **Cabeceras de protección.**
+- [x] **LIA-063** (S) 🔌✏️ **Cabeceras de protección.**
   - *Motivo:* que la URL de trabajo no se filtre por Referer y limitar qué
     puede cargar la página del editor.
   - *Qué:* `Referrer-Policy: no-referrer` en el editor (meta y servidor
@@ -131,7 +139,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
 
 ### Límites de uso
 
-- [ ] **LIA-064** (M) 🔌✏️ **Límites por usuario en el plugin** (sustituye
+- [x] **LIA-064** (M) 🔌✏️ **Límites por usuario en el plugin** (sustituye
   al límite nunca implementado de LIA-013).
   - *Motivo:* cada guardado es un commit y un push, y cada publicación un
     contenedor de liaex; sin límites, un bucle (error o abuso) satura Git
@@ -143,7 +151,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
     «Demasiadas peticiones, espera unos segundos» sin perder el trabajo.
   - *Hecho cuando:* los tests del plugin superan cada límite y reciben 429;
     el editor trata el 429 (test del puente y e2e).
-- [ ] **LIA-065** (S) 🔌 **Una publicación a la vez por usuario y
+- [x] **LIA-065** (S) 🔌 **Una publicación a la vez por usuario y
   material.**
   - *Motivo:* dos clics seguidos en Publicar crean dos módulos o lanzan dos
     liaex en paralelo.
@@ -151,7 +159,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
     usuario y fichero durante `publish_api.php`; si está ocupado, `409`
     con mensaje «Ya se está publicando este material».
   - *Hecho cuando:* dos peticiones simultáneas producen un solo módulo.
-- [ ] **LIA-066** (S) 🔌 **Bloqueo temporal por IP tras tokens inválidos.**
+- [x] **LIA-066** (S) 🔌 **Bloqueo temporal por IP tras tokens inválidos.**
   - *Motivo:* adivinar un token de 48 caracteres es inviable, pero un
     barrido de peticiones inválidas carga Moodle y el engine.
   - *Qué:* contador de fallos de token por IP (MUC); tras 20 fallos en
@@ -160,7 +168,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
 
 ### Ciclo de vida de tokens y sesiones
 
-- [ ] **LIA-067** (S) 🔌 **Tokens de vista previa bajo demanda.**
+- [x] **LIA-067** (S) 🔌 **Tokens de vista previa bajo demanda.**
   - *Motivo:* `materials.php` emite hoy un token por material **en cada
     carga de la página** y los deja escritos en el HTML; la tabla crece
     sin control y los tokens aparecen en el código fuente de la página.
@@ -169,7 +177,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
     en ese momento y redirige al editor.
   - *Hecho cuando:* cargar la página de materiales no inserta filas en la
     tabla de tokens.
-- [ ] **LIA-068** (S) 🔌 **Tarea programada de limpieza** (absorbe LIA-051).
+- [x] **LIA-068** (S) 🔌 **Tarea programada de limpieza** (absorbe LIA-051).
   - *Qué:* `scheduled_task` diaria que borra tokens caducados o revocados
     de más de 24 h y cierra (`closed_at`) las sesiones de edición sin
     guardados en 7 días.
@@ -178,7 +186,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
 
 ### Trazabilidad y mensajes
 
-- [ ] **LIA-069** (M) 🔌 **Auditoría con eventos de Moodle** (absorbe la
+- [x] **LIA-069** (M) 🔌 **Auditoría con eventos de Moodle** (absorbe la
   parte de registro de LIA-050).
   - *Motivo:* hoy no queda rastro en el registro de Moodle de quién abrió,
     guardó o publicó un material.
@@ -187,7 +195,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
     cmid) en el registro estándar; visibles en los informes del curso.
   - *Hecho cuando:* cada acción del e2e real deja su evento en
     `logstore_standard_log`.
-- [ ] **LIA-070** (S) 🔌 **Errores genéricos hacia el navegador.**
+- [x] **LIA-070** (S) 🔌 **Errores genéricos hacia el navegador.**
   - *Motivo:* algunos 502 devuelven el detalle interno del engine (rutas,
     mensajes de Git).
   - *Qué:* registrar el detalle en el log del servidor (`debugging` o
@@ -198,7 +206,7 @@ acepta cualquier petición mientras tiene acceso al socket de Docker.
 
 ### Infraestructura
 
-- [ ] **LIA-071** (S) 🌐 **Límite en el proxy delante de Moodle** (lo
+- [~] **LIA-071** (S) 🌐 **Límite en el proxy delante de Moodle** (lo
   configuran los administradores).
   - *Qué:* límite por IP solo para `/local/liamateriales/(content|save|token|publish_api).php`,
     por ejemplo en Nginx `limit_req zone=liamat rate=60r/m burst=20`, o el

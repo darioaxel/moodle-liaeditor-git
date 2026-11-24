@@ -28,6 +28,49 @@
 
 ## Registro de sesiones
 
+### 2026-11-24 — Sesión 39: Fase S — Seguridad
+
+Rama `feature/seguridad` (sale de `feature/generacion-web`) en este repo y
+en `fpvirtual-crepe-editor`.
+
+- **LIA-060** Firma HMAC-SHA256 plugin → engine: middleware ASGI
+  (`materiales_liascript.auth`; ±60 s, sin réplicas, `/health` libre),
+  `serve.py` exige `MATERIALES_LIASCRIPT_SHARED_SECRET`; en el plugin,
+  `engine_client` (único cliente HTTP) y el secreto en `config.php` o en
+  el ajuste nuevo. Vectores de prueba idénticos en Python y PHP.
+- **LIA-061** Documentado (engine sin puerto publicado); falta aplicarlo
+  en el servidor.
+- **LIA-062/067** Código de apertura de 60 s y un solo uso en el fragmento
+  (`#open=…&src=…`); `content.php` lo canjea por POST y recarga con
+  `POST {token}`; `preview.php` emite el código al pulsar (el catálogo ya
+  no crea tokens al cargarse). Formato antiguo tras `legacy_open_url`.
+- **LIA-063** Cabeceras (`no-referrer`, `nosniff`, `no-store`, CORS con
+  `Vary`) unificadas en `lib.php`; `meta referrer` y CSP en el editor.
+- **LIA-064/065/066** `rate_limiter` (MUC): límites por usuario
+  configurables (429 + `Retry-After`), bloqueo por IP tras 20 tokens
+  inválidos, una publicación a la vez (409). El editor trata el 429 sin
+  perder el trabajo.
+- **LIA-068** Tarea diaria de limpieza; **LIA-069** eventos
+  `material_opened/saved/conflict/published`; **LIA-070** errores
+  genéricos con identificador de incidencia.
+- **LIA-071** Documentado en el README del plugin (Nginx `limit_req`).
+- **Pruebas**: engine 113 ✓ (ruff, mypy); editor 127 ✓, typecheck, build,
+  e2e 18/18; plugin: lint y arnés mínimo (rate_limiter, firma); los tests
+  PHPUnit nuevos (`engine_client`, `token_manager`, `rate_limiter`,
+  `cleanup_task`, `events`) se ejecutan en el Moodle de pruebas.
+- **Pendiente**: desplegar, quitar el puerto del engine, límite del
+  proxy, e2e real.
+
+### 2026-11-24 — Sesión 38: Web y editor con la estética de vuepress-theme-hope
+
+- **Web** (`liamat.css`, `web.html`, `liamat.js`, `web.lua`): barra superior
+  y lateral, migas, información de la página, índice «En esta página»,
+  contenedores de aviso con título e icono, código con lenguaje,
+  navegación en tarjetas, portada y modo claro/oscuro. Colores de avisos y
+  resaltado tomados de la paleta del editor (AA).
+- **Editor**: cajas `@nota/@aviso/…` como contenedores de aviso, quizzes
+  como en la web y token `code-block-bg`; mismo aspecto que la web.
+
 ### 2026-11-23 — Sesión 37: Generación web y PDF de contenido — Fase 4 (integración)
 
 - **Engine**: formatos `web` (zip) y `pdfcontenido` (PDF) en `POST /publish`

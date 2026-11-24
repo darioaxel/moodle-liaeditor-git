@@ -54,12 +54,62 @@ en Moodle 6.0dev.
    - `$CFG->local_liamateriales_service_url` — URL interna del engine
      (server-to-server), p. ej. `http://engine:8000`. El navegador
      nunca habla con el engine: no necesita URL pública.
+   - `$CFG->local_liamateriales_service_secret` — secreto compartido con
+     el engine (el mismo valor que su `MATERIALES_LIASCRIPT_SHARED_SECRET`;
+     `openssl rand -hex 32`). Firma cada petición; sin él, el engine
+     responde 401. También se puede poner en el ajuste «Secreto compartido
+     con el engine», pero `config.php` lo deja fuera de la base de datos.
 3. En *Administración del sitio → Plugins → Materiales Editables*: URL del
-   editor LiaEdit self-hosted (obligatoria), origen CORS (opcional, se
-   deriva del editor), TTL del token y tamaño máximo de material.
+   editor (obligatoria), origen CORS (opcional, se deriva del editor), TTL
+   del token, tamaño máximo de material, límites de uso por usuario y la
+   apertura antigua (`legacy_open_url`, solo para el fork de LiveEditor).
 4. Si el engine corre en red interna/IP privada, revisar la seguridad cURL
    de Moodle (`curlsecurityallowedport`, `curlsecurityblockedhosts`) para
    permitir el host/puerto del engine.
+
+## Seguridad (fase S)
+
+Superficie expuesta: cuatro scripts sin sesión de Moodle, que usa el
+editor (`content.php`, `save.php`, `token.php`, `publish_api.php`).
+
+- **Tokens fuera de las URL.** El editor se abre con un código de un solo
+  uso y 60 s en el fragmento (`#open=…`), que canjea con
+  `POST content.php`; el token de edición solo viaja en el cuerpo de las
+  peticiones.
+- **Cabeceras.** `Referrer-Policy: no-referrer`, `nosniff`, `no-store` y
+  CORS limitado al origen del editor.
+- **Límites.** Por usuario (ajustes; 429 con `Retry-After`), un bloqueo por
+  IP tras 20 tokens inválidos en 10 min, y una publicación a la vez por
+  usuario y material (409).
+- **Errores.** El navegador recibe un mensaje genérico con un identificador
+  de incidencia; el detalle queda en el log de PHP del servidor.
+- **Auditoría.** Eventos «Material abierto / guardado / conflicto /
+  publicado» en el registro de Moodle (informes del curso).
+- **Limpieza.** Tarea programada diaria (tokens caducados, sesiones
+  inactivas 7 días).
+- **Engine.** Solo en la red interna y con firma HMAC (ver
+  `engine/README.md`, «Superficie expuesta»).
+
+### Límite en el proxy (LIA-071)
+
+Además de los límites por usuario del plugin, el proxy delante de Moodle
+debe limitar el volumen por IP de los cuatro scripts. Nginx:
+
+```nginx
+# En http { … }
+limit_req_zone $binary_remote_addr zone=liamat:10m rate=60r/m;
+
+# En el server { … } de Moodle
+location ~ ^/local/liamateriales/(content|save|token|publish_api)\.php$ {
+    limit_req zone=liamat burst=20 nodelay;
+    limit_req_status 429;
+    # … lo mismo que el resto de PHP de Moodle (fastcgi_pass / proxy_pass)
+}
+```
+
+Apache (con `mod_evasive` o `mod_security`), el equivalente sobre esas
+cuatro rutas. Comprobación: más de 80 peticiones seguidas desde una IP a
+`token.php` reciben 429 del proxy.
 
 ## Arquitectura
 
