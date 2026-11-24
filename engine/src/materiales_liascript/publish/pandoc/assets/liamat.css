@@ -1,8 +1,10 @@
 /* Web estática de Materiales Editables (lector LiaScript + Pandoc).
  *
  * Estética de vuepress-theme-hope (medidas, barra superior y lateral, índice
- * de la página, contenedores de aviso, código y navegación) con el verde del
- * editor FP Virtual como acento (#3eaf7c; texto AA #2a7d57). Modo claro y
+ * de la página, contenedores de aviso, código y navegación) con los colores
+ * del editor FP Virtual (fpvirtual-crepe-editor, src/theme/palette.ts):
+ * acento verde #3eaf7c (texto AA #2a7d57), estados de los avisos y resaltado.
+ * El editor muestra las cajas y los quizzes igual que esta web. Modo claro y
  * oscuro (html[data-theme]). Iconos de los avisos: vuepress-theme-hope (MIT). */
 
 :root {
@@ -31,15 +33,15 @@
   --ok-soft: rgba(16, 185, 129, .14);
   --ko: #b8272c;
   --ko-soft: rgba(244, 63, 94, .14);
-  /* Contenedores de aviso (valores de hope; info oscurecido para AA). */
-  --tip-text: #18794e; --tip-soft: rgba(16, 185, 129, .14);
-  --warning-text: #915930; --warning-soft: rgba(234, 179, 8, .14);
-  --caution-text: #b8272c; --caution-soft: rgba(244, 63, 94, .14);
-  --important-text: #6f42c1; --important-soft: rgba(159, 122, 234, .14);
-  --info-text: #1f6f8b; --info-soft: rgba(27, 178, 229, .14);
-  /* Resaltado de sintaxis: One Light (el de hope). */
-  --sx-keyword: #a626a4; --sx-string: #50a14f; --sx-number: #986801; --sx-comment: #a0a1a7;
-  --sx-function: #4078f2; --sx-type: #c18401; --sx-variable: #e45649; --sx-operator: #0184bc;
+  /* Contenedores de aviso: colores de estado del editor (contraste comprobado allí). */
+  --tip-text: #1f5c41; --tip-soft: #eef8f3;
+  --warning-text: #8a5300; --warning-soft: #fff4e5;
+  --caution-text: #c62828; --caution-soft: #fdecea;
+  --important-text: #6a4fc0; --important-soft: #f3f0ff;
+  --info-text: #2457c5; --info-soft: #eef3ff;
+  /* Resaltado de sintaxis: el del editor (syntaxLight de su paleta, AA sobre el fondo del código). */
+  --sx-keyword: #cf222e; --sx-string: #0a3069; --sx-number: #0550ae; --sx-comment: #59636e;
+  --sx-function: #6639ba; --sx-type: #953800; --sx-meta: #116329;
   --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
   --mono: consolas, monaco, 'Andale Mono', 'Ubuntu Mono', ui-monospace, monospace;
   --navbar-height: 3.75rem;
@@ -74,14 +76,14 @@ html[data-theme="dark"] {
   --ok-soft: rgba(16, 185, 129, .16);
   --ko: #f66f81;
   --ko-soft: rgba(244, 63, 94, .16);
-  --tip-text: #3dd68c; --tip-soft: rgba(16, 185, 129, .16);
-  --warning-text: #f9b44e; --warning-soft: rgba(234, 179, 8, .16);
-  --caution-text: #f66f81; --caution-soft: rgba(244, 63, 94, .16);
-  --important-text: #c8abfa; --important-soft: rgba(159, 122, 234, .16);
-  --info-text: #a6d9ea; --info-soft: rgba(27, 178, 229, .16);
-  /* One Dark. */
-  --sx-keyword: #c678dd; --sx-string: #98c379; --sx-number: #d19a66; --sx-comment: #7f848e;
-  --sx-function: #61afef; --sx-type: #e5c07b; --sx-variable: #e06c75; --sx-operator: #56b6c2;
+  --tip-text: #7fd1ae; --tip-soft: #16332a;
+  --warning-text: #ffcc80; --warning-soft: #3a2a12;
+  --caution-text: #ff8a80; --caution-soft: #3d1d1d;
+  --important-text: #b9a6ff; --important-soft: #2a2147;
+  --info-text: #8ab4ff; --info-soft: #172a4d;
+  /* syntaxDark del editor. */
+  --sx-keyword: #ff7b72; --sx-string: #a5d6ff; --sx-number: #79c0ff; --sx-comment: #9198a1;
+  --sx-function: #d2a8ff; --sx-type: #ffa657; --sx-meta: #7ee787;
   color-scheme: dark;
 }
 
@@ -184,14 +186,14 @@ div.sourceCode[data-ext]::before {
 }
 div.sourceCode[data-ext] pre { padding-top: 1.6rem; }
 pre > code.sourceCode > span > a:first-child::before { text-decoration: none; }
-code span.kw, code span.cf, code span.im { color: var(--sx-keyword); font-weight: normal; }
+code span.kw, code span.cf, code span.im, code span.al, code span.er, code span.wa { color: var(--sx-keyword); font-weight: normal; }
 code span.st, code span.ss, code span.ch, code span.vs, code span.sc { color: var(--sx-string); }
 code span.dv, code span.bn, code span.fl, code span.cn { color: var(--sx-number); }
 code span.co, code span.cv, code span.do, code span.an, code span.in { color: var(--sx-comment); font-style: italic; font-weight: normal; }
-code span.fu, code span.at { color: var(--sx-function); }
+code span.fu { color: var(--sx-function); }
 code span.dt, code span.bu, code span.ex { color: var(--sx-type); font-weight: normal; }
-code span.va, code span.pp, code span.al, code span.er, code span.wa { color: var(--sx-variable); font-weight: normal; }
-code span.op, code span.ot, code span.sp { color: var(--sx-operator); }
+code span.pp, code span.at { color: var(--sx-meta); font-weight: normal; }
+code span.va, code span.op, code span.ot, code span.sp { color: inherit; }
 
 /* --- Contenedores de aviso (hint-container de hope) --------------------------------- */
 
