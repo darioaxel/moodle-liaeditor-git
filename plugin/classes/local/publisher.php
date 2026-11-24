@@ -102,7 +102,7 @@ class publisher {
         int $existingcmid,
         string $deployedby
     ): int {
-        global $DB, $CFG;
+        global $DB, $CFG, $USER;
         require_once($CFG->dirroot . '/course/modlib.php');
 
         if (!isset(self::TYPES[$artifacttype])) {
@@ -155,6 +155,13 @@ class publisher {
             'deployed_at' => time(),
             'deployed_by' => $deployedby,
             'status' => 'ok',
+        ]);
+        // Auditoría (LIA-069): visible en los informes del curso.
+        \local_liamateriales\event\material_published::fire((int) $USER->id, $courseid, [
+            'file' => $sourcefile,
+            'sha' => $sha,
+            'format' => $artifacttype,
+            'cmid' => $cmid,
         ]);
         return $cmid;
     }

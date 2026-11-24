@@ -67,6 +67,11 @@ try {
 if ($status === 200) {
     // D3: el plugin registra la versión modificada después del commit.
     local_liamateriales_record_save((int) $user->id, $file, $branch, $result->new_sha);
+    \local_liamateriales\event\material_saved::fire((int) $user->id, (int) $tokendata->courseid, [
+        'file' => $file,
+        'branch' => $branch,
+        'sha' => $result->new_sha,
+    ]);
     // Contrato C6: token renovado en cada respuesta 200.
     $newtoken = token_manager::refresh($body->token, $file, $branch);
     // committed_at del nuevo commit si el engine lo da (opcional en el contrato).
@@ -79,6 +84,12 @@ if ($status === 200) {
 }
 
 if ($status === 409) {
+    \local_liamateriales\event\material_conflict::fire((int) $user->id, (int) $tokendata->courseid, [
+        'file' => $file,
+        'branch' => $branch,
+        'sha' => $body->original_sha,
+        'resolution_branch' => $result->resolution_branch ?? null,
+    ]);
     local_liamateriales_api_respond(409, [
         'status' => 'conflict',
         'message' => get_string('saveconflict', 'local_liamateriales'),

@@ -98,6 +98,14 @@ if (!$readonly && (int) $tokendata->courseid > 0) {
 
 $markdown = local_liamateriales_inject_lms_block($result->content, $lmsconfig);
 
+// Auditoría (LIA-069): quién abrió qué versión, y si fue en solo lectura.
+\local_liamateriales\event\material_opened::fire((int) $tokendata->userid, (int) $tokendata->courseid, [
+    'file' => $file,
+    'branch' => $branch,
+    'sha' => $result->sha,
+    'readonly' => $readonly ? 1 : 0,
+]);
+
 http_response_code(200);
 local_liamateriales_api_headers();
 header('Content-Type: text/plain; charset=utf-8');

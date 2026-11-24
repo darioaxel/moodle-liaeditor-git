@@ -130,3 +130,7 @@ $string['settings_ratelimit_save'] = 'Guardados';
 $string['settings_ratelimit_token'] = 'Renovaciones del token';
 $string['settings_ratelimit_publish'] = 'Publicaciones desde el editor';
 $string['taskcleanup'] = 'Limpieza de tokens caducados y sesiones de edición inactivas';
+$string['event_opened'] = 'Material abierto en el editor';
+$string['event_saved'] = 'Material guardado';
+$string['event_conflict'] = 'Conflicto al guardar un material';
+$string['event_published'] = 'Material publicado en el curso';
