@@ -61,7 +61,7 @@ try {
         'message' => $body->commit_message ?? null,
     ]);
 } catch (\moodle_exception $e) {
-    local_liamateriales_api_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
+    local_liamateriales_api_internal_error('save.php: ' . $e->getMessage());
 }
 
 if ($status === 200) {
@@ -99,7 +99,7 @@ if ($status === 409) {
     ]);
 }
 
-local_liamateriales_api_respond($status >= 400 ? $status : 502, [
-    'status' => 'error',
-    'message' => $result->detail ?? 'error inesperado del engine',
-]);
+local_liamateriales_api_internal_error(
+    "save.php: engine HTTP {$status}: " . json_encode($result->detail ?? $result),
+    $status >= 400 && $status < 500 ? $status : 502
+);

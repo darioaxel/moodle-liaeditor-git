@@ -79,9 +79,9 @@ try {
         // Ya hay una publicación de este material en curso (LIA-065).
         local_liamateriales_api_respond(409, ['status' => 'busy', 'message' => $e->getMessage()]);
     }
-    local_liamateriales_api_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
+    local_liamateriales_api_internal_error('publish_api.php: ' . $e->getMessage() . ' ' . ($e->debuginfo ?? ''));
 } catch (\Throwable $e) {
-    local_liamateriales_api_respond(500, ['status' => 'error', 'message' => $e->getMessage()]);
+    local_liamateriales_api_internal_error('publish_api.php: ' . get_class($e) . ': ' . $e->getMessage(), 500);
 }
 
 local_liamateriales_api_respond(200, [

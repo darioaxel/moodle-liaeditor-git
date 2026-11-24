@@ -165,6 +165,23 @@ function local_liamateriales_api_respond(int $status, array $body, array $header
 }
 
 /**
+ * Error interno hacia el navegador (LIA-070): mensaje genérico con un
+ * identificador de incidencia; el detalle (rutas, mensajes de Git o del
+ * engine) va solo al log del servidor, con ese identificador.
+ *
+ * @param string $detail detalle interno (no se envía al navegador)
+ */
+function local_liamateriales_api_internal_error(string $detail, int $status = 502): void {
+    $incident = bin2hex(random_bytes(5));
+    error_log("local_liamateriales [incidencia {$incident}] {$detail}");
+    local_liamateriales_api_respond($status, [
+        'status' => 'error',
+        'message' => get_string('internalerror', 'local_liamateriales', $incident),
+        'incident' => $incident,
+    ]);
+}
+
+/**
  * Respuesta 429 con ``Retry-After`` (LIA-064, LIA-066) y fin.
  */
 function local_liamateriales_api_too_many(int $seconds): void {

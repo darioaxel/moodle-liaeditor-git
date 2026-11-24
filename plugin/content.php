@@ -72,7 +72,7 @@ try {
         'branch' => $branch,
     ]);
 } catch (\moodle_exception $e) {
-    local_liamateriales_api_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
+    local_liamateriales_api_internal_error('content.php: ' . $e->getMessage());
 }
 
 $baseurl = (new \moodle_url('/local/liamateriales/save.php'))->out(false);

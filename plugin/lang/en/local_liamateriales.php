@@ -134,3 +134,4 @@ $string['event_opened'] = 'Material abierto en el editor';
 $string['event_saved'] = 'Material guardado';
 $string['event_conflict'] = 'Conflicto al guardar un material';
 $string['event_published'] = 'Material publicado en el curso';
+$string['internalerror'] = 'No se pudo completar la operación por un error del servidor. Si se repite, avisa al administrador con la incidencia {$a}.';
