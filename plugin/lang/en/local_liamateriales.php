@@ -129,3 +129,4 @@ $string['settings_ratelimit_content'] = 'Aperturas y recargas del material';
 $string['settings_ratelimit_save'] = 'Guardados';
 $string['settings_ratelimit_token'] = 'Renovaciones del token';
 $string['settings_ratelimit_publish'] = 'Publicaciones desde el editor';
+$string['taskcleanup'] = 'Limpieza de tokens caducados y sesiones de edición inactivas';

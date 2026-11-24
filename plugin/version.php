@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112401;        // Seguridad: límites de uso (caché MUC ratelimit), publicación única.
+$plugin->version = 2026112402;        // Seguridad: tarea programada de limpieza.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->release = '2.6.0';

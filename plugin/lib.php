@@ -360,6 +360,9 @@ function local_liamateriales_touch_session(int $userid, string $file, string $br
     ]);
     if ($session) {
         $session->branch = $branch;
+        // Última apertura: la tarea de limpieza (LIA-068) cierra las sesiones
+        // sin aperturas ni guardados en 7 días.
+        $session->opened_at = time();
         if ($lastsha !== '') {
             $session->last_sha = $lastsha;
             $session->last_save = time();
