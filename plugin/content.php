@@ -33,6 +33,7 @@ require_once(__DIR__ . '/lib.php');
 use local_liamateriales\local\token_manager;
 
 local_liamateriales_api_preflight('GET, POST');
+local_liamateriales_api_guard_ip();
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -51,14 +52,17 @@ try {
         $tokendata = token_manager::validate($token, required_param('file', PARAM_PATH), required_param('branch', PARAM_RAW));
         $tokendata->token = $token;
     } else {
+        local_liamateriales_api_token_failed();
         local_liamateriales_api_respond(403, ['status' => 'error', 'message' => get_string('tokeninvalid', 'local_liamateriales')]);
     }
     $file = local_liamateriales_validate_file($tokendata->file);
     $branch = $tokendata->branch;
     $token = $tokendata->token;
 } catch (\moodle_exception $e) {
+    local_liamateriales_api_token_failed();
     local_liamateriales_api_respond(403, ['status' => 'error', 'message' => get_string('tokeninvalid', 'local_liamateriales')]);
 }
+local_liamateriales_api_limit('content', (int) $tokendata->userid);
 // El modo lo decide el token (vista previa = solo lectura), no la URL.
 $readonly = !empty($tokendata->readonly);
 

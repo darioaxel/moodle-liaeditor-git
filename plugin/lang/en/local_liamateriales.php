@@ -117,3 +117,15 @@ $string['progress_downloaded'] = 'Fichero generado. Se está descargando.';
 $string['progress_error'] = 'No se pudo completar: {message}';
 $string['progress_avisos'] = 'Fichero generado. Partes del material que este formato no representa:';
 $string['progress_nofile'] = 'Selecciona primero el fichero que quieres subir.';
+
+// Seguridad (fase S).
+$string['cachedef_ratelimit'] = 'Contadores de los límites de uso y bloqueos por IP';
+$string['ratelimited'] = 'Demasiadas peticiones. Espera {$a} segundos y vuelve a intentarlo.';
+$string['publishbusy'] = 'Ya se está publicando este material. Espera a que termine.';
+$string['settings_ratelimit_heading'] = 'Límites de uso';
+$string['settings_ratelimit_heading_desc'] = 'Peticiones máximas por usuario desde el editor (0 = sin límite). Al superarlas, el editor recibe «Demasiadas peticiones» y no pierde el trabajo. Además, una IP con 20 tokens inválidos en 10 minutos queda bloqueada 15 minutos.';
+$string['settings_ratelimit_window'] = 'Por usuario, en {$a} min.';
+$string['settings_ratelimit_content'] = 'Aperturas y recargas del material';
+$string['settings_ratelimit_save'] = 'Guardados';
+$string['settings_ratelimit_token'] = 'Renovaciones del token';
+$string['settings_ratelimit_publish'] = 'Publicaciones desde el editor';

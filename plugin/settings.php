@@ -63,6 +63,22 @@ if ($hassiteconfig) {
         PARAM_INT
     ));
 
+    // Límites de uso por usuario (LIA-064): peticiones por ventana; 0 = sin límite.
+    $settings->add(new admin_setting_heading(
+        'local_liamateriales/ratelimit_heading',
+        get_string('settings_ratelimit_heading', 'local_liamateriales'),
+        get_string('settings_ratelimit_heading_desc', 'local_liamateriales')
+    ));
+    foreach (\local_liamateriales\local\rate_limiter::LIMITS as $action => [$setting, $default, $window]) {
+        $settings->add(new admin_setting_configtext(
+            'local_liamateriales/' . $setting,
+            get_string('settings_' . $setting, 'local_liamateriales'),
+            get_string('settings_ratelimit_window', 'local_liamateriales', $window / 60),
+            $default,
+            PARAM_INT
+        ));
+    }
+
     // Web estática (docs/generacion_web): cómo se abre en el curso.
     $settings->add(new admin_setting_heading(
         'local_liamateriales/web_heading',

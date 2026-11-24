@@ -378,6 +378,30 @@ class publisher {
         ?string $name,
         \stdClass $user
     ): int {
+        // Una publicación a la vez por usuario y material (LIA-065): dos clics
+        // seguidos no crean dos módulos ni lanzan dos generaciones.
+        $lock = \core\lock\lock_config::get_lock_factory('local_liamateriales')
+            ->get_lock('publish_' . $user->id . '_' . sha1($sourcefile), 0);
+        if (!$lock) {
+            throw new \moodle_exception('publishbusy', 'local_liamateriales');
+        }
+        try {
+            return self::generate_and_publish($courseid, $section, $sourcefile, $artifacttype, $sha, $name, $user);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /** Genera y publica (dentro del bloqueo de publish_generated). */
+    private static function generate_and_publish(
+        int $courseid,
+        int $section,
+        string $sourcefile,
+        string $artifacttype,
+        string $sha,
+        ?string $name,
+        \stdClass $user
+    ): int {
         $bytes = self::generate_artifact($sourcefile, $sha, $artifacttype);
         $draftitemid = self::stage_artifact(
             (int) $user->id,

@@ -19,6 +19,7 @@ require_once(__DIR__ . '/lib.php');
 use local_liamateriales\local\token_manager;
 
 local_liamateriales_api_preflight('POST');
+local_liamateriales_api_guard_ip();
 
 $body = json_decode(file_get_contents('php://input') ?: '');
 if (!is_object($body) || empty($body->token) || empty($body->file) || empty($body->branch)) {
@@ -26,10 +27,13 @@ if (!is_object($body) || empty($body->token) || empty($body->file) || empty($bod
 }
 
 try {
-    $newtoken = token_manager::refresh($body->token, $body->file, $body->branch);
+    $tokendata = token_manager::validate($body->token, $body->file, $body->branch);
 } catch (\moodle_exception $e) {
+    local_liamateriales_api_token_failed();
     local_liamateriales_api_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
 }
+local_liamateriales_api_limit('token', (int) $tokendata->userid);
+$newtoken = token_manager::refresh($body->token, $body->file, $body->branch);
 
 local_liamateriales_api_respond(200, [
     'status' => 'ok',

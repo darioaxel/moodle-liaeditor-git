@@ -165,6 +165,38 @@ function local_liamateriales_api_respond(int $status, array $body, array $header
 }
 
 /**
+ * Respuesta 429 con ``Retry-After`` (LIA-064, LIA-066) y fin.
+ */
+function local_liamateriales_api_too_many(int $seconds): void {
+    local_liamateriales_api_respond(429, [
+        'status' => 'rate_limited',
+        'message' => get_string('ratelimited', 'local_liamateriales', $seconds),
+        'retry_after' => $seconds,
+    ], ['Retry-After: ' . $seconds]);
+}
+
+/** Corta con 429 si la IP está bloqueada por tokens inválidos (LIA-066). */
+function local_liamateriales_api_guard_ip(): void {
+    $left = \local_liamateriales\local\rate_limiter::ip_blocked(getremoteaddr());
+    if ($left !== null) {
+        local_liamateriales_api_too_many($left);
+    }
+}
+
+/** Anota un token inválido desde la IP de la petición (LIA-066). */
+function local_liamateriales_api_token_failed(): void {
+    \local_liamateriales\local\rate_limiter::token_failure(getremoteaddr());
+}
+
+/** Corta con 429 si el usuario supera el límite de la acción (LIA-064). */
+function local_liamateriales_api_limit(string $action, int $userid): void {
+    $wait = \local_liamateriales\local\rate_limiter::hit($action, $userid);
+    if ($wait !== null) {
+        local_liamateriales_api_too_many($wait);
+    }
+}
+
+/**
  * Inyecta (o sustituye) el bloque ``liascript-lms`` en la cabecera LiaScript.
  *
  * El bloque vive dentro del comentario HTML de cabecera del documento

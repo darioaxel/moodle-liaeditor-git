@@ -26,6 +26,7 @@ use local_liamateriales\local\publisher;
 use local_liamateriales\local\token_manager;
 
 local_liamateriales_api_preflight('POST');
+local_liamateriales_api_guard_ip();
 
 $body = json_decode(file_get_contents('php://input') ?: '');
 if (!is_object($body) || empty($body->file) || empty($body->sha) || empty($body->format) || empty($body->token)) {
@@ -39,6 +40,7 @@ try {
     local_liamateriales_validate_file($body->file);
     $tokendata = token_manager::validate($body->token, $body->file, null, true);
 } catch (\moodle_exception $e) {
+    local_liamateriales_api_token_failed();
     local_liamateriales_api_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
 }
 if ((int) $tokendata->courseid <= 0) {
@@ -58,6 +60,7 @@ if (!has_capability('local/liamateriales:deploy', $coursecontext, $user)
         || !has_capability('moodle/course:manageactivities', $coursecontext, $user)) {
     local_liamateriales_api_respond(403, ['status' => 'error', 'message' => get_string('publishnocap', 'local_liamateriales')]);
 }
+local_liamateriales_api_limit('publish', (int) $user->id);
 
 // Genera el artefacto en el engine y crea o actualiza el módulo (mismo
 // camino que la página Publicar del plugin).
@@ -72,6 +75,10 @@ try {
         $user
     );
 } catch (\moodle_exception $e) {
+    if ($e->errorcode === 'publishbusy') {
+        // Ya hay una publicación de este material en curso (LIA-065).
+        local_liamateriales_api_respond(409, ['status' => 'busy', 'message' => $e->getMessage()]);
+    }
     local_liamateriales_api_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
 } catch (\Throwable $e) {
     local_liamateriales_api_respond(500, ['status' => 'error', 'message' => $e->getMessage()]);
