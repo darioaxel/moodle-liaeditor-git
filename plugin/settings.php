@@ -14,6 +14,15 @@ if ($hassiteconfig) {
     $settings = new admin_settingpage('local_liamateriales', get_string('pluginname', 'local_liamateriales'));
     $ADMIN->add('localplugins', $settings);
 
+    // Secreto compartido con el engine (LIA-060): firma HMAC de cada petición.
+    // Preferible en config.php: $CFG->local_liamateriales_service_secret.
+    $settings->add(new admin_setting_configpasswordunmask(
+        'local_liamateriales/service_secret',
+        get_string('settings_service_secret', 'local_liamateriales'),
+        get_string('settings_service_secret_desc', 'local_liamateriales'),
+        ''
+    ));
+
     $settings->add(new admin_setting_configtext(
         'local_liamateriales/liaeditor_url',
         get_string('settings_liaeditor_url', 'local_liamateriales'),

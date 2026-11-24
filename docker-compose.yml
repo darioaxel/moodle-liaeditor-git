@@ -5,6 +5,7 @@
 #   Engine: http://localhost:8000/health  ·  Moodle: http://localhost:8080
 #
 # En Moodle, `config.php`: $CFG->local_liamateriales_service_url = 'http://engine:8000';
+# y $CFG->local_liamateriales_service_secret = '<el mismo MATERIALES_LIASCRIPT_SHARED_SECRET>';
 # y en los ajustes del plugin, la URL del editor LiaEdit self-hosted.
 #
 # El editor (fork FPVirtual/LiveEditor) se despliega aparte como estático.
@@ -19,6 +20,8 @@ services:
       CONTENT_REPO: /content
       CONTENT_REPO_URL: ${CONTENT_REPO_URL:-}
       MATERIALES_LIASCRIPT_LOG_FORMAT: console
+      # Firma HMAC de las peticiones del plugin (LIA-060): obligatoria.
+      MATERIALES_LIASCRIPT_SHARED_SECRET: ${MATERIALES_LIASCRIPT_SHARED_SECRET:?define el secreto compartido con el plugin (openssl rand -hex 32)}
     volumes:
       # Clon del repo de contenidos con `origin` con credenciales de escritura (D1).
       - ${CONTENT_REPO:-./content}:/content

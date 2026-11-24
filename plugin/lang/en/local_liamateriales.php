@@ -23,6 +23,8 @@ $string['state_update_available'] = 'Actualización disponible';
 $string['state_error'] = 'Error';
 
 // LiaEditor: settings (LIA-012).
+$string['settings_service_secret'] = 'Secreto compartido con el engine';
+$string['settings_service_secret_desc'] = 'Firma de cada petición al engine (HMAC-SHA256). Debe coincidir con MATERIALES_LIASCRIPT_SHARED_SECRET del engine; sin él, el engine rechaza las peticiones (401). Genera uno largo y aleatorio (p. ej. openssl rand -hex 32). Si se define $CFG->local_liamateriales_service_secret en config.php, tiene prioridad sobre este ajuste.';
 $string['settings_liaeditor_url'] = 'URL del LiaEditor';
 $string['settings_liaeditor_url_desc'] = 'URL base de la instancia autoalojada de LiaEdit (p. ej. https://liascript-editor.example.com).';
 $string['settings_cors_origin'] = 'Origen CORS para el editor';

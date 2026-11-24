@@ -10,25 +10,22 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__ . '/../../lib/filelib.php'); // clase \curl (cliente server-to-server)
+require_once(__DIR__ . '/../../lib/filelib.php'); // send_file y clase \curl
+
 
 /**
  * URL base del engine (configuración obligatoria en producción).
  */
 function local_liamateriales_service_url(): string {
-    global $CFG;
-    if (empty($CFG->local_liamateriales_service_url)) {
-        throw new \moodle_exception('servicenotconfigured', 'local_liamateriales');
-    }
-    return rtrim($CFG->local_liamateriales_service_url, '/');
+    return \local_liamateriales\local\engine_client::base_url();
 }
 
 /**
- * Petición server-to-server contra la API del engine.
+ * Petición server-to-server contra la API del engine (firmada, LIA-060).
  *
  * Comprueba el status HTTP: las respuestas de error del engine son JSON
  * ``{"detail": ...}`` (HTTPException de FastAPI) y se convierten en
- * ``moodle_exception`` accionable.
+ * ``moodle_exception``.
  *
  * @param string $method GET | POST
  * @param array<string, string> $query
@@ -36,22 +33,13 @@ function local_liamateriales_service_url(): string {
  * @return mixed body decodificado
  */
 function local_liamateriales_service_request(string $method, string $path, array $query = [], ?array $payload = null) {
-    $url = local_liamateriales_service_url() . $path . ($query ? '?' . http_build_query($query) : '');
-    $headers = ['Accept: application/json'];
-    $curl = new \curl();
-    if ($method === 'POST') {
-        $headers[] = 'Content-Type: application/json';
-        $response = $curl->post($url, json_encode($payload ?? []), ['CURLOPT_HTTPHEADER' => $headers]);
-    } else {
-        $response = $curl->get($url, [], ['CURLOPT_HTTPHEADER' => $headers]);
+    $result = \local_liamateriales\local\engine_client::send($method, $path, $query, $method === 'POST' ? ($payload ?? []) : null);
+    if ($result->errno) {
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $result->error);
     }
-    if ($curl->get_errno()) {
-        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $curl->error);
-    }
-    $status = (int) ($curl->get_info()['http_code'] ?? 0);
-    $data = json_decode($response);
-    if ($status >= 400) {
-        $detail = (is_object($data) && !empty($data->detail)) ? $data->detail : "HTTP {$status}";
+    $data = json_decode($result->body);
+    if ($result->status >= 400) {
+        $detail = (is_object($data) && !empty($data->detail)) ? $data->detail : "HTTP {$result->status}";
         throw new \moodle_exception('servicerror', 'local_liamateriales', '', $detail);
     }
     if ($data === null) {
@@ -90,22 +78,15 @@ function local_liamateriales_service_post(string $path, array $payload) {
  * @return array{0: int, 1: mixed} (HTTP status, body decodificado)
  */
 function local_liamateriales_service_post_full(string $path, array $payload): array {
-    $url = local_liamateriales_service_url() . $path;
-    $headers = [
-        'Content-Type: application/json',
-        'Accept: application/json',
-    ];
-    $curl = new \curl();
-    $response = $curl->post($url, json_encode($payload), ['CURLOPT_HTTPHEADER' => $headers]);
-    if ($curl->get_errno()) {
-        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $curl->error);
+    $result = \local_liamateriales\local\engine_client::send('POST', $path, [], $payload);
+    if ($result->errno) {
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $result->error);
     }
-    $status = (int) ($curl->get_info()['http_code'] ?? 0);
-    $data = json_decode($response);
-    if ($data === null && $response !== 'null') {
+    $data = json_decode($result->body);
+    if ($data === null && $result->body !== 'null') {
         throw new \moodle_exception('servicerror', 'local_liamateriales', '', 'invalid JSON');
     }
-    return [$status, $data];
+    return [$result->status, $data];
 }
 
 /**

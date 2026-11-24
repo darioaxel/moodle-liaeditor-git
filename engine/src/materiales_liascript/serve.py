@@ -16,6 +16,10 @@ entorno:
 - ``MATERIALES_LIASCRIPT_THEME`` (opcional, defecto ``verde``): tema visual de
   los contenidos exportados (``publish/themes/<tema>.css``); ``none`` deja el
   aspecto original de LiaScript.
+- ``MATERIALES_LIASCRIPT_SHARED_SECRET`` (obligatoria): secreto compartido
+  con el plugin; el engine rechaza (401) las peticiones sin su firma HMAC
+  (LIA-060). Solo para desarrollo, ``MATERIALES_LIASCRIPT_ALLOW_UNSIGNED=1``
+  arranca sin él.
 - ``MATERIALES_LIASCRIPT_LOG_FORMAT``: ``console`` (defecto) o ``json``.
 - ``HOST`` / ``PORT``: interfaz y puerto de uvicorn (defaults 0.0.0.0:8000).
 
@@ -39,9 +43,17 @@ def build_app() -> FastAPI:
     if not content_repo:
         msg = "error: define CONTENT_REPO (ruta al repo de contenidos)"
         raise SystemExit(msg)
+    secret = os.environ.get("MATERIALES_LIASCRIPT_SHARED_SECRET", "").strip()
+    if not secret and os.environ.get("MATERIALES_LIASCRIPT_ALLOW_UNSIGNED") != "1":
+        msg = (
+            "error: define MATERIALES_LIASCRIPT_SHARED_SECRET (el mismo secreto que el "
+            "ajuste «Secreto compartido con el engine» del plugin)"
+        )
+        raise SystemExit(msg)
     return create_app(
         Path(content_repo),
         content_repo_url=os.environ.get("CONTENT_REPO_URL"),
+        shared_secret=secret or None,
     )
 
 

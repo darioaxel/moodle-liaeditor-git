@@ -257,25 +257,24 @@ class publisher {
         self::$lastavisos = [];
         // La generación puede superar el límite de ejecución PHP por defecto.
         \core_php_time_limit::raise(self::GENERATE_TIMEOUT + 30);
-        $curl = new \curl();
-        $curl->setHeader('Content-Type: application/json');
-        $curl->setHeader('Accept: application/octet-stream');
-        $curl->setopt(['CURLOPT_TIMEOUT' => self::GENERATE_TIMEOUT, 'CURLOPT_CONNECTTIMEOUT' => 10]);
-        $response = $curl->post(
-            local_liamateriales_service_url() . '/publish',
-            json_encode(['file' => $sourcefile, 'sha' => $sha, 'format' => $artifacttype])
+        $result = engine_client::send(
+            'POST',
+            '/publish',
+            [],
+            ['file' => $sourcefile, 'sha' => $sha, 'format' => $artifacttype],
+            'application/octet-stream',
+            ['CURLOPT_TIMEOUT' => self::GENERATE_TIMEOUT, 'CURLOPT_CONNECTTIMEOUT' => 10]
         );
-        $status = (int) ($curl->get_info()['http_code'] ?? 0);
-        if ($curl->get_errno() || $status !== 200 || !is_string($response) || $response === '') {
-            $detail = $curl->get_errno() ? $curl->error : "HTTP {$status}";
-            $decoded = json_decode(is_string($response) ? $response : '');
+        if ($result->errno || $result->status !== 200 || $result->body === '') {
+            $detail = $result->errno ? $result->error : "HTTP {$result->status}";
+            $decoded = json_decode($result->body);
             if (is_object($decoded) && !empty($decoded->detail)) {
                 $detail = $decoded->detail;
             }
             throw new \moodle_exception('publishgenerateerror', 'local_liamateriales', '', $detail);
         }
-        self::$lastavisos = self::parse_avisos($curl->getResponse());
-        return $response;
+        self::$lastavisos = self::parse_avisos($result->headers);
+        return $result->body;
     }
 
     /**

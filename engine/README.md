@@ -49,6 +49,7 @@ CONTENT_REPO=/ruta/al/clon make serve
 | --- | --- | --- |
 | `CONTENT_REPO` | sí | Clon del repo de contenidos; su `origin` necesita credenciales de escritura (push de ramas, D1) |
 | `CONTENT_REPO_URL` | no | URL del repo en la forja, para la `diff_url` de los conflictos |
+| `MATERIALES_LIASCRIPT_SHARED_SECRET` | sí | Secreto compartido con el plugin (ajuste «Secreto compartido con el engine» o `$CFG->local_liamateriales_service_secret`). Todas las rutas salvo `GET /health` exigen la firma HMAC-SHA256 del plugin (`X-Liamat-Timestamp`, `X-Liamat-Signature`; ±60 s, sin réplicas); si no, 401. Sin él, el servicio no arranca salvo con `MATERIALES_LIASCRIPT_ALLOW_UNSIGNED=1` (solo desarrollo) |
 | `MATERIALES_LIASCRIPT_WORKDIR` / `MATERIALES_LIASCRIPT_HOST_WORKDIR` | no | Traducción de rutas docker-in-docker para liaex (mismo bind mount visto desde el contenedor y desde el host) |
 | `MATERIALES_LIASCRIPT_LIAEX_NETWORK` | no | Red del contenedor de liaex (defecto `none`). `bridge` si los materiales usan `import:` de plantillas, que liaex descarga al exportar |
 | `MATERIALES_LIASCRIPT_SCORM_VERSION` | no | Versión de SCORM del formato `scorm`: `1.2` (defecto; la que Moodle soporta por completo y la de los presets de liaex para Moodle) o `2004` |
