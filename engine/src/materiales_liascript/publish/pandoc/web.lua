@@ -9,6 +9,7 @@ que necesita HTML concreto:
 - Narración: se omite (no hay lectura en voz alta).
 - Vídeo, audio y embebidos: <iframe> o <video>/<audio>.
 - Acordeón: <details>/<summary>.
+- Cajas: contenedores con título, como los de vuepress-theme-hope.
 ]]
 
 local function youtube(url)
@@ -41,8 +42,26 @@ local function medio(tipo, src, titulo)
     '<figcaption><a href="%s">%s</a></figcaption></figure>'):format(s, t, s, t)
 end
 
+-- Cajas → contenedores de aviso al estilo vuepress-theme-hope (`hint-container`
+-- con título); se conserva la clase original.
+local CAJAS = {
+  nota = { 'info', 'Nota' },
+  consejo = { 'tip', 'Consejo' },
+  aviso = { 'warning', 'Aviso' },
+  importante = { 'important', 'Importante' },
+  error = { 'caution', 'Error' },
+}
+
 function Div(el)
   if el.classes:includes('narracion') then return {} end
+  for clase, hope in pairs(CAJAS) do
+    if el.classes:includes(clase) then
+      el.classes:insert('hint-container')
+      el.classes:insert(hope[1])
+      el.content:insert(1, pandoc.RawBlock('html', '<p class="hint-container-title">' .. hope[2] .. '</p>'))
+      return el
+    end
+  end
   for _, tipo in ipairs({ 'video', 'audio', 'embed' }) do
     if el.classes:includes(tipo) then
       return pandoc.RawBlock('html', medio(tipo, el.attributes.src, el.attributes.titulo))

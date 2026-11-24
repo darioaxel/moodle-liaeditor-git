@@ -319,3 +319,11 @@ Rama `feature/generacion-web` en este repo y en `fpvirtual-crepe-editor`.
 
 **Pendiente del criterio de salida**: publicar y descargar los dos formatos
 en el Moodle de pruebas, desde la página Publicar y desde el editor.
+
+**Aspecto de la web** (sesión 38): estética de vuepress-theme-hope con el
+verde del editor como acento: barra superior fija, barra lateral con el
+índice, migas, título con autoría y tiempo de lectura, índice de la página
+(«En esta página», desde 1280 px), contenedores de aviso con título e icono,
+código One Light/One Dark con el lenguaje, navegación en tarjetas, portada
+con «Empezar» y modo claro/oscuro. Así queda resuelta en parte la decisión
+pendiente nº 1: la marca FP Virtual sigue siendo solo del PDF.
