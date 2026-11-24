@@ -66,6 +66,24 @@ healthcheck en `/health`). Para publicar necesita el socket de Docker del
 host montado (`/var/run/docker.sock`) y el grupo `docker` (`--group-add`).
 El repo de contenidos se monta en `/content`.
 
+### Superficie expuesta (LIA-060, LIA-061)
+
+El navegador nunca habla con el engine: solo Moodle (servidor a servidor).
+Como el engine tiene el socket de Docker (equivale a root en el host):
+
+- **Sin puerto publicado.** El contenedor va solo en la red Docker de
+  Moodle, sin `ports:` (o, como mucho, `127.0.0.1:8000:8000` para
+  diagnóstico local). Moodle lo alcanza por el nombre del servicio:
+  `$CFG->local_liamateriales_service_url = 'http://<servicio>:8000';`.
+- **Firma obligatoria.** `MATERIALES_LIASCRIPT_SHARED_SECRET` en el engine y
+  el mismo valor en Moodle (`$CFG->local_liamateriales_service_secret` en
+  `config.php`, o el ajuste del plugin). Generarlo con `openssl rand -hex 32`.
+  Los relojes de Moodle y del engine deben estar sincronizados (±60 s).
+
+Comprobación: desde otra máquina, `curl http://<host>:<puerto>/health` no
+conecta; desde el contenedor de Moodle, `curl http://<servicio>:8000/health`
+responde y cualquier otra ruta sin firma da 401.
+
 ## Integración continua
 
 `.github/workflows/ci.yml` en la raíz del repositorio: ruff, mypy strict y
