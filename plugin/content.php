@@ -32,31 +32,7 @@ require_once(__DIR__ . '/lib.php');
 
 use local_liamateriales\local\token_manager;
 
-$origin = local_liamateriales_cors_origin();
-
-/**
- * Respuesta de error JSON con CORS (el editor la muestra como pantalla clara).
- */
-function content_error(int $status, string $message): void {
-    global $origin;
-    http_response_code($status);
-    header('Content-Type: application/json; charset=utf-8');
-    if ($origin !== '') {
-        header('Access-Control-Allow-Origin: ' . $origin);
-    }
-    echo json_encode(['status' => 'error', 'message' => $message]);
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    // Preflight CORS del fetch del editor.
-    if ($origin !== '') {
-        header('Access-Control-Allow-Origin: ' . $origin);
-        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type');
-    }
-    exit;
-}
+local_liamateriales_api_preflight('GET, POST');
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -67,7 +43,7 @@ try {
             $tokendata = token_manager::lookup($request->token);
             $tokendata->token = $request->token;
         } else {
-            content_error(400, 'petición incompleta');
+            local_liamateriales_api_respond(400, ['status' => 'error', 'message' => 'petición incompleta']);
         }
     } else if (local_liamateriales_legacy_open()) {
         // Formato antiguo: los parámetros se leen tras el preflight.
@@ -75,13 +51,13 @@ try {
         $tokendata = token_manager::validate($token, required_param('file', PARAM_PATH), required_param('branch', PARAM_RAW));
         $tokendata->token = $token;
     } else {
-        content_error(403, get_string('tokeninvalid', 'local_liamateriales'));
+        local_liamateriales_api_respond(403, ['status' => 'error', 'message' => get_string('tokeninvalid', 'local_liamateriales')]);
     }
     $file = local_liamateriales_validate_file($tokendata->file);
     $branch = $tokendata->branch;
     $token = $tokendata->token;
 } catch (\moodle_exception $e) {
-    content_error(403, get_string('tokeninvalid', 'local_liamateriales'));
+    local_liamateriales_api_respond(403, ['status' => 'error', 'message' => get_string('tokeninvalid', 'local_liamateriales')]);
 }
 // El modo lo decide el token (vista previa = solo lectura), no la URL.
 $readonly = !empty($tokendata->readonly);
@@ -92,7 +68,7 @@ try {
         'branch' => $branch,
     ]);
 } catch (\moodle_exception $e) {
-    content_error(502, $e->getMessage());
+    local_liamateriales_api_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
 }
 
 $baseurl = (new \moodle_url('/local/liamateriales/save.php'))->out(false);
@@ -119,11 +95,8 @@ if (!$readonly && (int) $tokendata->courseid > 0) {
 $markdown = local_liamateriales_inject_lms_block($result->content, $lmsconfig);
 
 http_response_code(200);
+local_liamateriales_api_headers();
 header('Content-Type: text/plain; charset=utf-8');
-header('Cache-Control: no-cache, must-revalidate');
-if ($origin !== '') {
-    header('Access-Control-Allow-Origin: ' . $origin);
-}
 header('X-LiaMD-Branch: ' . $branch);
 header('X-LiaMD-SHA: ' . $result->sha);
 header('X-LiaMD-Readonly: ' . ($readonly ? 'true' : 'false'));

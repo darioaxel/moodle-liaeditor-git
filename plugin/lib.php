@@ -114,6 +114,57 @@ function local_liamateriales_cors_origin(): string {
 }
 
 /**
+ * Cabeceras de las respuestas de los scripts que usa el editor
+ * (content.php, save.php, token.php, publish_api.php; LIA-063): CORS
+ * restringido al origen del editor, sin Referer, sin sniffing y sin caché.
+ */
+function local_liamateriales_api_headers(): void {
+    header('Referrer-Policy: no-referrer');
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: no-store');
+    $origin = local_liamateriales_cors_origin();
+    if ($origin !== '') {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+    }
+}
+
+/**
+ * Responde el preflight CORS (OPTIONS) y termina; en otro método no hace nada.
+ *
+ * @param string $methods métodos admitidos además de OPTIONS (``POST``, ``GET, POST``)
+ */
+function local_liamateriales_api_preflight(string $methods): void {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'OPTIONS') {
+        return;
+    }
+    local_liamateriales_api_headers();
+    if (local_liamateriales_cors_origin() !== '') {
+        header('Access-Control-Allow-Methods: ' . $methods . ', OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type');
+        header('Access-Control-Max-Age: 600');
+    }
+    exit;
+}
+
+/**
+ * Respuesta JSON de los scripts del editor y fin.
+ *
+ * @param array<string, mixed> $body
+ * @param string[] $headers cabeceras adicionales («Nombre: valor»)
+ */
+function local_liamateriales_api_respond(int $status, array $body, array $headers = []): void {
+    http_response_code($status);
+    local_liamateriales_api_headers();
+    header('Content-Type: application/json; charset=utf-8');
+    foreach ($headers as $header) {
+        header($header);
+    }
+    echo json_encode($body);
+    exit;
+}
+
+/**
  * Inyecta (o sustituye) el bloque ``liascript-lms`` en la cabecera LiaScript.
  *
  * El bloque vive dentro del comentario HTML de cabecera del documento

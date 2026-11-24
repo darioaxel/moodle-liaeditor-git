@@ -24,49 +24,26 @@ require_once(__DIR__ . '/lib.php');
 
 use local_liamateriales\local\token_manager;
 
-$origin = local_liamateriales_cors_origin();
-
-/**
- * Respuesta JSON con CORS y cierre.
- */
-function save_respond(int $status, array $body): void {
-    global $origin;
-    http_response_code($status);
-    header('Content-Type: application/json; charset=utf-8');
-    if ($origin !== '') {
-        header('Access-Control-Allow-Origin: ' . $origin);
-    }
-    echo json_encode($body);
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if ($origin !== '') {
-        header('Access-Control-Allow-Origin: ' . $origin);
-        header('Access-Control-Allow-Methods: POST, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type');
-    }
-    exit;
-}
+local_liamateriales_api_preflight('POST');
 
 $body = json_decode(file_get_contents('php://input') ?: '');
 if (!is_object($body) || empty($body->file) || empty($body->branch) || empty($body->original_sha)
         || !isset($body->content) || empty($body->token)) {
-    save_respond(400, ['status' => 'error', 'message' => 'petición incompleta']);
+    local_liamateriales_api_respond(400, ['status' => 'error', 'message' => 'petición incompleta']);
 }
 
 $file = $body->file;
 $branch = $body->branch;
 $maxsize = (int) get_config('local_liamateriales', 'max_file_size') ?: 1048576;
 if (strlen($body->content) > $maxsize) {
-    save_respond(413, ['status' => 'error', 'message' => 'archivo demasiado grande para edición online']);
+    local_liamateriales_api_respond(413, ['status' => 'error', 'message' => 'archivo demasiado grande para edición online']);
 }
 
 try {
     local_liamateriales_validate_file($file);
     $tokendata = token_manager::validate($body->token, $file, $branch, true);
 } catch (\moodle_exception $e) {
-    save_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
+    local_liamateriales_api_respond(403, ['status' => 'error', 'message' => $e->getMessage()]);
 }
 
 $user = \core_user::get_user($tokendata->userid);
@@ -81,7 +58,7 @@ try {
         'message' => $body->commit_message ?? null,
     ]);
 } catch (\moodle_exception $e) {
-    save_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
+    local_liamateriales_api_respond(502, ['status' => 'error', 'message' => $e->getMessage()]);
 }
 
 if ($status === 200) {
@@ -90,7 +67,7 @@ if ($status === 200) {
     // Contrato C6: token renovado en cada respuesta 200.
     $newtoken = token_manager::refresh($body->token, $file, $branch);
     // committed_at del nuevo commit si el engine lo da (opcional en el contrato).
-    save_respond(200, local_liamateriales_save_ok_body(
+    local_liamateriales_api_respond(200, local_liamateriales_save_ok_body(
         $result,
         $branch,
         $newtoken->token,
@@ -99,7 +76,7 @@ if ($status === 200) {
 }
 
 if ($status === 409) {
-    save_respond(409, [
+    local_liamateriales_api_respond(409, [
         'status' => 'conflict',
         'message' => get_string('saveconflict', 'local_liamateriales'),
         'resolution_branch' => $result->resolution_branch,
@@ -108,7 +85,7 @@ if ($status === 409) {
     ]);
 }
 
-save_respond($status >= 400 ? $status : 502, [
+local_liamateriales_api_respond($status >= 400 ? $status : 502, [
     'status' => 'error',
     'message' => $result->detail ?? 'error inesperado del engine',
 ]);
