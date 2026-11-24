@@ -36,6 +36,10 @@ class GitProvider(ABC):
         """Contenido textual de un archivo en ``ref``."""
 
     @abstractmethod
+    def get_bytes(self, ref: str, path: str) -> bytes:
+        """Contenido binario de un archivo en ``ref`` (imágenes)."""
+
+    @abstractmethod
     def get_commit(self, ref: str) -> str:
         """SHA completo del commit al que apunta ``ref`` (peela tags)."""
 

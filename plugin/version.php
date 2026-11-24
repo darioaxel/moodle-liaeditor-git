@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112403;        // Seguridad: eventos de auditoría y errores genéricos.
+$plugin->version = 2026112500;        // Imágenes: asset.php (fase 1).
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.6.0';
+$plugin->release = '2.7.0';

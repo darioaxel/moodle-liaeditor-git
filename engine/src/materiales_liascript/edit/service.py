@@ -12,6 +12,9 @@ import re
 from collections.abc import Callable
 from datetime import datetime
 
+import structlog
+
+from materiales_liascript import images
 from materiales_liascript.edit.branches import (
     EditError,
     edit_branch_name,
@@ -29,6 +32,8 @@ from materiales_liascript.edit.models import (
     SaveResult,
 )
 from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
+
+_log = structlog.get_logger(__name__)
 
 _SSH_URL_RE = re.compile(r"^git@(?P<host>[^:]+):(?P<path>.+?)(?:\.git)?$")
 _HTTPS_URL_RE = re.compile(r"^https?://(?P<creds>[^/@]+@)?(?P<rest>.+?)(?:\.git)?$")
@@ -142,6 +147,25 @@ class EditService:
                 diff_url=build_compare_url(self._repo_url, request.original_sha, target),
             )
         return SaveOk(branch=target, new_sha=new_sha, committed_at=self._git.commit_date(new_sha))
+
+    def asset(self, file: str, branch: str, ref: str) -> tuple[bytes, str]:
+        """Imagen ``ref`` (ruta del Markdown de ``file``) en ``branch``: bytes y tipo MIME.
+
+        Solo imágenes de la carpeta del material, con extensión y firma de
+        imagen (``materiales_liascript.images``). Cualquier fallo es 404 sin
+        detalle, para no revelar qué existe en el repositorio.
+        """
+        file = validate_file_path(file)
+        if not self._git.branch_exists(branch):
+            raise EditError(404, "imagen no encontrada")
+        try:
+            path = images.resolve(file, ref)
+            data = self._git.get_bytes(branch, path)
+            mime = images.check(path, data)
+        except (images.ImageError, GitProviderError) as exc:
+            _log.info("imagen_rechazada", file=file, ref=ref, motivo=str(exc))
+            raise EditError(404, "imagen no encontrada") from exc
+        return data, mime
 
     def list_materials(self, branch: str | None = None) -> MaterialList:
         """Materiales ``.md`` de la rama, con título de la cabecera LiaScript.

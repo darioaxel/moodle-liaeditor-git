@@ -135,3 +135,5 @@ $string['event_saved'] = 'Material guardado';
 $string['event_conflict'] = 'Conflicto al guardar un material';
 $string['event_published'] = 'Material publicado en el curso';
 $string['internalerror'] = 'No se pudo completar la operación por un error del servidor. Si se repite, avisa al administrador con la incidencia {$a}.';
+$string['settings_ratelimit_asset'] = 'Imágenes que el editor pide para mostrarlas';
+$string['assetnotfound'] = 'Imagen no encontrada.';

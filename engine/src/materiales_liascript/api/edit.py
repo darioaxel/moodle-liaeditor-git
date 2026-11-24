@@ -10,6 +10,8 @@ estas rutas; la lógica Git vive en ``materiales_liascript.edit`` (D2):
   nuevo SHA o ``409`` con la rama ``resolucion/...`` creada y la URL de diff.
 - ``GET /edit/state``: UP_TO_DATE / UPDATE_AVAILABLE por comparación de SHAs
   (§5.3 de la v1), para el panel del curso y las notificaciones.
+- ``GET /edit/asset``: imagen de la carpeta del material, para que el editor
+  la muestre (docs/imagenes).
 
 El router se monta siempre; sin provider Git responde 503 con JSON claro.
 """
@@ -19,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from materiales_liascript.edit.branches import EditError
 from materiales_liascript.edit.models import EditOpenRequest, SaveRequest
@@ -36,7 +38,7 @@ class EditApiDeps:
     default_branch: str = "main"
 
 
-def create_edit_router(deps: EditApiDeps) -> APIRouter:
+def create_edit_router(deps: EditApiDeps) -> APIRouter:  # noqa: PLR0915 - una ruta por endpoint
     """Router con los endpoints de edición sobre las dependencias dadas."""
     router = APIRouter()
 
@@ -65,6 +67,23 @@ def create_edit_router(deps: EditApiDeps) -> APIRouter:
         except EditError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         return JSONResponse(result.model_dump(mode="json"))
+
+    @router.get("/edit/asset")
+    def asset(
+        file: str = Query(min_length=1),
+        branch: str = Query(min_length=1),
+        path: str = Query(min_length=1, max_length=255),
+    ) -> Response:
+        """Imagen del material (ruta relativa a su ``.md``) para el editor."""
+        try:
+            data, mime = service().asset(file, branch, path)
+        except EditError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        return Response(
+            content=data,
+            media_type=mime,
+            headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=300"},
+        )
 
     @router.post("/edit/open")
     def open_edit(request: EditOpenRequest) -> JSONResponse:

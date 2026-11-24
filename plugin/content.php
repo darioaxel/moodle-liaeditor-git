@@ -77,12 +77,14 @@ try {
 
 $baseurl = (new \moodle_url('/local/liamateriales/save.php'))->out(false);
 $tokenurl = (new \moodle_url('/local/liamateriales/token.php'))->out(false);
+$asseturl = (new \moodle_url('/local/liamateriales/asset.php'))->out(false);
 $returnurl = (new \moodle_url('/my/courses.php'))->out(false);
 
 // committed_at (fecha del commit sha) solo si el engine la da en ISO 8601.
 $lmsconfig = local_liamateriales_lms_config([
     'save_endpoint' => $baseurl,
     'token_refresh_endpoint' => $tokenurl,
+    'asset_endpoint' => $asseturl,
     'file' => $file,
     'branch' => $branch,
     'sha' => $result->sha,

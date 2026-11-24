@@ -158,5 +158,5 @@ imágenes en la rama de resolución; e2e del editor.
 | Fase | Estado |
 | --- | --- |
 | 0 — Corpus | Hecha: material de prueba, matriz por formato, conversión a PNG en el PDF de contenido |
-| 1 — Ver | En curso |
-| 2 — Subir | Pendiente |
+| 1 — Ver | Hecha: `GET /edit/asset`, `asset.php`, `ImageStore` en el editor. Corregida la pérdida del texto alternativo en el bloque de imagen de Crepe |
+| 2 — Subir | En curso |

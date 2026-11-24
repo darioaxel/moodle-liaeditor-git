@@ -64,6 +64,9 @@ class LocalGitProvider(GitProvider):
         return sorted(str(item.path) for item in self._walk(tree))
 
     def get_file(self, ref: str, path: str) -> str:
+        return self.get_bytes(ref, path).decode("utf-8")
+
+    def get_bytes(self, ref: str, path: str) -> bytes:
         commit = self._commit(ref)
         try:
             entry = commit.tree / path
@@ -74,7 +77,7 @@ class LocalGitProvider(GitProvider):
             msg = f"No es un archivo en {ref}: {path}"
             raise GitProviderError(msg)
         data: bytes = entry.data_stream.read()
-        return data.decode("utf-8")
+        return data
 
     def get_commit(self, ref: str) -> str:
         return str(self._commit(ref).hexsha)
