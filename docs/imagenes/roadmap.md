@@ -24,7 +24,8 @@ en `fpvirtual-crepe-editor`.
 | D4 | Subida: PNG, JPEG y GIF. Lectura: además WebP (materiales existentes). **SVG excluido** | Un SVG puede llevar JavaScript y se publicaría en el dominio de Moodle (riesgo R5). WebP no se sube: el H5P de liaex la descarta (§2.1) |
 | D5 | El navegador redimensiona (máx. 1920 px) y recodifica a **JPEG** (fotos) o **PNG** (con transparencia); GIF sin tocar | Menos peso en Git; la recodificación elimina el EXIF (privacidad, GPS); JPEG y PNG funcionan en todos los formatos |
 | D6 | Nombre: `img/<slug>-<hash8>.<ext>` (hash del contenido) | Sin colisiones; la misma imagen dos veces se guarda una vez |
-| D7 | Límites: 2 MB por imagen (ya comprimida), 20 imágenes y 10 MB por guardado (ajustables) | Tamaño del repositorio y de las peticiones |
+| D7 | Límites: 2 MB por imagen (ya comprimida), 20 imágenes y 10 MB por guardado (constantes iguales en plugin y engine) | Tamaño del repositorio y de las peticiones |
+| D8 | El pie del bloque de imagen de Crepe **es** el texto alternativo; el título se conserva | Crepe guardaba la proporción en el texto alternativo (`![1.00](…)`): perdía el texto alternativo de cualquier material con una imagen sola en su párrafo (corregido en la fase 1) |
 
 ### 2.1 Comportamiento de cada formato (fase 0)
 
@@ -159,4 +160,5 @@ imágenes en la rama de resolución; e2e del editor.
 | --- | --- |
 | 0 — Corpus | Hecha: material de prueba, matriz por formato, conversión a PNG en el PDF de contenido |
 | 1 — Ver | Hecha: `GET /edit/asset`, `asset.php`, `ImageStore` en el editor. Corregida la pérdida del texto alternativo en el bloque de imagen de Crepe |
-| 2 — Subir | En curso |
+| 2 — Subir | Hecha: `commit_files` y `images` en el guardado (engine), validación en `save.php`, subida en el editor (reducir, recodificar, pendientes, borrador) |
+| 3 — Después | Pendiente: pegar y arrastrar, aviso de texto alternativo vacío, exportar el H5P sin los otros `.md` de la carpeta, Git LFS |

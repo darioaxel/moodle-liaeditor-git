@@ -90,6 +90,18 @@ editor (`content.php`, `save.php`, `token.php`, `publish_api.php`).
 - **Engine.** Solo en la red interna y con firma HMAC (ver
   `engine/README.md`, «Superficie expuesta»).
 
+### Imágenes (docs/imagenes)
+
+- `asset.php`: `POST {token, path}` → bytes de una imagen de la carpeta del
+  material del token (también con token de solo lectura). Tipos de una
+  lista (PNG, JPEG, GIF, WebP), `nosniff`, CSP `default-src 'none'` y
+  `sandbox`; límite «asset» (240/min).
+- `save.php` acepta `images: [{path, content_base64}]`: PNG, JPEG o GIF,
+  20 como máximo, 2 MB cada una y 10 MB en total; se valida la ruta, el
+  base64 y el tipo real (`finfo`, `getimagesize`) antes de enviarlas al
+  engine, que repite la validación. SVG nunca.
+- PHP: `post_max_size` de al menos 16M para guardar con imágenes.
+
 ### Límite en el proxy (LIA-071)
 
 Además de los límites por usuario del plugin, el proxy delante de Moodle

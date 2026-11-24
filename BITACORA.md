@@ -28,6 +28,29 @@
 
 ## Registro de sesiones
 
+### 2026-11-25 — Sesión 40: Imágenes en los materiales (fases 0, 1 y 2)
+
+Rama `feature/imagenes` (sale de `feature/seguridad`) en este repo y en el
+editor. Roadmap en `docs/imagenes/roadmap.md` (opción B: las imágenes
+viajan con el guardado, un commit).
+
+- **Fase 0**: material de prueba `ut06-imagenes` (PNG, JPEG, WebP, externa).
+  Matriz por formato: el PDF de contenido fallaba con WebP y GIF (XeLaTeX
+  no los admite) → copias PNG con Pillow; el H5P de liaex descarta las
+  WebP y mete todos los `.md` de la carpeta del material (pendiente).
+- **Fase 1**: `GET /edit/asset` (ruta en la carpeta del material, tipo y
+  firma), `asset.php` (token en el cuerpo, límite propio), `ImageStore` en
+  el editor (`proxyDomURL` → `blob:`). **Corregida una pérdida de datos**:
+  el bloque de imagen de Crepe escribía la proporción en el texto
+  alternativo (`![1.00](…)`).
+- **Fase 2**: `commit_files` (texto y binario, un commit con CAS),
+  `images` en el guardado validadas en plugin y engine; en el editor,
+  reducir a 1920 px, recodificar a JPEG/PNG (sin EXIF), pendientes en
+  memoria y en el borrador, y solo las referenciadas en el guardado.
+- **Pruebas**: engine 160 ✓ (ruff, mypy); editor 148 ✓ y e2e 25/25 (con
+  una subida real de 2600 px); plugin: lint y arnés de la validación.
+- **Pendiente**: fase 3 y prueba en el Moodle de pruebas.
+
 ### 2026-11-24 — Sesión 39: Fase S — Seguridad
 
 Rama `feature/seguridad` (sale de `feature/generacion-web`) en este repo y

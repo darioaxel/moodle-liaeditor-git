@@ -289,6 +289,26 @@ Detallada en [docs/generacion_web/roadmap.md](generacion_web/roadmap.md).
 
 ---
 
+## FASE I — Imágenes en los materiales
+
+Detallada en [docs/imagenes/roadmap.md](imagenes/roadmap.md). Rama
+`feature/imagenes` (sale de `feature/seguridad`) en este repo y en el
+editor.
+
+- [x] **LIA-120** (S) Fase 0: material de prueba con imágenes y matriz por
+  formato; el PDF de contenido convierte WebP y GIF a PNG (sesión 40).
+- [x] **LIA-121** (M) Fase 1: ver en el editor las imágenes relativas
+  (`GET /edit/asset`, `asset.php`, `ImageStore`); corregida la pérdida del
+  texto alternativo en el bloque de imagen de Crepe.
+- [x] **LIA-122** (M) Fase 2: subir imágenes; viajan con el guardado y
+  van en el mismo commit que el Markdown.
+- [ ] **LIA-123** (S) Fase 3: pegar y arrastrar, aviso de texto
+  alternativo vacío, H5P sin los otros `.md` de la carpeta, Git LFS.
+- [ ] **LIA-124** (S) Probar en el Moodle de pruebas (ver, subir, guardar,
+  409, publicar en los seis formatos).
+
+---
+
 ## FASE B — Robustez del backend (⚙️🔌)
 
 Problemas detectados en el análisis técnico (sesión 24) que siguen

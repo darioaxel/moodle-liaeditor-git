@@ -199,8 +199,17 @@ vez** al publicar (`publish_api.php` revisa `deploy` y
 | `save.php` | Token de edición (cuerpo) | POST, OPTIONS | Guarda (commit y push) |
 | `token.php` | Token de edición (cuerpo) | POST, OPTIONS | Renueva el token |
 | `publish_api.php` | Token de edición (cuerpo) + capacidades | POST, OPTIONS | Publicación en un clic desde el editor |
+| `asset.php` | Token de edición o de solo lectura (cuerpo) | POST, OPTIONS | Imágenes de la carpeta del material para el editor (PNG, JPEG, GIF, WebP) |
 
-Los cuatro scripts sin sesión responden siempre con
+**Imágenes.** `save.php` acepta imágenes nuevas en el mismo guardado
+(PNG, JPEG o GIF; 20 como máximo, 2 MB cada una y 10 MB en total). El
+plugin valida la ruta, el base64 y el tipo real (`finfo`, `getimagesize`)
+y el engine repite la validación (ruta dentro de la carpeta del material,
+firma de bytes). SVG nunca (puede llevar JavaScript). `asset.php` solo
+sirve tipos de una lista, con `nosniff`, `Content-Security-Policy:
+default-src 'none'` y `sandbox`.
+
+Los cinco scripts sin sesión responden siempre con
 `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`,
 `Cache-Control: no-store` y `Access-Control-Allow-Origin` limitado al
 origen del editor (`Vary: Origin`).
@@ -611,6 +620,7 @@ flowchart TD
 | T9 | CSRF en las páginas con sesión | `sesskey` en los POST de `publish.php`; los scripts del editor no usan la cookie | `publish.php` |
 | T10 | Uso desde otro origen | CORS limitado al origen del editor | `local_liamateriales_api_headers` |
 | T11 | Falta de trazabilidad | Eventos de Moodle y tabla de despliegues | `classes/event/*` |
+| T13 | Imágenes maliciosas (SVG con JavaScript, HTML disfrazado, rutas fuera del material, tamaño) | Solo PNG/JPEG/GIF para subir; tipo real comprobado en plugin y engine; rutas normalizadas dentro de la carpeta del material; límites de número y tamaño; respuestas de `asset.php` con `nosniff`, CSP y `sandbox`; el editor recodifica (elimina EXIF) | `plugin/lib.php` (`local_liamateriales_validate_images`), `asset.php`, `engine/…/images.py` |
 | T12 | Contenedores de conversión | Copia temporal del commit, `--rm`, red `none` por defecto (Pandoc además con `--user`) | `publish/service.py`, `publish/pandoc_export.py` |
 
 ---
@@ -676,6 +686,7 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | Firma HMAC | Sin firma, firma errónea, de otra ruta, caducada, repetida o con el cuerpo alterado → 401; mismos vectores en PHP y Python | `engine/tests/test_auth.py`, `plugin/tests/engine_client_test.php` |
 | Código de apertura | Un solo uso, caducidad, no vale como token, la vista previa conserva el solo lectura | `plugin/tests/token_manager_test.php` |
 | Flujo del editor | Abre canjeando el código, ninguna URL lleva token, el código desaparece de la barra, 429 sin perder trabajo | `fpvirtual-crepe-editor/scripts/e2e-mock.mjs` (18 comprobaciones), `tests/lms.test.ts` |
+| Imágenes | Rutas fuera de la carpeta, SVG, falso PNG, extensión que no casa, base64 roto, tamaño y número → rechazadas sin commit; un commit con Markdown e imágenes; 409 con imágenes | `engine/tests/test_api_asset.py`, `test_save_images.py`, `test_images.py`, `plugin/tests/images_test.php`, e2e del editor |
 | Límites y bloqueo de IP | Cada límite, ventana deslizante, desactivación, bloqueo y caducidad del bloqueo, una publicación a la vez | `plugin/tests/rate_limiter_test.php` |
 | Limpieza | Borra lo viejo y conserva lo reciente; tarea registrada | `plugin/tests/cleanup_task_test.php` |
 | Auditoría | Cuatro eventos con contexto y datos | `plugin/tests/events_test.php` |
