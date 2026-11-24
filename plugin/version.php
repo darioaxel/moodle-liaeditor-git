@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112305;        // Web estática y PDF de contenido (Pandoc + lector LiaScript), avisos del lector.
+$plugin->version = 2026112400;        // Seguridad: firma con el engine, código de apertura de un solo uso.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.5.0';
+$plugin->release = '2.6.0';

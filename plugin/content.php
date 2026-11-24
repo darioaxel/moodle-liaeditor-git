@@ -4,10 +4,19 @@
 /**
  * content.php — sirve el markdown de un material al editor self-hosted.
  *
- * La autenticación es el **token de un solo uso** (D9): las cookies de
- * sesión de Moodle no viajan en el fetch cross-origin del editor. El token
- * se emite en edit.php (con capacidad ya verificada) y va ligado a
- * usuario+fichero+rama con caducidad corta.
+ * La autenticación es por token (D9): las cookies de sesión de Moodle no
+ * viajan en el fetch cross-origin del editor. Ninguna URL lleva un token
+ * válido (LIA-062):
+ *
+ * - ``POST {code}``: canjea el código de apertura (60 s, un solo uso) que
+ *   edit.php o preview.php pusieron en el fragmento de la URL del editor, y
+ *   devuelve el material con el token de edición en el bloque.
+ * - ``POST {token}``: recarga con el token de edición vigente («Recargar la
+ *   versión del servidor» del editor).
+ * - ``GET ?file&branch&token``: formato antiguo (fork de LiveEditor), solo
+ *   con el ajuste ``legacy_open_url``.
+ *
+ * Fichero, rama y modo (solo lectura) salen siempre del token.
  *
  * Responde el markdown con el bloque ``liascript-lms`` inyectado en la
  * cabecera (roadmap del fork §C2): endpoints de guardado/renovación, SHA,
@@ -43,25 +52,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     // Preflight CORS del fetch del editor.
     if ($origin !== '') {
         header('Access-Control-Allow-Origin: ' . $origin);
-        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type');
     }
     exit;
 }
 
-// Los parámetros se leen tras el preflight: OPTIONS no los lleva.
-$file = required_param('file', PARAM_PATH);
-$branch = required_param('branch', PARAM_RAW);
-$token = required_param('token', PARAM_RAW);
-
 try {
-    local_liamateriales_validate_file($file);
-    $tokendata = token_manager::validate($token, $file, $branch);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $request = json_decode(file_get_contents('php://input') ?: '');
+        if (is_object($request) && !empty($request->code) && is_string($request->code)) {
+            $tokendata = token_manager::redeem($request->code);
+        } else if (is_object($request) && !empty($request->token) && is_string($request->token)) {
+            $tokendata = token_manager::lookup($request->token);
+            $tokendata->token = $request->token;
+        } else {
+            content_error(400, 'petición incompleta');
+        }
+    } else if (local_liamateriales_legacy_open()) {
+        // Formato antiguo: los parámetros se leen tras el preflight.
+        $token = required_param('token', PARAM_RAW);
+        $tokendata = token_manager::validate($token, required_param('file', PARAM_PATH), required_param('branch', PARAM_RAW));
+        $tokendata->token = $token;
+    } else {
+        content_error(403, get_string('tokeninvalid', 'local_liamateriales'));
+    }
+    $file = local_liamateriales_validate_file($tokendata->file);
+    $branch = $tokendata->branch;
+    $token = $tokendata->token;
 } catch (\moodle_exception $e) {
     content_error(403, get_string('tokeninvalid', 'local_liamateriales'));
 }
 // El modo lo decide el token (vista previa = solo lectura), no la URL.
-$readonly = !empty($tokendata->readonly) || optional_param('readonly', 0, PARAM_BOOL);
+$readonly = !empty($tokendata->readonly);
 
 try {
     $result = local_liamateriales_service_get('/edit/content', [

@@ -231,6 +231,38 @@ function local_liamateriales_editor_open_url(string $contenturl, bool $readonly)
 }
 
 /**
+ * ¿Se mantiene la URL de apertura antigua (token en la query, para el fork
+ * de LiveEditor)? Ajuste ``legacy_open_url``, desactivado por defecto (LIA-062).
+ */
+function local_liamateriales_legacy_open(): bool {
+    return (bool) get_config('local_liamateriales', 'legacy_open_url');
+}
+
+/**
+ * URL del editor que abre un material (LIA-062).
+ *
+ * Emite un **código de apertura** (60 s, un solo uso) y lo pasa en el
+ * fragmento: ``<editor>/#open=<código>&src=<content.php>``. El fragmento no
+ * llega a ningún servidor (ni a los registros ni al Referer); el editor lo
+ * borra de la barra de direcciones y canjea el código con
+ * ``POST content.php {code}``, que le devuelve el token de edición.
+ *
+ * Con ``legacy_open_url`` activo se mantiene el formato antiguo
+ * (``?/open/file/<content.php?…&token=…>``) para el fork.
+ */
+function local_liamateriales_open_in_editor(int $userid, string $file, string $branch, int $courseid, bool $readonly): string {
+    $content = new \moodle_url('/local/liamateriales/content.php');
+    if (local_liamateriales_legacy_open()) {
+        $token = \local_liamateriales\local\token_manager::issue($userid, $file, $branch, $courseid, $readonly);
+        $content->params(['file' => $file, 'branch' => $branch, 'token' => $token->token]);
+        return local_liamateriales_editor_open_url($content->out(false), $readonly);
+    }
+    $code = \local_liamateriales\local\token_manager::issue_open($userid, $file, $branch, $courseid, $readonly);
+    return local_liamateriales_editor_url() . '/#open=' . rawurlencode($code->token)
+        . '&src=' . rawurlencode($content->out(false));
+}
+
+/**
  * Crea o actualiza la sesión de edición del usuario (LIA-010, D3).
  *
  * Una sesión activa (closed_at NULL) por usuario y fichero; si ya existe se

@@ -108,22 +108,9 @@ if ($materials && !empty($materials->files)) {
     foreach ($materials->files as $material) {
         $file = $material->path;
         $actions = [];
-        // Vista previa con token de solo lectura (no permite guardar ni publicar).
-        $previewtoken = \local_liamateriales\local\token_manager::issue(
-            (int) $USER->id,
-            $file,
-            $materials->branch,
-            0,
-            true
-        );
-        $previewcontent = (new moodle_url('/local/liamateriales/content.php', [
-            'file' => $file,
-            'branch' => $materials->branch,
-            'token' => $previewtoken->token,
-            'readonly' => 1,
-        ]))->out(false);
+        // Vista previa de solo lectura: el código se emite al pulsar (preview.php, LIA-067).
         $actions[] = html_writer::link(
-            local_liamateriales_editor_open_url($previewcontent, true),
+            new moodle_url('/local/liamateriales/preview.php', ['id' => $courseid, 'file' => $file]),
             get_string('material_preview', 'local_liamateriales'),
             ['target' => '_blank', 'rel' => 'noopener noreferrer', 'class' => 'btn btn-secondary btn-sm']
         );

@@ -31,6 +31,14 @@ if ($hassiteconfig) {
         PARAM_URL
     ));
 
+    // Formato de apertura antiguo (token en la URL) para el fork de LiveEditor (LIA-062).
+    $settings->add(new admin_setting_configcheckbox(
+        'local_liamateriales/legacy_open_url',
+        get_string('settings_legacy_open_url', 'local_liamateriales'),
+        get_string('settings_legacy_open_url_desc', 'local_liamateriales'),
+        0
+    ));
+
     $settings->add(new admin_setting_configtext(
         'local_liamateriales/cors_origin',
         get_string('settings_cors_origin', 'local_liamateriales'),
