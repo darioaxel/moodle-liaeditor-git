@@ -9,6 +9,7 @@ los controles aplicados y los riesgos residuales conocidos.
 | **Sistema** | Materiales Editables: plugin de Moodle `local_liamateriales`, engine `materiales_liascript-git` (Python/FastAPI) y editor web `fpvirtual-crepe-editor` |
 | **Versión evaluada** | Plugin 2.6.0 (`2026112403`); rama `feature/seguridad` de `moodle-liascript-git` (commit `2c8be12`) y de `fpvirtual-crepe-editor` (commit `c957d56`) |
 | **Moodle** | 5.3 o superior |
+| **Entornos** | Producción: tres servidores (Moodle; base de datos; engine y editor), §2.2. Pruebas: todo en contenedores en un único host, §2.3 |
 | **Fecha** | 2026-11-24 |
 | **Estado** | Controles de la fase S implementados y probados con tests automáticos; pendiente el despliegue y las pruebas en el entorno de pruebas (§11) |
 
@@ -35,39 +36,47 @@ cursos de Moodle como H5P, SCORM 1.2, ePub, PDF o web estática.
 
 ## 2. Arquitectura y fronteras de confianza
 
+### 2.1 Componentes y fronteras
+
 ```mermaid
 flowchart LR
-  subgraph Z1["Zona 1 · Navegador del profesor (no confiable)"]
-    ED["Editor Crepe<br/>(origen propio)"]
+  subgraph Z1["Navegador del profesor (no confiable)"]
+    ED["Editor Crepe<br/>(JavaScript descargado del servidor del editor)"]
     MB["Páginas de Moodle<br/>(sesión de Moodle)"]
   end
 
-  subgraph Z2["Zona 2 · Moodle (servidor web)"]
+  subgraph SM["Servidor de Moodle"]
     PS["Scripts con sesión<br/>materials.php · edit.php · preview.php · publish.php"]
     PT["Scripts sin sesión (token)<br/>content.php · save.php · token.php · publish_api.php"]
-    DB[("Base de datos de Moodle<br/>tokens (hash), sesiones, despliegues, registro")]
     MUC[("Caché MUC<br/>límites y bloqueos")]
     FS[("moodledata<br/>ficheros publicados")]
   end
 
-  subgraph Z3["Zona 3 · Red interna"]
-    EN["Engine FastAPI<br/>(sin puerto público)"]
+  subgraph SB["Servidor de base de datos"]
+    DB[("BD de Moodle<br/>tokens (hash), sesiones, despliegues, registro")]
+  end
+
+  subgraph SE["Servidor del engine y el editor"]
+    WEB["Nginx<br/>estáticos del editor + proxy HTTPS del engine"]
+    EN["Engine FastAPI<br/>(escucha solo en local)"]
     GIT[("Clon del repo de contenidos")]
-    DK["Demonio Docker<br/>(socket montado)"]
+    DK["Demonio Docker<br/>(socket montado en el engine)"]
     LX["Contenedores efímeros<br/>liaex · Pandoc"]
   end
 
   FORGE[("Forja Git<br/>GitHub")]
 
+  WEB -- "descarga del editor (HTTPS)" --> ED
   MB -- "HTTPS + cookie de sesión + sesskey" --> PS
   ED -- "HTTPS + CORS + token en el cuerpo" --> PT
   PS --> DB
   PT --> DB
   PT --> MUC
-  PS -- "HTTP firmado HMAC" --> EN
-  PT -- "HTTP firmado HMAC" --> EN
   PS --> FS
   PT --> FS
+  PS -- "HTTPS + firma HMAC" --> WEB
+  PT -- "HTTPS + firma HMAC" --> WEB
+  WEB --> EN
   EN --> GIT
   GIT -- "push con credenciales del engine" --> FORGE
   EN -- "docker run" --> DK
@@ -78,13 +87,90 @@ flowchart LR
 | --- | --- | --- |
 | Navegador → scripts con sesión | Peticiones del profesor dentro de Moodle | Sesión de Moodle, `require_login`, capacidades, `sesskey` en los POST |
 | Navegador (editor) → scripts sin sesión | `fetch` entre orígenes desde el editor | Token opaco ligado a usuario + fichero + rama; CORS limitado al origen del editor; límites de uso |
-| Moodle → engine | Llamadas de servidor a servidor | Firma HMAC-SHA256 con secreto compartido; engine solo en la red interna |
+| Moodle → engine | Llamadas de servidor a servidor entre dos máquinas | HTTPS; cortafuegos que solo admite la IP de Moodle; firma HMAC-SHA256 con secreto compartido |
 | Engine → Docker | Lanzamiento de contenedores de conversión | Imágenes fijas, red `none` por defecto, copia temporal del commit |
 | Engine → forja | `git push` de las ramas de edición | Credenciales de escritura del engine (no las del usuario) |
+| Engine → Moodle | **No existe.** El engine no tiene cliente HTTP ni credenciales de Moodle o de la BD | — |
 
 **Por qué hay scripts sin sesión.** El editor se sirve desde otro origen y
 la cookie de sesión de Moodle (SameSite=Lax) no viaja en sus `fetch`. Por
 eso esos cuatro scripts se autentican con un token propio.
+
+### 2.2 Topología de producción
+
+- **Servidor A**: Moodle instalado de forma nativa (sin contenedores), única
+  instancia en esa máquina.
+- **Servidor B**: base de datos de Moodle; solo el servidor A tiene acceso.
+- **Servidor C**: gestionado por el equipo del proyecto. Aloja el engine,
+  Docker con los conversores y los estáticos del editor.
+
+```mermaid
+flowchart TB
+  NET(["Internet<br/>navegadores del profesorado y del alumnado"])
+
+  subgraph A["Servidor A · Moodle"]
+    A1["Servidor web + PHP<br/>Moodle + local_liamateriales"]
+    A2[("moodledata")]
+  end
+
+  subgraph B["Servidor B · Base de datos"]
+    B1[("SGBD de Moodle")]
+  end
+
+  subgraph C["Servidor C · Engine y editor"]
+    C1["Nginx :443<br/>editor.dominio → estáticos del editor<br/>engine.dominio → solo IP de A"]
+    C2["Engine :8000<br/>escucha en 127.0.0.1"]
+    C3["Docker + contenedores<br/>liaex · Pandoc"]
+    C4[("Clon del repo de contenidos")]
+  end
+
+  GH[("GitHub<br/>repo de contenidos")]
+
+  NET -- "HTTPS 443" --> A1
+  NET -- "HTTPS 443 (solo el editor)" --> C1
+  A1 -- "SGBD (solo desde A)" --> B1
+  A1 -- "HTTPS 443 + HMAC" --> C1
+  C1 --> C2
+  C2 --> C3
+  C2 --> C4
+  C4 -- "HTTPS / SSH saliente" --> GH
+  A1 --- A2
+```
+
+**Matriz de flujos de red.** Cualquier flujo que no aparezca aquí debe estar
+denegado.
+
+| # | Origen | Destino | Puerto | Protocolo | Motivo |
+| --- | --- | --- | --- | --- | --- |
+| F1 | Internet | A (Moodle) | 443 | HTTPS | Moodle; incluye los cuatro scripts que usa el editor |
+| F2 | Internet | C (Nginx, nombre del editor) | 443 | HTTPS | Descarga de los estáticos del editor |
+| F3 | A (Moodle) | B (BD) | Puerto del SGBD | Protocolo del SGBD (con TLS si es posible) | Base de datos de Moodle |
+| F4 | A (Moodle) | C (Nginx, nombre del engine) | 443 | HTTPS + firma HMAC | Peticiones al engine (servidor a servidor) |
+| F5 | C (engine) | GitHub | 443 o 22 | HTTPS o SSH | `fetch` y `push` del repositorio de contenidos |
+| F6 | C (Docker) | Registro de imágenes | 443 | HTTPS | Solo al actualizar las imágenes de liaex y Pandoc |
+
+**Flujos que no deben existir:**
+- de Internet al puerto del engine (8000) o a cualquier ruta del engine en C;
+- de C a A o a B;
+- del navegador al engine;
+- de cualquier origen distinto de A a la base de datos.
+
+### 2.3 Entorno de pruebas (diferencias)
+
+En pruebas (`192.168.2.253`), Moodle, su base de datos, el engine y el
+editor corren en contenedores Docker en un mismo host, por HTTP y sin TLS.
+Ahí el engine está en la red Docker de Moodle y comprometerlo daría control
+sobre todo el host, Moodle incluido. Este documento evalúa la topología de
+producción; el entorno de pruebas no debe usarse con datos reales (R11).
+
+### 2.4 Alcance de un compromiso, por servidor
+
+| Si se compromete… | Obtiene | No obtiene |
+| --- | --- | --- |
+| **Servidor A (Moodle)** | Todo Moodle: `config.php` (credenciales de la BD y secreto compartido), `moodledata`, sesiones. Con el secreto, puede llamar al engine: escribir en cualquier rama del repositorio de contenidos y lanzar conversiones | Root en C: las rutas del engine no aceptan argumentos libres para Docker |
+| **Servidor B (BD)** | Datos de Moodle: hashes de tokens (no se pueden usar sin el token en claro), sesiones de edición, despliegues y registro. Si el secreto se guardó en el ajuste del plugin y no en `config.php`, también el secreto (R12) | El servidor A, el servidor C y el repositorio |
+| **Engine** (ejecución de código en el proceso) | **Root en C** por el socket de Docker (R3): el repositorio y sus credenciales Git, el secreto compartido y **los ficheros del editor** (R13) | El servidor A y el B: el engine no tiene red ni credenciales hacia ellos |
+| **Ficheros del editor** (en C) | El editor que ejecuta el navegador del profesorado: puede robar tokens de edición (15 min, un fichero y un curso), guardar contenido manipulado y publicar HTML o JavaScript en los cursos (R5) | Sesiones de Moodle: el editor no las recibe |
 
 ## 3. Actores y permisos
 
@@ -119,7 +205,12 @@ Los cuatro scripts sin sesión responden siempre con
 `Cache-Control: no-store` y `Access-Control-Allow-Origin` limitado al
 origen del editor (`Vary: Origin`).
 
-### 4.2 Engine (solo red interna)
+### 4.2 Engine (sin exposición pública)
+
+En producción, el engine escucha en `127.0.0.1:8000` del servidor C. Nginx
+lo publica por HTTPS con un nombre propio y solo admite la IP del servidor
+de Moodle (`allow <IP de A>; deny all;`). El cortafuegos del servidor C
+aplica la misma regla.
 
 | Ruta | Uso |
 | --- | --- |
@@ -131,7 +222,7 @@ origen del editor (`Vary: Origin`).
 ### 4.3 Editor
 
 Ficheros estáticos sin servidor propio. Guarda borradores del Markdown en
-IndexedDB del navegador (§9). Lleva `<meta name="referrer"
+IndexedDB del navegador (§8, R7). Lleva `<meta name="referrer"
 content="no-referrer">`; la CSP la aplica el servidor web (ejemplo en el
 README del editor).
 
@@ -509,7 +600,7 @@ flowchart TD
 
 | # | Amenaza | Controles | Dónde |
 | --- | --- | --- | --- |
-| T1 | Llamadas directas al engine (commits en `main`, lanzar contenedores) | Engine sin puerto público; firma HMAC obligatoria; el servicio no arranca sin secreto | `engine/…/auth.py`, `serve.py`, `classes/local/engine_client.php` |
+| T1 | Llamadas directas al engine (commits en `main`, lanzar contenedores) | Engine accesible solo desde la IP de Moodle (cortafuegos + Nginx); firma HMAC obligatoria; el servicio no arranca sin secreto | `engine/…/auth.py`, `serve.py`, `classes/local/engine_client.php` |
 | T2 | Robo del token en URLs, registros, historial o Referer | Código de un solo uso en el fragmento; token solo en el cuerpo; `Referrer-Policy: no-referrer`; `Cache-Control: no-store` | `content.php`, `lib.php`, editor `openUrl.ts` |
 | T3 | Reutilización de un código o token capturado | Código de 60 s y un solo uso (canje con bloqueo); token de 15 min revocado en cada renovación; solo se guarda el hash | `classes/local/token_manager.php` |
 | T4 | Escalada de modo (vista previa → escritura) o de fichero | El token fija fichero, rama, curso y modo; validación en cada script; capacidades revisadas al publicar | `token_manager::validate`, `publish_api.php` |
@@ -532,7 +623,7 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | --- | --- | --- | --- |
 | R1 | **Privacidad (RGPD)**: el plugin declara `null_provider`, pero guarda datos personales (userid en tokens y sesiones, username en despliegues). | Exportar o borrar datos de un usuario no incluye estas tablas. | Implementar el proveedor de privacidad (metadatos, exportación y borrado). **Prioridad alta.** |
 | R2 | **El engine confía en el plugin para autorizar.** `/edit/save` admite cualquier rama existente, incluida `main`; la restricción (rama propia o `editmain`) la aplica el plugin al emitir el token. | Con el secreto, se podría escribir en `main`. | Mantener el secreto fuera de la BD (`config.php`) y rotarlo; opcionalmente, que el engine rechace `main` salvo con un indicador firmado. |
-| R3 | **Socket de Docker en el engine.** Comprometer el engine equivale a root en el host. | Alto si se compromete el engine. | Red interna + firma (ya); valorar un *socket proxy* que solo permita `run` de las imágenes previstas, o rootless Docker. |
+| R3 | **Socket de Docker en el engine.** El demonio de Docker corre como root y quien puede usar su socket puede crear un contenedor que monte el disco del host (`-v /:/host`, `--privileged`). Una ejecución de código en el engine (fallo en FastAPI o una dependencia, o una dependencia comprometida) equivale a **root en el servidor C**. Con el secreto robado no basta: las rutas del engine no aceptan argumentos libres para Docker. | En producción, limitado al servidor C (§2.4): repositorio y credenciales Git, secreto compartido y ficheros del editor. No alcanza a Moodle ni a la BD. | **Quitar el socket al engine**: liaex y Pandoc como servicios propios con una API interna y un volumen compartido para los trabajos. Alternativas: Docker o Podman *rootless* para las conversiones, o un proxy del socket que inspeccione el cuerpo de las peticiones. |
 | R4 | **Contenedores de liaex sin endurecer**: sin `--user`, sin límites de memoria, CPU ni procesos y sin `--cap-drop`; imágenes con etiqueta `latest`. | Denegación de servicio con un material malicioso; cambios inesperados de la imagen (cadena de suministro). | Añadir `--user`, `--memory`, `--pids-limit`, `--cap-drop ALL`, `--read-only` donde sea posible, y fijar las imágenes por *digest*. |
 | R5 | **HTML y JavaScript del autor en lo publicado.** La web estática, el SCORM y el H5P incluyen el HTML del material (LiaScript lo admite) y se sirven desde el dominio de Moodle. | XSS almacenado por parte de quien puede editar materiales (profesorado con `edit`). Es el mismo riesgo que subir un HTML como recurso «Archivo» en Moodle. | Aceptarlo como en Moodle, o servir los ficheros publicados desde un dominio separado o con CSP en `pluginfile`. |
 | R6 | **`edit.php` cambia estado con un GET** (crea o reutiliza la rama de edición y emite un código). | Un enlace de un tercero puede abrir una sesión de edición del profesor (sin cambiar contenido). | Bajo. Opcional: confirmar con `sesskey`. |
@@ -540,8 +631,10 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | R8 | **Modo antiguo** (`legacy_open_url`). Si se activa, el token vuelve a viajar en la URL. | Pierde los controles de T2. | Mantenerlo desactivado y retirarlo con el fork de LiveEditor. |
 | R9 | **IP real detrás de un proxy.** El bloqueo por IP usa `getremoteaddr()`. | Sin `$CFG->reverseproxy` y `getremoteaddrconf` bien configurados, todas las peticiones parecen venir del proxy (se bloquearía a todos) o se puede falsear la IP. | Revisar la configuración del proxy de Moodle en producción. |
 | R10 | **Caché MUC por nodo.** Con varios servidores web y un almacén de caché local, los límites son por nodo. | Límites más permisivos de lo configurado. | Usar un almacén compartido (Redis) para la caché de aplicación. |
-| R11 | **Entorno de pruebas sin TLS** (`http://`). | Tokens en claro en la red. | Solo pruebas; en producción, HTTPS obligatorio en Moodle y en el editor. |
-| R12 | **Secreto en la BD** si se usa el ajuste del plugin en lugar de `config.php`. | Una copia de la BD expone el secreto. | Usar `config.php`. |
+| R11 | **Entorno de pruebas sin TLS** (`http://`) y con todo en un mismo host (§2.3). | Tokens en claro en la red; un compromiso del engine alcanza a Moodle. | Solo pruebas, sin datos reales; en producción, la topología de §2.2. |
+| R12 | **Secreto en la BD** si se usa el ajuste del plugin en lugar de `config.php`. | Una copia de la BD (servidor B) expone el secreto. | Usar `config.php`. |
+| R13 | **Editor y engine en el mismo servidor.** Con root en C (R3), se pueden modificar los ficheros del editor que descarga el profesorado. | Robo de tokens de edición mientras dure la manipulación, cambios en los materiales y publicación de HTML o JavaScript en los cursos (R5). Afecta a cada profesor que abra el editor. | Resolver R3 (sin socket, el engine no es root y no puede escribir los estáticos si pertenecen a otro usuario y Nginx los sirve en solo lectura), o servir el editor desde otra máquina. Vigilar la integridad de los estáticos (hash de la versión desplegada). |
+| R14 | **Canal Moodle → engine entre dos máquinas.** La firma HMAC autentica las peticiones e impide alterarlas, pero no cifra. | Sin TLS, el Markdown de los materiales, los nombres de usuario y los ficheros generados viajarían en claro por la red. | HTTPS obligatorio en F4 (Nginx con certificado, aunque sea de una CA interna, o un túnel WireGuard); cortafuegos con la IP de A; en Moodle, permitir en `curlsecurityblockedhosts` y `curlsecurityallowedport` solo ese host y ese puerto (por defecto se bloquean los rangos privados). |
 
 ---
 
@@ -550,7 +643,18 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 - [ ] `MATERIALES_LIASCRIPT_SHARED_SECRET` en el engine y
   `$CFG->local_liamateriales_service_secret` en `config.php`
   (`openssl rand -hex 32`), con el mismo valor.
-- [ ] Engine sin puerto publicado, solo en la red interna de Moodle.
+- [ ] Topología de §2.2 y matriz de flujos aplicada en los cortafuegos de
+  A, B y C (todo lo demás, denegado).
+- [ ] Engine escuchando en `127.0.0.1` del servidor C; Nginx lo publica por
+  HTTPS solo para la IP del servidor de Moodle.
+- [ ] `$CFG->local_liamateriales_service_url` con `https://` y el nombre del
+  engine; certificado válido para Moodle (CA pública o interna instalada en
+  el servidor A).
+- [ ] Seguridad cURL de Moodle: el host y el puerto del engine permitidos
+  de forma explícita, sin abrir rangos privados enteros.
+- [ ] Estáticos del editor propiedad de un usuario distinto del que ejecuta
+  el engine y servidos en solo lectura; hash de la versión desplegada
+  registrado.
 - [ ] Relojes de Moodle y del engine sincronizados (NTP; margen de 60 s).
 - [ ] Ajuste «Apertura antigua» (`legacy_open_url`) **desactivado**.
 - [ ] «Origen CORS» o «URL del editor» con el origen HTTPS exacto del editor.
@@ -575,7 +679,9 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | Límites y bloqueo de IP | Cada límite, ventana deslizante, desactivación, bloqueo y caducidad del bloqueo, una publicación a la vez | `plugin/tests/rate_limiter_test.php` |
 | Limpieza | Borra lo viejo y conserva lo reciente; tarea registrada | `plugin/tests/cleanup_task_test.php` |
 | Auditoría | Cuatro eventos con contexto y datos | `plugin/tests/events_test.php` |
-| Engine aislado | `curl http://<host>:<puerto>/health` desde fuera no conecta; desde Moodle, `/edit/files` sin firma → 401 | Manual |
+| Engine aislado | Desde cualquier máquina que no sea A: `curl https://<engine>/health` rechazado (403 de Nginx o sin conexión) y el puerto 8000 de C cerrado; desde A: `/health` responde y `/edit/files` sin firma → 401 | Manual |
+| Canal cifrado | Desde A: `curl -v https://<engine>/health` valida el certificado; en Moodle, los guardados y publicaciones funcionan con la URL `https://` | Manual |
+| Matriz de flujos | Desde C no se alcanza A ni B; desde Internet solo se alcanza el 443 de A y el nombre del editor en C | Manual (escaneo de puertos) |
 | Cabeceras | `curl -I` a los cuatro scripts y al editor | Manual |
 | Sin tokens en registros | Buscar `token=` en los access log tras usar el editor | Manual |
 
