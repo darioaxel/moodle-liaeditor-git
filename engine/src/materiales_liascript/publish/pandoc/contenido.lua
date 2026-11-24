@@ -15,6 +15,7 @@ que se muevan.
   la plantilla FP Virtual (que define nota, aviso e importante; «error» y
   «consejo» se asocian a «importante» y «nota»).
 - Código ejecutable: código normal.
+- Imágenes WebP y GIF: la copia PNG que prepara el engine (XeLaTeX no las admite).
 ]]
 
 local OMITIR = { narracion = true }
@@ -71,6 +72,21 @@ function Link(el)
       return { pandoc.Str(etiqueta .. ':'), pandoc.Space(), pandoc.Link(el.content, el.target) }
     end
   end
+end
+
+-- XeLaTeX no admite WebP ni GIF: el engine deja una copia «<imagen>.png»
+-- (images.png_copies_for_pdf) y aquí se usa esa copia si existe.
+function Image(el)
+  local ext = el.src:lower():match('%.(%w+)$')
+  if (ext == 'webp' or ext == 'gif') and not el.src:match('^%a+://') then
+    local copia = el.src .. '.png'
+    local f = io.open(copia, 'rb')
+    if f then
+      f:close()
+      el.src = copia
+    end
+  end
+  return el
 end
 
 function CodeBlock(el)

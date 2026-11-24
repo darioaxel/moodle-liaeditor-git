@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
 
+from materiales_liascript.images import png_copies_for_pdf
 from materiales_liascript.publish.models import PublishError
 
 #: Imagen pública con Pandoc ≥ 3 (chunkedhtml), XeLaTeX y pandoc-latex-environment.
@@ -108,6 +109,8 @@ class PandocExporter:
         work = self._prepare(checkout)
         shutil.copytree(self._theme_dir or work / "ext" / "fpvirtual-theme", work / "theme")
         output = work / "contenido.pdf"
+        # XeLaTeX no admite WebP ni GIF: copia PNG que usa contenido.lua.
+        copies = png_copies_for_pdf((checkout / file).parent)
         try:
             avisos = self._pandoc(
                 checkout,
@@ -134,6 +137,8 @@ class PandocExporter:
             return PandocResult(output.read_bytes(), avisos)
         finally:
             shutil.rmtree(work, ignore_errors=True)
+            for copy in copies:
+                copy.unlink(missing_ok=True)
 
     # -- Internos -------------------------------------------------------------
 

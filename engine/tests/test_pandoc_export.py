@@ -202,3 +202,14 @@ def test_pdf_de_contenido_sin_preguntas(material: Path, nombre: str) -> None:
         # Sin «[[» ni «{{»: un material puede explicar la sintaxis en código en línea.
         for resto in ("--{{", "@nota(", "@aviso(", "Comprobar", "Autoevaluación"):
             assert resto not in texto, f"en el PDF de contenido no debe aparecer: {resto}"
+
+
+@requiere_pandoc
+def test_web_incluye_las_imagenes_del_material(material: Path) -> None:
+    resultado = PandocExporter(PANDOC_IMAGE).web(material, "materiales/ut06-imagenes.md")
+    paquete = zipfile.ZipFile(io.BytesIO(resultado.content))
+    nombres = set(paquete.namelist())
+    assert {"img/esquema.png", "img/foto.jpg", "diagrama.webp"} <= nombres
+    html = "\n".join(paquete.read(n).decode("utf-8") for n in nombres if n.endswith(".html"))
+    assert 'src="img/esquema.png"' in html
+    assert 'src="diagrama.webp"' in html
