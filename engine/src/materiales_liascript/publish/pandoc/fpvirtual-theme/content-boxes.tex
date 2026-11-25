@@ -64,13 +64,19 @@
 % ---------------------------------------------------------------------------
 \usepackage[most]{tcolorbox}
 \usepackage{etoolbox}
+% fvextra (incluye fancyvrb): Pandoc solo carga fancyvrb si el documento tiene
+% código resaltado; sin él, \RecustomVerbatimEnvironment no existe y el PDF de
+% un material sin bloques de código fallaba. La opción breaklines es de fvextra.
+\usepackage{fvextra}
 \definecolor{codigo-fondo}{HTML}{F7F7F7}
 \definecolor{codigo-borde}{HTML}{B3B2B3}
 \tcbset{codigo/.style={breakable, enhanced, colback=codigo-fondo,
   colframe=codigo-borde, boxrule=0.4pt, arc=0pt, outer arc=0pt,
   left=5pt, right=5pt, top=3pt, bottom=3pt, before skip=0.8em, after skip=0.8em}}
 % Bloques con lenguaje resaltado (Shaded/Highlighting de Pandoc).
-\AtBeginDocument{\renewenvironment{Shaded}{\begin{tcolorbox}[codigo]}{\end{tcolorbox}}}
+% (Solo existe si el documento tiene código resaltado.)
+\AtBeginDocument{\ifcsname Shaded\endcsname
+  \renewenvironment{Shaded}{\begin{tcolorbox}[codigo]}{\end{tcolorbox}}\fi}
 % Bloques sin lenguaje o no resaltables (verbatim): misma caja y cortes de línea.
 \RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines,fontsize=\small}
 \BeforeBeginEnvironment{verbatim}{\begin{tcolorbox}[codigo]}
