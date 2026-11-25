@@ -464,6 +464,44 @@ local function revisar_restos(salida, lineas_origen)
   end
 end
 
+-- Ancho de imagen de LiaScript: `![alt](img.png)<!-- style="width: 40%" -->`
+-- (lo escribe el editor; LiaScript lo aplica como estilo). Para Pandoc es el
+-- atributo `width` de la imagen: `width: 40%` en la web y 0.4\linewidth en el
+-- PDF. Una imagen sola en su párrafo sigue siendo una figura con pie.
+local function ancho_de_comentario(el)
+  if not el or el.t ~= 'RawInline' or not el.format:match('html') then return nil end
+  local estilo = el.text:match('^<!%-%-%s*style%s*=%s*"([^"]*)"%s*%-%->$')
+  return estilo and estilo:match('width%s*:%s*(%d+%%)')
+end
+
+local function anchos_de_imagen(doc)
+  doc = doc:walk({
+    Inlines = function(inl)
+      local salida = pandoc.Inlines({})
+      local i = 1
+      while i <= #inl do
+        local el = inl[i]
+        local ancho = el.t == 'Image' and ancho_de_comentario(inl[i + 1])
+        if ancho then
+          el.attributes.width = ancho
+          i = i + 1 -- el comentario se consume
+        end
+        salida:insert(el)
+        i = i + 1
+      end
+      return salida
+    end,
+  })
+  return doc:walk({
+    Para = function(p)
+      local img = p.content[1]
+      if #p.content == 1 and img.t == 'Image' and img.attributes.width then
+        return pandoc.Figure({ pandoc.Plain({ img }) }, { pandoc.Plain(img.caption) })
+      end
+    end,
+  })
+end
+
 function Reader(input, opts)
   avisos = {}
   local texto = tostring(input):gsub('\r\n', '\n')
@@ -481,6 +519,7 @@ function Reader(input, opts)
 
   -- ascii_identifiers: nombres de página sin tildes (más robustos en URLs de Moodle).
   local doc = pandoc.read(table.concat(salida, '\n'), 'markdown+ascii_identifiers', opts)
+  doc = anchos_de_imagen(doc)
   if meta.title then doc.meta.title = pandoc.MetaInlines(pandoc.read(meta.title, 'markdown').blocks[1].content) end
   if meta.author then doc.meta.author = pandoc.MetaInlines({ pandoc.Str(meta.author) }) end
   if meta.language then doc.meta.lang = pandoc.MetaString(meta.language) end

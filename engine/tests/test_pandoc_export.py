@@ -213,3 +213,37 @@ def test_web_incluye_las_imagenes_del_material(material: Path) -> None:
     html = "\n".join(paquete.read(n).decode("utf-8") for n in nombres if n.endswith(".html"))
     assert 'src="img/esquema.png"' in html
     assert 'src="diagrama.webp"' in html
+
+
+@requiere_pandoc
+def test_columnas_e_imagen_con_ancho_en_la_web(material: Path) -> None:
+    resultado = PandocExporter(PANDOC_IMAGE).web(material, "materiales/ut07-columnas.md")
+    paquete = zipfile.ZipFile(io.BytesIO(resultado.content))
+    html = "\n".join(
+        paquete.read(n).decode("utf-8") for n in paquete.namelist() if n.endswith(".html")
+    )
+    grupos, columnas = 2, 4  # dos bloques de dos columnas
+    assert html.count('class="lia-columnas"') == grupos
+    assert html.count('class="lia-columna"') == columnas
+    assert "display: flex" in html
+    # El comentario de LiaScript se convierte en el ancho de la imagen.
+    assert re.search(r'<img src="img/foto.jpg" style="width:40(\.0)?%"', html)
+    assert "<!-- style=" not in html
+    assert resultado.avisos == []
+
+
+@requiere_pandoc
+def test_columnas_lado_a_lado_en_el_pdf(material: Path) -> None:
+    resultado = PandocExporter(PANDOC_IMAGE).content_pdf(material, "materiales/ut07-columnas.md")
+    assert resultado.content[:4] == b"%PDF"
+    if not shutil.which("pdftotext"):
+        pytest.skip("sin pdftotext")
+    pdf = material / "columnas.pdf"
+    pdf.write_bytes(resultado.content)
+    texto = subprocess.run(
+        ["pdftotext", "-layout", str(pdf), "-"], capture_output=True, text=True, check=True
+    ).stdout
+    # Las dos columnas en la misma línea del PDF (minipages lado a lado).
+    assert any(
+        "COLUMNA-IZQUIERDA" in linea and "COLUMNA-DERECHA" in linea for linea in texto.splitlines()
+    )

@@ -16,6 +16,9 @@ que se muevan.
   «consejo» se asocian a «importante» y «nota»).
 - Código ejecutable: código normal.
 - Imágenes WebP y GIF: la copia PNG que prepara el engine (XeLaTeX no las admite).
+- Columnas del editor (`<div class="lia-columnas">` con `lia-columna`): una
+  minipage por columna, lado a lado; sus figuras dejan de ser flotantes (una
+  figura no puede ir dentro de una minipage) y el pie va debajo, en cursiva.
 ]]
 
 local OMITIR = { narracion = true }
@@ -28,7 +31,43 @@ local function tiene(el, clase)
   return el.classes:includes(clase)
 end
 
+--- Figura → imagen (no flotante) y su pie debajo, para dentro de una columna.
+local function sin_flotantes(bloques)
+  return pandoc.Blocks(bloques):walk({
+    Figure = function(f)
+      local salida = pandoc.Blocks({})
+      salida:extend(f.content)
+      local pie = pandoc.utils.stringify(f.caption)
+      if pie ~= '' then
+        salida:insert(pandoc.Para({ pandoc.Emph(pandoc.Inlines(pie)) }))
+      end
+      return salida
+    end,
+  })
+end
+
+local function columnas(el)
+  local cols = {}
+  for _, b in ipairs(el.content) do
+    if b.t == 'Div' and tiene(b, 'lia-columna') then table.insert(cols, b) end
+  end
+  if #cols == 0 then return el.content end
+  local ancho = string.format('%.3f', (1 - 0.04 * (#cols - 1)) / #cols)
+  -- Un único bloque LaTeX: si Pandoc separara las minipages con líneas en
+  -- blanco, cada una empezaría párrafo y quedarían una debajo de otra.
+  -- \vspace{0pt}: alinea las columnas por arriba (con [t] la referencia es la
+  -- primera línea, que en una imagen es su borde inferior).
+  local partes = {}
+  for i, col in ipairs(cols) do
+    local interior = pandoc.write(pandoc.Pandoc(sin_flotantes(col.content)), 'latex')
+    table.insert(partes, (i > 1 and '\\hfill\n' or '') ..
+      '\\begin{minipage}[t]{' .. ancho .. '\\linewidth}\\vspace{0pt}\n' .. interior .. '\n\\end{minipage}%')
+  end
+  return pandoc.RawBlock('latex', '\\par\\noindent\n' .. table.concat(partes, '\n') .. '\n\\par\\medskip')
+end
+
 function Div(el)
+  if tiene(el, 'lia-columnas') then return columnas(el) end
   for clase in pairs(OMITIR) do
     if tiene(el, clase) then return {} end
   end
