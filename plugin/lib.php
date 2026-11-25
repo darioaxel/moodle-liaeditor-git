@@ -531,3 +531,33 @@ function local_liamateriales_extend_navigation_course(\navigation_node $parent, 
         );
     }
 }
+
+/**
+ * Pie con la versión del plugin y la fecha de su último cambio (seguimiento).
+ *
+ * La fecha sale del número de versión (AAAAMMDDNN, convención de Moodle): cada
+ * cambio del plugin sube $plugin->version en version.php. Si el código es más
+ * nuevo que lo instalado, lo indica (falta ejecutar la actualización).
+ *
+ * @return string HTML: línea pequeña alineada a la derecha.
+ */
+function local_liamateriales_version_footer(): string {
+    $plugin = new stdClass();
+    require(__DIR__ . '/version.php');
+    $version = (string) $plugin->version;
+    $date = '';
+    if (preg_match('/^(\d{4})(\d{2})(\d{2})\d{2}$/', $version, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+        $date = userdate(make_timestamp((int) $m[1], (int) $m[2], (int) $m[3], 12), get_string('strftimedate', 'langconfig'));
+    }
+    $text = get_string('versionfooter', 'local_liamateriales', (object) [
+        'release' => s($plugin->release),
+        'version' => s($version),
+        'date' => $date,
+    ]);
+    $installed = (string) get_config('local_liamateriales', 'version');
+    if ($installed !== '' && $installed !== $version) {
+        $text .= ' · ' . get_string('versionpending', 'local_liamateriales', s($installed));
+    }
+    return html_writer::div($text, 'local-liamateriales-version text-end text-muted small mt-4',
+        ['style' => 'font-size: 0.75rem']);
+}

@@ -67,6 +67,16 @@ en Moodle 6.0dev.
    de Moodle (`curlsecurityallowedport`, `curlsecurityblockedhosts`) para
    permitir el host/puerto del engine.
 
+## Versión y seguimiento
+
+Las páginas del plugin (Materiales Editables y Publicar) muestran abajo a la
+derecha, en letra pequeña, la versión y la fecha del último cambio:
+«Materiales Editables 2.7.1 (2026112502) · último cambio: 25 nov 2026». La
+fecha sale del número de versión (`AAAAMMDDNN`), así que **cada cambio del
+plugin sube `$plugin->version`** en `version.php` (y `release` si procede).
+Si el código es más nuevo que lo instalado, el pie añade «actualización
+pendiente: instalada …» (falta `admin/cli/upgrade.php`).
+
 ## Seguridad (fase S)
 
 Superficie expuesta: cuatro scripts sin sesión de Moodle, que usa el

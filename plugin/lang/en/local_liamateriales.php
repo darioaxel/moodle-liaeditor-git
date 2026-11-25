@@ -16,6 +16,8 @@ $string['liamateriales:editmain'] = 'Editar materiales directamente en la rama p
 $string['privacy:metadata:reason'] = 'El plugin solo almacena metadatos de edición y publicación de materiales.';
 $string['servicenotconfigured'] = 'El engine no está configurado. Establece $CFG->local_liamateriales_service_url (ver README).';
 $string['servicerror'] = 'El engine devolvió un error: {$a}';
+$string['versionfooter'] = 'Materiales Editables {$a->release} ({$a->version}) · último cambio: {$a->date}';
+$string['versionpending'] = 'actualización pendiente: instalada {$a}';
 
 // Material states (by SHA comparison, §5.3).
 $string['state_up_to_date'] = 'Actualizado';

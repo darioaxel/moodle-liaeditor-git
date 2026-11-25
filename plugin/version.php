@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112501;        // Imágenes: guardado con imágenes (fase 2).
+$plugin->version = 2026112502;        // Pie con versión y fecha; Publicar sin actividades borradas.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.7.0';
+$plugin->release = '2.7.1';

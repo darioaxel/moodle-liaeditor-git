@@ -306,4 +306,5 @@ echo html_writer::tag('button', get_string('publish_upload_button', 'local_liama
 echo html_writer::end_tag('details');
 
 echo html_writer::end_tag('form');
+echo local_liamateriales_version_footer();
 echo $OUTPUT->footer();
