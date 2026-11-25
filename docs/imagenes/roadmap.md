@@ -27,6 +27,8 @@ en `fpvirtual-crepe-editor`.
 | D7 | Límites: 2 MB por imagen (ya comprimida), 20 imágenes y 10 MB por guardado (constantes iguales en plugin y engine) | Tamaño del repositorio y de las peticiones |
 | D8 | El pie del bloque de imagen de Crepe **es** el texto alternativo; el título se conserva | Crepe guardaba la proporción en el texto alternativo (`![1.00](…)`): perdía el texto alternativo de cualquier material con una imagen sola en su párrafo (corregido en la fase 1) |
 | D9 | **Un material por carpeta** en el repositorio de contenidos (`materiales/<material>/<material>.md` + `img/`), y el engine exporta con liaex desde una copia sin los otros `.md` de la carpeta | liaex empaqueta la carpeta del material: el H5P llevaba los demás materiales (§2.1). La copia aislada lo evita aunque un repositorio no siga la convención |
+| D11 | Ancho de imagen en % del ancho del texto con el comentario de LiaScript `<!-- style="width: N%;" -->`, de 10 a 100 | Sintaxis documentada de LiaScript; 100 % es el ancho imprimible del PDF; el tirador de alto de Crepe no se guardaba |
+| D12 | Columnas con `<div class="lia-columnas">` y `<div class="lia-columna">` con estilo flex | LiaScript no tiene clases de columnas; el estilo del div se aplica a su Markdown (comprobado con liaex). Las clases permiten al editor y a Pandoc reconocerlas |
 | D10 | **Sin Git LFS** por ahora | El engine escribe los blobs directamente (`hash-object`, `mktree`); con LFS tendría que escribir punteros y subir los ficheros a un servidor LFS. Con 2 MB por imagen ya comprimida, un curso con cientos de imágenes son decenas o pocos cientos de MB. Revisar si el repositorio de contenidos supera ~1 GB o los clones se vuelven lentos |
 
 ### 2.1 Comportamiento de cada formato (fase 0)
@@ -160,6 +162,31 @@ imágenes en la rama de resolución; e2e del editor.
 el SCORM de `ut05-sesiones` y de `demo-liascript` llevan solo su `.md` y sus
 imágenes; la web y el PDF de contenido incluyen las imágenes.
 
+### Fase 4 — Borrado, tamaño y columnas
+
+- **Borrado** (engine): el guardado borra, en el mismo commit, las imágenes
+  que el material usaba en `original_sha` y ya no usa, si ningún otro `.md`
+  del repositorio las referencia (también con `../`). Nunca las que el
+  material no referenciaba. `commit_files` acepta `None` (borrar).
+  Detectado en LIA-124: tres imágenes huérfanas en la rama de ut03.
+- **Borrado** (editor): borrar una imagen sola en su párrafo **nunca se
+  guardaba**. El bloque de imagen de Crepe no tenía posición y el
+  preservador de la fuente la recuperaba del hueco original. Si se deshace
+  un borrado ya guardado, el editor reenvía la imagen.
+- **Ancho** (D11): `![alt](img/x.png)<!-- style="width: 40%;" -->`, la
+  sintaxis documentada de LiaScript. En el editor, barra *Ancho* (10–100 %
+  del ancho del texto o de la columna; 100 % = ancho imprimible del PDF).
+  En Pandoc, atributo `width` (web: `width: 40%`; PDF: `0.4\linewidth`).
+- **Columnas** (D12): LiaScript no tiene clases de columnas, pero aplica el
+  estilo de un `<div>` al Markdown que contiene. Formato:
+  `<div class="lia-columnas" style="display: flex; …">` con
+  `<div class="lia-columna" style="flex: 1 1 14em; min-width: 0;">` y
+  líneas en blanco alrededor del Markdown. Comprobado con liaex (web en
+  Chrome): texto e imagen y dos imágenes lado a lado. En el PDF de
+  contenido, una minipage por columna. En el editor, columnas editables
+  (no HTML protegido); plantillas *Dos columnas*, *Texto e imagen* y *Dos
+  imágenes lado a lado*.
+
 ## 5. Seguridad
 
 - Rutas: relativas, normalizadas, dentro de la carpeta del material, sin
@@ -181,4 +208,5 @@ imágenes; la web y el PDF de contenido incluyen las imágenes.
 | 1 — Ver | Hecha: `GET /edit/asset`, `asset.php`, `ImageStore` en el editor. Corregida la pérdida del texto alternativo en el bloque de imagen de Crepe |
 | 2 — Subir | Hecha: `commit_files` y `images` en el guardado (engine), validación en `save.php`, subida en el editor (reducir, recodificar, pendientes, borrador) |
 | 3 — Pegar y aislar | Hecha: pegar y arrastrar, aviso de texto alternativo, paquetes de liaex sin otros materiales, un material por carpeta en `contenidos-test`. Git LFS descartado por ahora (D10) |
-| Prueba en Moodle | Pendiente (LIA-124) |
+| Prueba en Moodle | Hecha en parte (LIA-124): subir, pegar y arrastrar funcionan; reveló las imágenes huérfanas |
+| 4 — Borrado, tamaño y columnas | Hecha: borrado en Git y en el editor, ancho de imagen, dos columnas (editor, web y PDF de contenido) |

@@ -28,6 +28,26 @@
 
 ## Registro de sesiones
 
+### 2026-11-25 — Sesión 43: Borrado de imágenes, ancho, dos columnas e iconos de tema
+
+- **Borrado** (LIA-126): en la prueba LIA-124 quedaron tres imágenes
+  huérfanas en `img/` de ut03. El engine borra ahora, en el mismo commit,
+  las que el material deja de usar (si ningún otro `.md` las usa). En el
+  editor, borrar una imagen sola en su párrafo **no se guardaba nunca**: el
+  bloque de imagen de Crepe no tenía posición y el preservador la
+  recuperaba del hueco original. Corregido en el transformer LiaScript.
+- **Ancho y columnas** (LIA-127): estudiado LiaScript (sin clases de
+  columnas; estilo de `<div>` y comentario `<!-- style -->`), comprobado con
+  liaex en Chrome. Engine: ancho → atributo `width` en el lector Pandoc;
+  columnas → minipages en el PDF de contenido (fixture `ut07-columnas`).
+  Editor: nodos `lia_columns`/`lia_column`, atributo `width` del bloque de
+  imagen y barra *Ancho*, plantillas en el menú «/» y el panel.
+- **Tema con iconos** (LIA-128): `AppIcon.vue` + grupo de opciones.
+- **Pruebas**: engine 176 ✓ (ruff, mypy); editor 166 ✓ y e2e 42/42 (tema,
+  columnas, ancho, borrar, insertar). Capturas en `reports/` del editor.
+- **Pendiente**: imágenes de vista previa del panel para las plantillas
+  nuevas (`npm run lia:previews`); LIA-124 completa en Moodle.
+
 ### 2026-11-25 — Sesión 42: Publicar solo desde el plugin; pie de versión; PDF sin código
 
 - **Repos revisados**: `contenidos-test` con `main` por carpetas

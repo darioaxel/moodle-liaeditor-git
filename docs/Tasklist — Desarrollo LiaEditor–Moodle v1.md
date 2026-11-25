@@ -312,6 +312,14 @@ editor.
   selector de formato del editor; enlace «Publicar…» a `publish.php` con el
   material (`publish_url`, solo con `:deploy`); `publish_api.php` y el
   límite `ratelimit_publish` retirados (plugin 2.8.0, sesión 42).
+- [x] **LIA-126** (S) Borrar de Git las imágenes que el material deja de
+  usar (engine) y guardar el borrado de una imagen sola en su párrafo
+  (editor; antes se perdía) (sesión 43).
+- [x] **LIA-127** (M) Ancho de imagen (barra en el editor; web y PDF) y dos
+  columnas (texto e imagen, dos imágenes) en el editor, la web y el PDF de
+  contenido (sesión 43).
+- [x] **LIA-128** (XS) Tema del editor con iconos en lugar del desplegable
+  (sesión 43).
 
 ---
 
