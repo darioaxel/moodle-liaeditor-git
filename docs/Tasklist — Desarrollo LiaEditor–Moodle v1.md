@@ -302,8 +302,10 @@ editor.
   texto alternativo en el bloque de imagen de Crepe.
 - [x] **LIA-122** (M) Fase 2: subir imágenes; viajan con el guardado y
   van en el mismo commit que el Markdown.
-- [ ] **LIA-123** (S) Fase 3: pegar y arrastrar, aviso de texto
-  alternativo vacío, H5P sin los otros `.md` de la carpeta, Git LFS.
+- [x] **LIA-123** (S) Fase 3: pegar y arrastrar, aviso de texto
+  alternativo vacío, paquetes de liaex sin los otros `.md` de la carpeta y
+  un material por carpeta en `contenidos-test`; Git LFS descartado por
+  ahora (D10) (sesión 41).
 - [ ] **LIA-124** (S) Probar en el Moodle de pruebas (ver, subir, guardar,
   409, publicar en los seis formatos).
 

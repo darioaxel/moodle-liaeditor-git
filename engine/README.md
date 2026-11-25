@@ -27,7 +27,7 @@ src/materiales_liascript/
 | `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha, committed_at}` o `409` con rama `resolucion/...` (D5). Acepta `images: [{path, content_base64}]` (PNG, JPEG, GIF; máx. 20, 2 MB cada una y 10 MB en total): Markdown e imágenes en un único commit |
 | `GET` | `/edit/asset?file=&branch=&path=` | Imagen de la carpeta del material (ruta relativa a su `.md`; PNG, JPEG, GIF, WebP) para el editor; cualquier fallo, 404 |
 | `GET` | `/edit/state?file=&sha=&branch=` | `up_to_date` / `update_available` por comparación de SHAs |
-| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `scorm`, `web`, `pdfcontenido`) de un fichero en un SHA. El PDF de contenido convierte a PNG (Pillow) las imágenes WebP y GIF, que XeLaTeX no admite |
+| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `scorm`, `web`, `pdfcontenido`) de un fichero en un SHA. El PDF de contenido convierte a PNG (Pillow) las imágenes WebP y GIF, que XeLaTeX no admite. Los formatos de liaex se generan desde una copia sin los otros `.md` de la carpeta del material (el H5P los empaquetaba) |
 | `GET` | `/health` | Healthcheck |
 
 Sin repo Git, `/edit/*` y `/publish` responden 503; sin Docker en el host,

@@ -26,6 +26,8 @@ en `fpvirtual-crepe-editor`.
 | D6 | Nombre: `img/<slug>-<hash8>.<ext>` (hash del contenido) | Sin colisiones; la misma imagen dos veces se guarda una vez |
 | D7 | Límites: 2 MB por imagen (ya comprimida), 20 imágenes y 10 MB por guardado (constantes iguales en plugin y engine) | Tamaño del repositorio y de las peticiones |
 | D8 | El pie del bloque de imagen de Crepe **es** el texto alternativo; el título se conserva | Crepe guardaba la proporción en el texto alternativo (`![1.00](…)`): perdía el texto alternativo de cualquier material con una imagen sola en su párrafo (corregido en la fase 1) |
+| D9 | **Un material por carpeta** en el repositorio de contenidos (`materiales/<material>/<material>.md` + `img/`), y el engine exporta con liaex desde una copia sin los otros `.md` de la carpeta | liaex empaqueta la carpeta del material: el H5P llevaba los demás materiales (§2.1). La copia aislada lo evita aunque un repositorio no siga la convención |
+| D10 | **Sin Git LFS** por ahora | El engine escribe los blobs directamente (`hash-object`, `mktree`); con LFS tendría que escribir punteros y subir los ficheros a un servidor LFS. Con 2 MB por imagen ya comprimida, un curso con cientos de imágenes son decenas o pocos cientos de MB. Revisar si el repositorio de contenidos supera ~1 GB o los clones se vuelven lentos |
 
 ### 2.1 Comportamiento de cada formato (fase 0)
 
@@ -43,9 +45,10 @@ Medido con `engine/tests/fixtures/liascript/ut06-imagenes.md`:
 - El H5P de liaex descarta las WebP (por extensión). Por eso el editor no
   sube WebP (D4, D5); las que ya existan en un material no salen en el H5P.
 - **Hallazgo aparte**: el H5P de liaex mete en el paquete **todos los `.md`
-  de la carpeta del material**, es decir, otros materiales. Se descargan con
-  el paquete. Conviene un material por carpeta o que el engine exporte desde
-  una copia que solo contenga el material y sus recursos (pendiente).
+  de la carpeta del material**, es decir, otros materiales. Se descargaban
+  con el paquete. Resuelto en la fase 3 (D9): `contenidos-test` pasa a un
+  material por carpeta y el engine exporta desde una copia aislada
+  (`publish.service.isolate_material`).
 
 Descartado: guardar las imágenes en Moodle (rompe D1; liaex y Pandoc no
 podrían leerlas) y un commit por imagen al subirla (opción A: huérfanas y
@@ -135,11 +138,27 @@ editor; ninguna URL lleva token; rutas fuera de la carpeta del material →
 Markdown e imágenes; el borrador recupera las imágenes; el 409 conserva las
 imágenes en la rama de resolución; e2e del editor.
 
-### Fase 3 — Pendiente después
+### Fase 3 — Pegar, texto alternativo y paquetes aislados
 
-- Pegar y arrastrar imágenes (plugin de subida de Milkdown).
-- Texto alternativo obligatorio o aviso si falta.
-- Git LFS si el volumen de imágenes crece.
+- **Editor**: pegar y arrastrar con un uploader propio para el plugin de
+  subida de Milkdown (`src/editor/imagePaste.ts`). El de Crepe dejaba el
+  marcador «Upload in progress...» para siempre si una imagen fallaba y
+  perdía todo el pegado; el propio prepara una a una, salta las no
+  admitidas con aviso y nunca rechaza.
+- **Editor**: aviso (no bloquea) si el material guardado tiene imágenes sin
+  texto alternativo (`missingAlt`; fuera del código; un bloque vacío no
+  cuenta).
+- **Engine**: `isolate_material` quita de la copia temporal del SHA los
+  otros `.md` de la carpeta antes de llamar a liaex (conserva los que el
+  material referencia: plantillas locales en `import:`, enlaces).
+- **Contenidos**: `contenidos-test` en un material por carpeta, con
+  imágenes de prueba (PNG con y sin transparencia, JPEG con título, GIF
+  animado en línea).
+- **Git LFS**: descartado por ahora (D10).
+
+**Comprobado** con liaex y Pandoc reales sobre `contenidos-test`: el H5P y
+el SCORM de `ut05-sesiones` y de `demo-liascript` llevan solo su `.md` y sus
+imágenes; la web y el PDF de contenido incluyen las imágenes.
 
 ## 5. Seguridad
 
@@ -161,4 +180,5 @@ imágenes en la rama de resolución; e2e del editor.
 | 0 — Corpus | Hecha: material de prueba, matriz por formato, conversión a PNG en el PDF de contenido |
 | 1 — Ver | Hecha: `GET /edit/asset`, `asset.php`, `ImageStore` en el editor. Corregida la pérdida del texto alternativo en el bloque de imagen de Crepe |
 | 2 — Subir | Hecha: `commit_files` y `images` en el guardado (engine), validación en `save.php`, subida en el editor (reducir, recodificar, pendientes, borrador) |
-| 3 — Después | Pendiente: pegar y arrastrar, aviso de texto alternativo vacío, exportar el H5P sin los otros `.md` de la carpeta, Git LFS |
+| 3 — Pegar y aislar | Hecha: pegar y arrastrar, aviso de texto alternativo, paquetes de liaex sin otros materiales, un material por carpeta en `contenidos-test`. Git LFS descartado por ahora (D10) |
+| Prueba en Moodle | Pendiente (LIA-124) |

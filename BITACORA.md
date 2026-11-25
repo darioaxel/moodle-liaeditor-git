@@ -28,6 +28,27 @@
 
 ## Registro de sesiones
 
+### 2026-11-25 — Sesión 41: Imágenes, fase 3, y contenidos-test por carpetas
+
+- **contenidos-test** (rama `feature/imagenes`): un material por carpeta
+  (`materiales/<material>/<material>.md` + `img/`) e imágenes de prueba en
+  ut03, ut04, ut05 (PNG con transparencia) y la demo (JPEG con título, GIF
+  animado en línea). Los fixtures `real/` del editor, actualizados.
+- **Engine**: `isolate_material` quita los otros `.md` de la carpeta en la
+  copia temporal antes de liaex (el H5P los empaquetaba). Amenaza T14 en el
+  documento de seguridad.
+- **Editor**: pegar y arrastrar con un uploader propio (el de Crepe dejaba
+  el marcador colgado y perdía el pegado entero si fallaba una imagen);
+  aviso de imágenes sin texto alternativo.
+- **Git LFS**: descartado por ahora (D10 del roadmap).
+- **Pruebas**: engine 163 ✓ (ruff, mypy); exportación real con liaex y
+  Pandoc de ut05 y la demo en H5P, SCORM, web y PDF de contenido (cada
+  paquete solo con su `.md` y sus imágenes); editor 151 ✓, round-trip de
+  los materiales con imágenes y e2e 29/29 (pegar PNG + SVG).
+- **Pendiente**: LIA-124 (prueba en el Moodle de pruebas). Al desplegar
+  `contenidos-test` por carpetas cambian las rutas de los materiales: las
+  publicaciones y ramas `edicion/*` anteriores apuntan a las rutas viejas.
+
 ### 2026-11-25 — Sesión 40: Imágenes en los materiales (fases 0, 1 y 2)
 
 Rama `feature/imagenes` (sale de `feature/seguridad`) en este repo y en el

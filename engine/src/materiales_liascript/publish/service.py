@@ -8,6 +8,8 @@ se verifican sin Docker.
 
 from __future__ import annotations
 
+import posixpath
+import re
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -177,6 +179,47 @@ class LiaexDockerExecutor(ArtifactExecutor):
                 leftover.unlink(missing_ok=True)
 
 
+_MD_REF = re.compile(r"[\w./-]+\.md\b", re.IGNORECASE)
+
+
+def isolate_material(checkout: Path, file: str) -> list[str]:
+    """Quita de la copia los otros ``.md`` de la carpeta del material.
+
+    liaex empaqueta la carpeta del material (el H5P incluye todos sus
+    ``.md``): sin esto, cada paquete llevaría los demás materiales de la
+    carpeta y el alumnado podría descargarlos (roadmap de imágenes, fase 3).
+    Se conservan los ``.md`` que el material referencia por ruta relativa
+    (plantillas locales en ``import:``, enlaces). Solo toca la copia temporal
+    del SHA, nunca Git.
+
+    Returns:
+        Rutas (relativas al checkout) de los ficheros quitados.
+    """
+    source = checkout / file
+    base = source.parent
+    text = source.read_text(encoding="utf-8", errors="replace")
+    material_dir = posixpath.dirname(file)
+    keep = {
+        posixpath.normpath(posixpath.join(material_dir, ref))
+        for ref in _MD_REF.findall(text)
+        if "://" not in ref
+    }
+    removed: list[str] = []
+    for path in base.rglob("*"):
+        rel = path.relative_to(checkout).as_posix()
+        if (
+            path.suffix.lower() != ".md"
+            or not path.is_file()
+            or rel == file
+            or rel in keep
+            or any(part.startswith(".") for part in path.relative_to(base).parts)
+        ):
+            continue
+        path.unlink()
+        removed.append(rel)
+    return sorted(removed)
+
+
 def _find_artifact(directory: Path, base: str, extension: str) -> Path | None:
     """Fichero generado por liaex: ``<base>.<extensión>`` o, si una versión de
     liaex lo nombra de otra forma, cualquier ``<base>*.<extensión>``."""
@@ -226,6 +269,7 @@ class PublishService:
                 content, avisos = generado.content, generado.avisos
             else:
                 assert self._executor is not None  # comprobado arriba
+                isolate_material(checkout, file)
                 content = self._executor.generate(checkout, file, request.format)
         slug = file.removesuffix(".md").replace("/", "-")
         return PublishResult(

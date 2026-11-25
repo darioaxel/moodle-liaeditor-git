@@ -621,6 +621,7 @@ flowchart TD
 | T10 | Uso desde otro origen | CORS limitado al origen del editor | `local_liamateriales_api_headers` |
 | T11 | Falta de trazabilidad | Eventos de Moodle y tabla de despliegues | `classes/event/*` |
 | T13 | Imágenes maliciosas (SVG con JavaScript, HTML disfrazado, rutas fuera del material, tamaño) | Solo PNG/JPEG/GIF para subir; tipo real comprobado en plugin y engine; rutas normalizadas dentro de la carpeta del material; límites de número y tamaño; respuestas de `asset.php` con `nosniff`, CSP y `sandbox`; el editor recodifica (elimina EXIF) | `plugin/lib.php` (`local_liamateriales_validate_images`), `asset.php`, `engine/…/images.py` |
+| T14 | Un paquete publicado (H5P, SCORM) lleva otros materiales de la misma carpeta, que el alumnado puede descargar | El engine exporta con liaex desde una copia del SHA sin los otros `.md` de la carpeta del material; convención de un material por carpeta | `engine/…/publish/service.py` (`isolate_material`) |
 | T12 | Contenedores de conversión | Copia temporal del commit, `--rm`, red `none` por defecto (Pandoc además con `--user`) | `publish/service.py`, `publish/pandoc_export.py` |
 
 ---
@@ -687,6 +688,7 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | Código de apertura | Un solo uso, caducidad, no vale como token, la vista previa conserva el solo lectura | `plugin/tests/token_manager_test.php` |
 | Flujo del editor | Abre canjeando el código, ninguna URL lleva token, el código desaparece de la barra, 429 sin perder trabajo | `fpvirtual-crepe-editor/scripts/e2e-mock.mjs` (18 comprobaciones), `tests/lms.test.ts` |
 | Imágenes | Rutas fuera de la carpeta, SVG, falso PNG, extensión que no casa, base64 roto, tamaño y número → rechazadas sin commit; un commit con Markdown e imágenes; 409 con imágenes | `engine/tests/test_api_asset.py`, `test_save_images.py`, `test_images.py`, `plugin/tests/images_test.php`, e2e del editor |
+| Paquetes aislados | El H5P y el SCORM no llevan otros materiales de la carpeta; Git no cambia | `engine/tests/test_publish_isolate.py` |
 | Límites y bloqueo de IP | Cada límite, ventana deslizante, desactivación, bloqueo y caducidad del bloqueo, una publicación a la vez | `plugin/tests/rate_limiter_test.php` |
 | Limpieza | Borra lo viejo y conserva lo reciente; tarea registrada | `plugin/tests/cleanup_task_test.php` |
 | Auditoría | Cuatro eventos con contexto y datos | `plugin/tests/events_test.php` |
