@@ -2,6 +2,14 @@
 
 Los worktrees temporales usan el CLI de Git (``git worktree add``): GitPython no
 expone worktrees de forma fiable. El resto de operaciones van por la API tipada.
+
+Hilos: FastAPI atiende las rutas síncronas en un pool de hilos y el provider es
+único. GitPython lee los objetos por un ``git cat-file --batch`` persistente
+compartido, que no admite lecturas simultáneas: con varias imágenes pedidas a la
+vez (el editor pide todas al abrir) las respuestas se mezclaban («SHA … could
+not be resolved», ramas «no encontradas», un PNG que «no es image/png») y los
+hilos acababan bloqueados. Toda lectura con GitPython va bajo ``self._lock``;
+las operaciones con subprocesos de ``git`` propios no lo necesitan.
 """
 
 from __future__ import annotations
@@ -10,6 +18,7 @@ import os
 import re
 import subprocess
 import tempfile
+import threading
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
@@ -38,6 +47,8 @@ class LocalGitProvider(GitProvider):
             msg = f"No es un repositorio Git: {repo_path}"
             raise GitProviderError(msg) from exc
         self._root = Path(self._repo.working_tree_dir or self._repo.git_dir)
+        # Reentrante: is_ancestor → get_commit → _commit.
+        self._lock = threading.RLock()
 
     # -- refs y checkouts -------------------------------------------------------
 
@@ -59,28 +70,31 @@ class LocalGitProvider(GitProvider):
     # -- contenido ---------------------------------------------------------------
 
     def list_files(self, ref: str, path: str = "") -> list[str]:
-        commit = self._commit(ref)
-        tree = commit.tree / path if path else commit.tree
-        return sorted(str(item.path) for item in self._walk(tree))
+        with self._lock:
+            commit = self._commit(ref)
+            tree = commit.tree / path if path else commit.tree
+            return sorted(str(item.path) for item in self._walk(tree))
 
     def get_file(self, ref: str, path: str) -> str:
         return self.get_bytes(ref, path).decode("utf-8")
 
     def get_bytes(self, ref: str, path: str) -> bytes:
-        commit = self._commit(ref)
-        try:
-            entry = commit.tree / path
-        except KeyError as exc:
-            msg = f"Archivo no encontrado en {ref}: {path}"
-            raise GitProviderError(msg) from exc
-        if entry.type != "blob":
-            msg = f"No es un archivo en {ref}: {path}"
-            raise GitProviderError(msg)
-        data: bytes = entry.data_stream.read()
-        return data
+        with self._lock:
+            commit = self._commit(ref)
+            try:
+                entry = commit.tree / path
+            except KeyError as exc:
+                msg = f"Archivo no encontrado en {ref}: {path}"
+                raise GitProviderError(msg) from exc
+            if entry.type != "blob":
+                msg = f"No es un archivo en {ref}: {path}"
+                raise GitProviderError(msg)
+            data: bytes = entry.data_stream.read()
+            return data
 
     def get_commit(self, ref: str) -> str:
-        return str(self._commit(ref).hexsha)
+        with self._lock:
+            return str(self._commit(ref).hexsha)
 
     def commit_date(self, ref: str) -> str | None:
         try:
@@ -93,19 +107,21 @@ class LocalGitProvider(GitProvider):
 
     def commits_ahead(self, base: str, ref: str) -> int:
         try:
-            return len(list(self._repo.iter_commits(f"{base}..{ref}")))
+            with self._lock:
+                return len(list(self._repo.iter_commits(f"{base}..{ref}")))
         except GitCommandError as exc:
             msg = f"Referencia Git inválida: {exc}"
             raise GitProviderError(msg) from exc
 
     def is_ancestor(self, ref_a: str, ref_b: str) -> bool:
-        sha_a = self.get_commit(ref_a)
-        try:
-            bases = self._repo.merge_base(ref_a, ref_b)
-        except GitCommandError as exc:
-            msg = f"Referencia Git inválida: {exc}"
-            raise GitProviderError(msg) from exc
-        return bool(bases) and bases[0].hexsha == sha_a
+        with self._lock:
+            sha_a = self.get_commit(ref_a)
+            try:
+                bases = self._repo.merge_base(ref_a, ref_b)
+            except GitCommandError as exc:
+                msg = f"Referencia Git inválida: {exc}"
+                raise GitProviderError(msg) from exc
+            return bool(bases) and bases[0].hexsha == sha_a
 
     # -- escritura (LIA-003/004) -------------------------------------------------
 
@@ -193,7 +209,9 @@ class LocalGitProvider(GitProvider):
         return result.stdout.decode().strip()
 
     def push_branch(self, branch: str) -> None:
-        if not any(remote.name == "origin" for remote in self._repo.remotes):
+        with self._lock:
+            has_origin = any(remote.name == "origin" for remote in self._repo.remotes)
+        if not has_origin:
             return
         self._git("push", "origin", f"refs/heads/{branch}:refs/heads/{branch}")
 
@@ -201,9 +219,10 @@ class LocalGitProvider(GitProvider):
 
     def _commit(self, ref: str) -> Commit:
         try:
-            commit = self._repo.commit(ref)
-            _ = commit.tree  # fuerza la resolución: un SHA de 40 hex es lazy
-            return commit
+            with self._lock:
+                commit = self._repo.commit(ref)
+                _ = commit.tree  # fuerza la resolución: un SHA de 40 hex es lazy
+                return commit
         except (BadName, ValueError) as exc:
             msg = f"Referencia Git no encontrada: {ref!r}"
             raise GitProviderError(msg) from exc
