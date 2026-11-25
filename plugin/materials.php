@@ -236,7 +236,8 @@ if ($latest) {
             'badge bg-' . local_liamateriales_state_class($statekey)
         );
         $cmlink = '—';
-        if ($cm = get_coursemodule_from_id('', $deploy->cmid, 0, false, IGNORE_MISSING)) {
+        $cm = get_coursemodule_from_id('', $deploy->cmid, 0, false, IGNORE_MISSING);
+        if ($cm && empty($cm->deletioninprogress)) {
             $modinfo = get_fast_modinfo($courseid);
             $cms = $modinfo->get_cms();
             $cmname = isset($cms[$deploy->cmid]) ? $cms[$deploy->cmid]->name : $deploy->source_file;

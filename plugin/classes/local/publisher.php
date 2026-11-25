@@ -138,6 +138,14 @@ class publisher {
             $moduleinfo->coursemodule = $cm->id;
             $moduleinfo->cmidnumber = $cm->idnumber;
             $moduleinfo->introeditor = ['text' => '', 'format' => FORMAT_HTML, 'itemid' => 0];
+            if ($modulename === 'resource') {
+                // resource_update_instance() hace revision++ sobre lo recibido
+                // (el formulario lo manda oculto). Sin él, PHP avisa en mitad
+                // de la respuesta JSON y la revisión vuelve a 1, de modo que
+                // las URL de los ficheros no cambian y el navegador sirve la
+                // versión anterior de su caché.
+                $moduleinfo->revision = (int) $DB->get_field('resource', 'revision', ['id' => $cm->instance]);
+            }
             update_moduleinfo($cm, $moduleinfo, $course);
             $cmid = (int) $cm->id;
         } else {
@@ -453,7 +461,10 @@ class publisher {
             return 0;
         }
         $cm = get_coursemodule_from_id(self::TYPES[$artifacttype][0], (int) $row->cmid, $courseid, false, IGNORE_MISSING);
-        return $cm ? (int) $cm->id : 0;
+        // Una actividad borrada sigue en la tabla, oculta, hasta que el cron
+        // termina de eliminarla (deletioninprogress): no se reutiliza, porque
+        // se actualizaría una actividad que ya no se ve en el curso.
+        return $cm && empty($cm->deletioninprogress) ? (int) $cm->id : 0;
     }
 
     /**

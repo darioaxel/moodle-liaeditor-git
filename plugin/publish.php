@@ -190,6 +190,16 @@ if (data_submitted() && confirm_sesskey()) {
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('material_publish', 'local_liamateriales'));
 
+// Volver a la lista de materiales (el «Cancelar» del formulario queda al final).
+echo html_writer::div(
+    html_writer::link(
+        $returnurl,
+        $OUTPUT->pix_icon('t/left', '') . get_string('backto', 'moodle', get_string('materials', 'local_liamateriales')),
+        ['class' => 'btn btn-outline-secondary btn-sm', 'id' => 'liamat-publish-back']
+    ),
+    'mb-3'
+);
+
 echo $OUTPUT->box_start('generalbox');
 echo html_writer::tag('p', html_writer::tag('strong', get_string('material_file', 'local_liamateriales') . ': ')
     . html_writer::tag('code', s($file)));

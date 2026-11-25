@@ -56,3 +56,22 @@
   fonttitle=\sffamily\bfseries\small, titlerule=0mm,
 }
 \fi
+
+% ---------------------------------------------------------------------------
+% Bloques de código con caja (aspecto Eisvogel) SIN listings: se conserva el
+% resaltado de Pandoc (--syntax-highlighting=default) y los caracteres Unicode
+% (listings descoloca los multibyte: diagramas con ─ │ └ ▶).
+% ---------------------------------------------------------------------------
+\usepackage[most]{tcolorbox}
+\usepackage{etoolbox}
+\definecolor{codigo-fondo}{HTML}{F7F7F7}
+\definecolor{codigo-borde}{HTML}{B3B2B3}
+\tcbset{codigo/.style={breakable, enhanced, colback=codigo-fondo,
+  colframe=codigo-borde, boxrule=0.4pt, arc=0pt, outer arc=0pt,
+  left=5pt, right=5pt, top=3pt, bottom=3pt, before skip=0.8em, after skip=0.8em}}
+% Bloques con lenguaje resaltado (Shaded/Highlighting de Pandoc).
+\AtBeginDocument{\renewenvironment{Shaded}{\begin{tcolorbox}[codigo]}{\end{tcolorbox}}}
+% Bloques sin lenguaje o no resaltables (verbatim): misma caja y cortes de línea.
+\RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines,fontsize=\small}
+\BeforeBeginEnvironment{verbatim}{\begin{tcolorbox}[codigo]}
+\AfterEndEnvironment{verbatim}{\end{tcolorbox}}

@@ -90,7 +90,7 @@ class PandocExporter:
                     "--toc-depth=2",
                     f"--template=/work/{_WORK}/ext/web.html",
                     f"--lua-filter=/work/{_WORK}/ext/web.lua",
-                    "--mathml",
+                    "--math-method=mathml",
                     "-o",
                     f"/work/{_WORK}/web",
                 ],
