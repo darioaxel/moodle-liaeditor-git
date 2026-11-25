@@ -130,6 +130,14 @@ class publisher {
             foreach (self::web_settings(get_config('local_liamateriales')) as $key => $value) {
                 $moduleinfo->$key = $value;
             }
+        } else if ($modulename === 'resource') {
+            // PDF, PDF de contenido y ePub: la visualización por defecto del
+            // sitio para Recurso, como en el formulario. Sin `display`,
+            // resource_add_instance() avisaba en mitad de la respuesta JSON
+            // («No se pudo completar: HTTP 200» al publicar por primera vez).
+            foreach (self::resource_defaults(get_config('resource')) as $key => $value) {
+                $moduleinfo->$key = $value;
+            }
         }
 
         if ($existingcmid > 0) {
@@ -224,6 +232,26 @@ class publisher {
         foreach (self::scorm_settings(get_config('scorm')) as $key => $value) {
             $moduleinfo->$key = $value;
         }
+    }
+
+    /**
+     * Ajustes de mod_resource para PDF, PDF de contenido y ePub: los valores
+     * por defecto del sitio para Recurso (como el formulario), sin descripción.
+     *
+     * @param \stdClass $config get_config('resource')
+     * @return array<string, int>
+     */
+    public static function resource_defaults(\stdClass $config): array {
+        return [
+            'display' => (int) ($config->display ?? 0),
+            'popupwidth' => (int) ($config->popupwidth ?? 620),
+            'popupheight' => (int) ($config->popupheight ?? 450),
+            'printintro' => 0,
+            'showsize' => (int) !empty($config->showsize),
+            'showtype' => (int) !empty($config->showtype),
+            'showdate' => (int) !empty($config->showdate),
+            'filterfiles' => (int) ($config->filterfiles ?? 0),
+        ];
     }
 
     /**
