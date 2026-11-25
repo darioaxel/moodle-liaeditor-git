@@ -120,8 +120,12 @@ class EditService:
         file = validate_file_path(request.file)
         if not self._git.branch_exists(request.branch):
             raise EditError(404, f"la rama no existe: {request.branch!r}")
-        files: dict[str, str | bytes] = {file: request.content, **self._uploads(file, request)}
+        uploads = self._uploads(file, request)
+        files: dict[str, str | bytes | None] = {file: request.content, **uploads}
         current = self._git.get_commit(request.branch)
+        # Imágenes que el material ha dejado de usar: se borran en el mismo commit.
+        for path in self._dropped_images(file, request, current, set(uploads)):
+            files[path] = None
         message = request.message or f"Editado desde Moodle por {request.user}"
         target = request.branch
         conflict = current != request.original_sha
@@ -150,6 +154,40 @@ class EditService:
                 diff_url=build_compare_url(self._repo_url, request.original_sha, target),
             )
         return SaveOk(branch=target, new_sha=new_sha, committed_at=self._git.commit_date(new_sha))
+
+    def _dropped_images(
+        self, file: str, request: SaveRequest, head: str, uploads: set[str]
+    ) -> list[str]:
+        """Imágenes que el material usaba en ``original_sha`` y ya no usa.
+
+        Solo se borran si existen en ``head`` y ningún otro ``.md`` del
+        repositorio las referencia (dos materiales pueden compartir una
+        imagen). Las que el material no referenciaba antes (añadidas a mano
+        en Git) nunca se tocan.
+        """
+        try:
+            before = self._git.get_file(request.original_sha, file)
+        except GitProviderError:
+            return []  # material nuevo o SHA desconocido: nada que comparar
+        dropped = images.references(file, before) - images.references(file, request.content)
+        dropped -= uploads
+        if not dropped:
+            return []
+        present = set(self._git.list_files(head))
+        dropped &= present
+        for other in present:
+            if not dropped:
+                break
+            if other == file or not other.lower().endswith(".md"):
+                continue
+            try:
+                text = self._git.get_file(head, other)
+            except GitProviderError:
+                continue
+            dropped -= images.references(other, text, confined=False)
+        if dropped:
+            _log.info("imagenes_borradas", file=file, imagenes=sorted(dropped))
+        return sorted(dropped)
 
     @staticmethod
     def _uploads(file: str, request: SaveRequest) -> dict[str, bytes]:

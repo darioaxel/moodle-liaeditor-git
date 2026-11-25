@@ -35,6 +35,10 @@ MAX_SAVE_BYTES = 10 * 1024 * 1024
 PDF_CONVERT = frozenset({".webp", ".gif"})
 
 _SAFE_PATH = re.compile(r"^[A-Za-z0-9._/-]+$")
+# Destinos de imagen en Markdown (`![alt](ruta "título")`, `![alt](<ruta>)`) y en
+# HTML (`<img src="ruta">`, también dentro de los bloques de LiaScript).
+_MD_IMAGE = re.compile(r"!\[(?:[^\]\\]|\\.)*\]\(\s*<?([^\s)>]+)")
+_HTML_IMAGE = re.compile(r"<img\b[^>]*?\bsrc\s*=\s*[\"']([^\"']+)[\"']", re.IGNORECASE)
 
 
 class ImageError(ValueError):
@@ -79,6 +83,32 @@ def resolve(material: str, ref: str) -> str:
         msg = f"extensión de imagen no admitida: {ref!r}"
         raise ImageError(msg)
     return path
+
+
+def references(material: str, text: str, *, confined: bool = True) -> set[str]:
+    """Rutas en el repo de las imágenes locales que referencia ``text``.
+
+    Con ``confined`` (por defecto) solo cuentan las de la carpeta del
+    material, como al servirlas o subirlas. Sin él, cualquier ruta relativa
+    dentro del repositorio: sirve para saber si **otro** material usa una
+    imagen antes de borrarla. Las externas o no válidas se ignoran.
+    """
+    found: set[str] = set()
+    for match in (*_MD_IMAGE.finditer(text), *_HTML_IMAGE.finditer(text)):
+        ref = match.group(1)
+        if confined:
+            try:
+                found.add(resolve(material, ref))
+            except ImageError:
+                continue
+            continue
+        ref = ref.split("#", 1)[0].split("?", 1)[0]
+        if not ref or ref.startswith("/") or ":" in ref:
+            continue
+        path = posixpath.normpath(posixpath.join(posixpath.dirname(material), ref))
+        if not path.startswith("../") and path != "..":
+            found.add(path)
+    return found
 
 
 def check(path: str, data: bytes, *, upload: bool = False) -> str:

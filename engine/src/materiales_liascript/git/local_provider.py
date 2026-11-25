@@ -161,7 +161,7 @@ class LocalGitProvider(GitProvider):
     def commit_files(
         self,
         branch: str,
-        files: Mapping[str, str | bytes],
+        files: Mapping[str, str | bytes | None],
         message: str,
         author: str,
     ) -> str:
@@ -176,8 +176,11 @@ class LocalGitProvider(GitProvider):
         base = self.get_commit(branch)
         tree = f"{base}^{{tree}}"
         for path, content in files.items():
-            data = content.encode("utf-8") if isinstance(content, str) else content
-            blob = self._hash_blob(data)
+            if content is None:
+                blob = None  # borrar
+            else:
+                data = content.encode("utf-8") if isinstance(content, str) else content
+                blob = self._hash_blob(data)
             tree = self._replace_tree_entry(tree, path.split("/"), blob)
         env = {
             "GIT_AUTHOR_NAME": author_name.strip(),
@@ -246,12 +249,13 @@ class LocalGitProvider(GitProvider):
             raise GitProviderError(msg)
         return result.stdout.strip()
 
-    def _replace_tree_entry(self, tree_ref: str, parts: list[str], blob_sha: str) -> str:
+    def _replace_tree_entry(self, tree_ref: str, parts: list[str], blob_sha: str | None) -> str:
         """Árbol nuevo igual que ``tree_ref`` pero con ``blob_sha`` en ``parts``.
 
         Reescribe recursivamente con ``git mktree`` solo los árboles del camino
         del archivo; crea los directorios intermedios si la ruta es nueva.
-        Devuelve el SHA del árbol raíz resultante.
+        Con ``blob_sha=None`` quita la entrada (y el directorio que se quede
+        vacío); si no existe, no cambia nada. Devuelve el SHA del árbol raíz.
         """
         tree_sha = self._git("rev-parse", tree_ref) if "^{" in tree_ref else tree_ref
         lines = self._git("ls-tree", tree_sha).splitlines()
@@ -265,15 +269,19 @@ class LocalGitProvider(GitProvider):
                 continue
             found = True
             if not rest:
-                entries.append(f"100644 blob {blob_sha}\t{name}")
+                if blob_sha is not None:
+                    entries.append(f"100644 blob {blob_sha}\t{name}")
                 continue
             mode, entry_type, sha = meta.split()
             if entry_type != "tree":
                 msg = f"{'/'.join(parts)} no es un directorio en {tree_ref}"
                 raise GitProviderError(msg)
             sub = self._replace_tree_entry(sha, rest, blob_sha)
-            entries.append(f"{mode} tree {sub}\t{name}")
-        if not found:
+            if sub != _EMPTY_TREE:
+                entries.append(f"{mode} tree {sub}\t{name}")
+        if not found and blob_sha is None:
+            pass  # borrar algo que no existe: nada que hacer
+        elif not found:
             if not rest:
                 entries.append(f"100644 blob {blob_sha}\t{head}")
             else:
@@ -281,6 +289,8 @@ class LocalGitProvider(GitProvider):
                 entries.append(f"040000 tree {sub}\t{head}")
         # mktree exige las entradas ordenadas; los directorios se ordenan
         # como si el nombre acabara en '/' (regla de Git).
+        if not entries:
+            return _EMPTY_TREE  # directorio vacío tras un borrado: el padre lo quita
         entries.sort(key=lambda e: e.split("\t", 1)[1] + ("/" if " tree " in e else ""))
         return self._git_in(["mktree"], "\n".join(entries) + "\n")
 

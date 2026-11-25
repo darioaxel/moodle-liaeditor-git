@@ -91,7 +91,7 @@ class GitProvider(ABC):
     def commit_files(
         self,
         branch: str,
-        files: Mapping[str, str | bytes],
+        files: Mapping[str, str | bytes | None],
         message: str,
         author: str,
     ) -> str:
@@ -99,7 +99,8 @@ class GitProvider(ABC):
 
         Mismas garantías que ``commit_file`` (plumbing, compare-and-swap).
         Lo usa el guardado con imágenes (docs/imagenes): Markdown e imágenes
-        en el mismo commit.
+        en el mismo commit. ``None`` borra el archivo (las imágenes que el
+        material deja de usar); un directorio que se queda vacío desaparece.
         """
         raise NotImplementedError
 
