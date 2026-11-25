@@ -54,11 +54,11 @@ final class rate_limiter_test extends \advanced_testcase {
     }
 
     public function test_limite_configurable_y_desactivable(): void {
-        set_config('ratelimit_publish', 1, 'local_liamateriales');
-        $this->assertNull(rate_limiter::hit('publish', 7));
-        $this->assertNotNull(rate_limiter::hit('publish', 7));
-        set_config('ratelimit_publish', 0, 'local_liamateriales');
-        $this->assertNull(rate_limiter::hit('publish', 7));
+        set_config('ratelimit_token', 1, 'local_liamateriales');
+        $this->assertNull(rate_limiter::hit('token', 7));
+        $this->assertNotNull(rate_limiter::hit('token', 7));
+        set_config('ratelimit_token', 0, 'local_liamateriales');
+        $this->assertNull(rate_limiter::hit('token', 7));
     }
 
     public function test_bloqueo_de_ip_tras_veinte_tokens_invalidos(): void {

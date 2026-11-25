@@ -80,7 +80,9 @@ pendiente: instalada …» (falta `admin/cli/upgrade.php`).
 ## Seguridad (fase S)
 
 Superficie expuesta: cuatro scripts sin sesión de Moodle, que usa el
-editor (`content.php`, `save.php`, `token.php`, `publish_api.php`).
+editor (`content.php`, `save.php`, `token.php`, `asset.php`). Publicar se
+hace solo en la página Publicar, con sesión: `publish_api.php` (publicar
+desde el editor) se retiró en 2.8.0.
 
 - **Tokens fuera de las URL.** El editor se abre con un código de un solo
   uso y 60 s en el fragmento (`#open=…`), que canjea con
@@ -115,17 +117,26 @@ editor (`content.php`, `save.php`, `token.php`, `publish_api.php`).
 ### Límite en el proxy (LIA-071)
 
 Además de los límites por usuario del plugin, el proxy delante de Moodle
-debe limitar el volumen por IP de los cuatro scripts. Nginx:
+debe limitar el volumen por IP de los cuatro scripts (`asset.php` con un
+margen mayor: pide una imagen por petición). Nginx:
 
 ```nginx
 # En http { … }
 limit_req_zone $binary_remote_addr zone=liamat:10m rate=60r/m;
 
 # En el server { … } de Moodle
-location ~ ^/local/liamateriales/(content|save|token|publish_api)\.php$ {
+location ~ ^/local/liamateriales/(content|save|token)\.php$ {
     limit_req zone=liamat burst=20 nodelay;
     limit_req_status 429;
     # … lo mismo que el resto de PHP de Moodle (fastcgi_pass / proxy_pass)
+}
+
+# asset.php: una petición por imagen al abrir un material; zona propia más amplia.
+# (en http { … }: limit_req_zone $binary_remote_addr zone=liamat_img:10m rate=600r/m;)
+location ~ ^/local/liamateriales/asset\.php$ {
+    limit_req zone=liamat_img burst=100 nodelay;
+    limit_req_status 429;
+    # … igual que arriba
 }
 ```
 

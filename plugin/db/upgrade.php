@@ -47,5 +47,11 @@ function xmldb_local_liamateriales_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026112400, 'local', 'liamateriales');
     }
 
+    if ($oldversion < 2026112503) {
+        // Publicar desde el editor retirado (publish_api.php): su límite de uso sobra.
+        unset_config('ratelimit_publish', 'local_liamateriales');
+        upgrade_plugin_savepoint(true, 2026112503, 'local', 'liamateriales');
+    }
+
     return true;
 }

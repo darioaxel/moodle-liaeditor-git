@@ -47,7 +47,7 @@ flowchart LR
 
   subgraph SM["Servidor de Moodle"]
     PS["Scripts con sesión<br/>materials.php · edit.php · preview.php · publish.php"]
-    PT["Scripts sin sesión (token)<br/>content.php · save.php · token.php · publish_api.php"]
+    PT["Scripts sin sesión (token)<br/>content.php · save.php · token.php · asset.php"]
     MUC[("Caché MUC<br/>límites y bloqueos")]
     FS[("moodledata<br/>ficheros publicados")]
   end
@@ -182,8 +182,10 @@ producción; el entorno de pruebas no debe usarse con datos reales (R11).
 | `local/liamateriales:deploy` | Curso | editingteacher, manager | Publicar en el curso (junto con `moodle/course:manageactivities`) |
 
 Las capacidades se comprueban al emitir el código de apertura y **otra
-vez** al publicar (`publish_api.php` revisa `deploy` y
-`moodle/course:manageactivities` en el momento de la petición).
+vez** al publicar: publicar solo se hace en `publish.php`, con la sesión de
+Moodle, `deploy`, `moodle/course:manageactivities` y `sesskey`. Un token de
+edición **no** permite publicar (desde la versión 2.8.0 no existe
+`publish_api.php`).
 
 ## 4. Superficie expuesta
 
@@ -198,7 +200,6 @@ vez** al publicar (`publish_api.php` revisa `deploy` y
 | `content.php` | Código de apertura o token de edición (cuerpo) | POST (GET solo en modo antiguo), OPTIONS | Entrega el Markdown al editor |
 | `save.php` | Token de edición (cuerpo) | POST, OPTIONS | Guarda (commit y push) |
 | `token.php` | Token de edición (cuerpo) | POST, OPTIONS | Renueva el token |
-| `publish_api.php` | Token de edición (cuerpo) + capacidades | POST, OPTIONS | Publicación en un clic desde el editor |
 | `asset.php` | Token de edición o de solo lectura (cuerpo) | POST, OPTIONS | Imágenes de la carpeta del material para el editor (PNG, JPEG, GIF, WebP) |
 
 **Imágenes.** `save.php` acepta imágenes nuevas en el mismo guardado
@@ -305,8 +306,8 @@ sequenceDiagram
   P->>ED: Carga el editor
   ED->>C: POST content.php {code}
   C->>DB: Canje → token readonly=1
-  C-->>ED: Markdown con readonly: true y sin publish_endpoint
-  Note over ED: El editor no muestra Guardar ni Publicar. Aunque se forzara la petición, save.php y publish_api.php rechazan el token de solo lectura (403).
+  C-->>ED: Markdown con readonly: true y sin publish_url
+  Note over ED: El editor no muestra Guardar ni el enlace a Publicar. Aunque se forzara la petición, save.php rechaza el token de solo lectura (403).
 ```
 
 ### 6.3 Guardar
@@ -369,34 +370,32 @@ sequenceDiagram
   C-->>ED: Markdown de la rama del token
 ```
 
-### 6.5 Publicar desde el editor
+### 6.5 Del editor a la página Publicar
+
+El editor no publica: muestra un enlace «Publicar…» a la página Publicar
+del plugin, que se abre en otra pestaña con la sesión de Moodle. El enlace
+no lleva token. `publish_api.php` (publicar en un clic con el token del
+editor) se retiró en la versión 2.8.0: un token robado ya no permite crear
+actividades en el curso.
 
 ```mermaid
 sequenceDiagram
   autonumber
+  actor P as Profesor
   participant ED as Editor
-  participant P as Moodle · publish_api.php
-  participant DB as BD de Moodle
-  participant E as Engine
-  participant D as Docker (liaex / Pandoc)
-  participant FS as moodledata
+  participant C as Moodle · content.php
+  participant M as Moodle · publish.php
 
-  ED->>P: POST {file, sha, format, token}
-  P->>P: ¿IP bloqueada? · formato admitido
-  P->>DB: validate(token, file, escritura) → curso de origen
-  P->>P: Actúa como el usuario del token (session manager set_user)
-  P->>DB: Comprueba deploy + manageactivities en el curso
-  P->>P: Límite de publicaciones (5 cada 10 min) → 429
-  P->>DB: Bloqueo usuario + fichero (si ya hay uno → 409)
-  P->>E: POST /publish {file, sha, format} (firmado)
-  E->>E: Copia temporal del commit exacto
-  E->>D: docker run --rm --network none … (liaex o Pandoc)
-  D-->>E: Fichero (zip, pdf, h5p…) y avisos
-  E-->>P: 200 + X-Liamat-Avisos
-  P->>FS: Área de borrador del usuario (la web se extrae con zip_packer)
-  P->>DB: add_moduleinfo / update_moduleinfo
-  P->>DB: Despliegue curso ↔ fichero ↔ SHA ↔ cmid + evento material_published
-  P-->>ED: 200 {cmid, url, avisos}
+  ED->>C: POST content.php {code}
+  C->>C: ¿Escritura, curso de origen y deploy del usuario del token?
+  C-->>ED: Markdown con publish_url = publish.php?id=curso&file=… (sin token)
+  ED->>ED: Acepta publish_url solo si es http(s) y del mismo origen que Moodle
+  P->>ED: Pulsa «Publicar…»
+  alt Hay cambios sin guardar
+    ED-->>P: «Guarda los cambios antes de publicar» (no abre la página)
+  else Todo guardado
+    ED->>M: Abre publish.php en otra pestaña (sesión de Moodle, como en 6.6)
+  end
 ```
 
 ### 6.6 Publicar desde la página Publicar del plugin
@@ -415,7 +414,7 @@ sequenceDiagram
   P->>M: POST (sesskey) {formato, versión, nombre, sección, modo}
   alt Generar y publicar
     M->>E: POST /publish (firmado)
-    M->>DB: Módulo, despliegue y evento (como en 6.5)
+    M->>DB: Bloqueo usuario + fichero · módulo, despliegue y evento material_published
   else Descargar sin publicar
     M->>E: POST /publish (firmado)
     M-->>P: El fichero (send_file)
@@ -452,7 +451,7 @@ sequenceDiagram
 sequenceDiagram
   autonumber
   actor X as Atacante
-  participant S as content.php / save.php / token.php / publish_api.php
+  participant S as content.php / save.php / token.php / asset.php
   participant MUC as Caché MUC
 
   loop Peticiones con tokens o códigos inventados
@@ -493,7 +492,7 @@ flowchart TD
   L -- sí --> C1
   L -- no --> M[GET /edit/content firmado]
   M -- error --> M1[502 genérico + incidencia en el log] --> Z
-  M -- ok --> N["Bloque liascript-lms: endpoints, SHA, token, readonly · publish_endpoint solo si escribe y hay curso"]
+  M -- ok --> N["Bloque liascript-lms: endpoints, SHA, token, readonly · publish_url solo si escribe, hay curso y puede publicar"]
   N --> O[Evento material_opened] --> P[200 text/plain + cabeceras de protección] --> Z
 ```
 
@@ -518,31 +517,12 @@ flowchart TD
   H -- otro / red --> K[error_log con incidencia] --> K1[4xx/502 genérico] --> Z
 ```
 
-### 7.3 `publish_api.php`
+### 7.3 `publish_api.php` (retirado)
 
-```mermaid
-flowchart TD
-  A([POST]) --> B{¿IP bloqueada?}
-  B -- sí --> B1[429] --> Z([Fin])
-  B -- no --> C{¿Campos completos y formato admitido?}
-  C -- no --> C1[400] --> Z
-  C -- sí --> D[validate: token de escritura del fichero]
-  D -- falla --> D1[Anotar fallo de IP · 403] --> Z
-  D -- ok --> E{¿El token tiene curso de origen?}
-  E -- no --> E1[403] --> Z
-  E -- sí --> F[Actuar como el usuario del token]
-  F --> G{¿deploy y manageactivities en el curso?}
-  G -- no --> G1[403] --> Z
-  G -- sí --> H{¿Límite de publicaciones?}
-  H -- superado --> B1
-  H -- ok --> I{¿Bloqueo usuario + fichero libre?}
-  I -- no --> I1[409 «ya se está publicando»] --> Z
-  I -- sí --> J[POST /publish firmado → fichero]
-  J -- error --> J1[502/500 genérico + incidencia en el log] --> Z
-  J -- ok --> K[Área de borrador; web extraída con zip_packer, index.html principal]
-  K --> L[Crear o actualizar el módulo · despliegue · evento published]
-  L --> M[Liberar el bloqueo] --> N["200 {cmid, url, avisos}"] --> Z
-```
+Retirado en la versión 2.8.0 del plugin: publicar solo se hace en
+`publish.php`, con sesión (§6.5 y §6.6). Con él desaparecen un script sin
+sesión que creaba actividades con el token del editor y su límite de uso
+(`ratelimit_publish`, que la actualización borra).
 
 ### 7.4 Canje del código de apertura (`token_manager::redeem`)
 
@@ -612,9 +592,9 @@ flowchart TD
 | T1 | Llamadas directas al engine (commits en `main`, lanzar contenedores) | Engine accesible solo desde la IP de Moodle (cortafuegos + Nginx); firma HMAC obligatoria; el servicio no arranca sin secreto | `engine/…/auth.py`, `serve.py`, `classes/local/engine_client.php` |
 | T2 | Robo del token en URLs, registros, historial o Referer | Código de un solo uso en el fragmento; token solo en el cuerpo; `Referrer-Policy: no-referrer`; `Cache-Control: no-store` | `content.php`, `lib.php`, editor `openUrl.ts` |
 | T3 | Reutilización de un código o token capturado | Código de 60 s y un solo uso (canje con bloqueo); token de 15 min revocado en cada renovación; solo se guarda el hash | `classes/local/token_manager.php` |
-| T4 | Escalada de modo (vista previa → escritura) o de fichero | El token fija fichero, rama, curso y modo; validación en cada script; capacidades revisadas al publicar | `token_manager::validate`, `publish_api.php` |
+| T4 | Escalada de modo (vista previa → escritura) o de fichero, o de editar a publicar | El token fija fichero, rama, curso y modo; validación en cada script; el token no sirve para publicar (solo `publish.php`, con sesión, capacidades y `sesskey`) | `token_manager::validate`, `publish.php` |
 | T5 | Fuerza bruta o barrido de tokens | Tokens de 48 caracteres aleatorios; bloqueo por IP (20 fallos / 10 min → 15 min) | `classes/local/rate_limiter.php` |
-| T6 | Abuso de recursos (bucles de guardado o publicación) | Límites por usuario (429); una publicación a la vez (409); límite en el proxy | `rate_limiter`, `publisher::publish_generated` |
+| T6 | Abuso de recursos (bucles de guardado o publicación) | Límites por usuario (429); una publicación a la vez por usuario y material; límite en el proxy | `rate_limiter`, `publisher::publish_generated` |
 | T7 | Filtración de información interna | Errores genéricos con identificador de incidencia; detalle solo en el log | `local_liamateriales_api_internal_error` |
 | T8 | Path traversal en el fichero o en el zip | Validación de rutas en plugin y engine (relativa, `.md`, sin `..`); extracción con `zip_packer` de Moodle, que limpia rutas | `lib.php`, `edit/branches.py`, `publisher::stage_web` |
 | T9 | CSRF en las páginas con sesión | `sesskey` en los POST de `publish.php`; los scripts del editor no usan la cookie | `publish.php` |
@@ -644,7 +624,7 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | R10 | **Caché MUC por nodo.** Con varios servidores web y un almacén de caché local, los límites son por nodo. | Límites más permisivos de lo configurado. | Usar un almacén compartido (Redis) para la caché de aplicación. |
 | R11 | **Entorno de pruebas sin TLS** (`http://`) y con todo en un mismo host (§2.3). | Tokens en claro en la red; un compromiso del engine alcanza a Moodle. | Solo pruebas, sin datos reales; en producción, la topología de §2.2. |
 | R12 | **Secreto en la BD** si se usa el ajuste del plugin en lugar de `config.php`. | Una copia de la BD (servidor B) expone el secreto. | Usar `config.php`. |
-| R13 | **Editor y engine en el mismo servidor.** Con root en C (R3), se pueden modificar los ficheros del editor que descarga el profesorado. | Robo de tokens de edición mientras dure la manipulación, cambios en los materiales y publicación de HTML o JavaScript en los cursos (R5). Afecta a cada profesor que abra el editor. | Resolver R3 (sin socket, el engine no es root y no puede escribir los estáticos si pertenecen a otro usuario y Nginx los sirve en solo lectura), o servir el editor desde otra máquina. Vigilar la integridad de los estáticos (hash de la versión desplegada). |
+| R13 | **Editor y engine en el mismo servidor.** Con root en C (R3), se pueden modificar los ficheros del editor que descarga el profesorado. | Robo de tokens de edición mientras dure la manipulación y cambios en los materiales, que llegarían a los cursos en la siguiente publicación (R5). El token no permite publicar. Afecta a cada profesor que abra el editor. | Resolver R3 (sin socket, el engine no es root y no puede escribir los estáticos si pertenecen a otro usuario y Nginx los sirve en solo lectura), o servir el editor desde otra máquina. Vigilar la integridad de los estáticos (hash de la versión desplegada). |
 | R14 | **Canal Moodle → engine entre dos máquinas.** La firma HMAC autentica las peticiones e impide alterarlas, pero no cifra. | Sin TLS, el Markdown de los materiales, los nombres de usuario y los ficheros generados viajarían en claro por la red. | HTTPS obligatorio en F4 (Nginx con certificado, aunque sea de una CA interna, o un túnel WireGuard); cortafuegos con la IP de A; en Moodle, permitir en `curlsecurityblockedhosts` y `curlsecurityallowedport` solo ese host y ese puerto (por defecto se bloquean los rangos privados). |
 
 ---
@@ -707,7 +687,7 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | Límites y bloqueos | `plugin/classes/local/rate_limiter.php`, `plugin/db/caches.php` |
 | Cabeceras, preflight, errores y 429 | `plugin/lib.php` (`local_liamateriales_api_*`) |
 | Apertura del editor | `plugin/lib.php` (`local_liamateriales_open_in_editor`), `plugin/edit.php`, `plugin/preview.php` |
-| Scripts del editor | `plugin/content.php`, `plugin/save.php`, `plugin/token.php`, `plugin/publish_api.php` |
+| Scripts del editor | `plugin/content.php`, `plugin/save.php`, `plugin/token.php`, `plugin/asset.php` |
 | Publicación | `plugin/classes/local/publisher.php`, `plugin/publish.php` |
 | Eventos | `plugin/classes/event/` |
 | Limpieza | `plugin/classes/task/cleanup.php`, `plugin/db/tasks.php` |

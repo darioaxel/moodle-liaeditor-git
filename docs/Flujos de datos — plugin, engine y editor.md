@@ -18,7 +18,7 @@ flowchart LR
     end
 
     subgraph MOODLE["Moodle"]
-        PL["Plugin local_liamateriales<br/>content.php, save.php, token.php,<br/>publish_api.php"]
+        PL["Plugin local_liamateriales<br/>content.php, save.php, token.php,<br/>asset.php"]
         DB[("BD Moodle<br/>token, editsess, deploy")]
         MOD["Módulos del curso<br/>mod_h5pactivity / mod_resource"]
     end
@@ -98,7 +98,7 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A["Markdown recibido de content.php"] --> B["splitDocument:<br/>separa la cabecera y extrae el bloque liascript-lms"]
-    B --> C["LmsConfig<br/>save_endpoint, publish_endpoint, token_refresh_endpoint,<br/>file, branch, sha, committed_at, token, readonly, return_url"]
+    B --> C["LmsConfig<br/>save_endpoint, token_refresh_endpoint, asset_endpoint, publish_url,<br/>file, branch, sha, committed_at, token, readonly, return_url"]
     B --> D["Cabecera sin el bloque<br/>se guarda aparte, literal"]
     B --> E["Cuerpo"]
     E --> F["Crepe / Milkdown<br/>transformer LiaScript: bloques protegidos con su fuente literal"]
@@ -122,9 +122,9 @@ El editor muestra «rama · versión del dd/mm/aaaa, hh:mm» en lugar del SHA.
 
 La página de materiales emite para cada material un **token de solo
 lectura** (`readonly = 1`, sin curso) sobre `main`. `content.php` inyecta
-`readonly: true` y el editor oculta Guardar y Publicar. Aunque se
-manipulara el editor, `save.php` y `publish_api.php` rechazan ese token con
-403.
+`readonly: true` y el editor oculta Guardar y el enlace a Publicar. Aunque
+se manipulara el editor, `save.php` rechaza ese token con 403. Ningún token
+del editor sirve para publicar.
 
 ## 3. Guardar
 
@@ -216,38 +216,20 @@ sequenceDiagram
 
 ## 4. Publicar
 
-### 4.1 Publicación en un clic desde el editor
+### 4.1 Desde el editor: enlace a la página Publicar
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor P as Profesor
-    participant B as Editor
-    participant M as Plugin (publish_api.php)
-    participant E as Engine
-    participant D as Docker (liaex)
-    participant C as Curso de Moodle
+Publicar se hace **solo en la página Publicar del plugin**, con la sesión
+de Moodle. El editor no publica: si el usuario puede publicar en el curso
+(`:deploy`), `content.php` añade al bloque `liascript-lms` un
+`publish_url` (`publish.php?id=<curso>&file=<material>`, sin token) y el
+editor muestra un enlace «Publicar…» que la abre en otra pestaña. Con
+cambios sin guardar, avisa en lugar de abrirla: la página usa la última
+versión guardada. El editor solo acepta `publish_url` si es del mismo
+origen que Moodle.
 
-    P->>B: elige formato (H5P, ePub, PDF o SCORM) y Publicar
-    Note over B: si hay cambios sin guardar,<br/>pide guardar primero
-    B->>M: POST publish_api.php {file, sha, format, token}
-    Note over M: token de escritura con curso de origen<br/>actúa como el usuario del token<br/>comprueba :deploy y manageactivities
-    M->>E: POST /publish {file, sha, format}
-    E->>E: worktree temporal del SHA (checkout aislado)
-    E->>D: docker run liascript/exporter liaex -i fichero -f formato
-    Note over D: red none por defecto<br/>bridge si el material importa plantillas
-    D-->>E: artefacto (.h5p / .epub / .pdf)
-    E-->>M: 200 bytes del artefacto
-    Note over M: guarda el fichero en el área de borrador del usuario
-    alt ya hay un módulo de ese formato para el fichero y sigue existiendo
-        M->>C: update_moduleinfo (actualiza el módulo)
-    else primera vez, otro formato o módulo borrado
-        M->>C: add_moduleinfo (mod_h5pactivity, mod_resource o mod_scorm)
-    end
-    Note over M: inserta en deploy {curso, fichero, sha, formato, cmid}
-    M-->>B: 200 {cmid, url del módulo}
-    B-->>P: Publicado en el curso + enlace
-```
+La publicación en un clic con el token del editor (`publish_api.php`) se
+retiró en la versión 2.8.0 del plugin: duplicaba la página Publicar con
+menos opciones y era un script sin sesión que creaba actividades.
 
 ### 4.1b Tema visual de los contenidos
 
@@ -266,8 +248,8 @@ El material en Git no cambia.
 
 ### 4.2 Publicación desde la página Publicar del plugin
 
-Mismo camino que el editor (`publisher::publish_generated`), con sesión de
-Moodle en lugar de token. El profesor elige la versión (la última de su
+`publisher::publish_generated`, con sesión de Moodle. Una publicación a la
+vez por usuario y material (bloqueo). El profesor elige la versión (la última de su
 rama de edición, es decir, su HEAD, o la oficial de `main`), el formato
 (H5P, ePub, PDF o SCORM 1.2), el nombre y la sección; el SHA lo resuelve
 el servidor. «Descargar sin publicar» genera el mismo fichero y lo entrega
@@ -286,9 +268,15 @@ sequenceDiagram
     E-->>M: {sha, committed_at} de cada versión
     M-->>P: formulario: versión (mi rama / main), formato, nombre, sección
     P->>M: POST Generar y publicar + sesskey
-    M->>E: POST /publish {file, sha, format}
-    E-->>M: bytes del artefacto
-    M->>C: add_moduleinfo o update_moduleinfo
+    M->>E: POST /publish {file, sha, format} (firmado)
+    E->>E: worktree temporal del SHA, sin los otros .md de la carpeta
+    E->>E: docker run liaex o Pandoc (red none por defecto)
+    E-->>M: bytes del artefacto y avisos del lector
+    alt ya hay un módulo de ese formato para el fichero y sigue existiendo
+        M->>C: update_moduleinfo (actualiza el módulo)
+    else primera vez, otro formato o módulo borrado
+        M->>C: add_moduleinfo (mod_h5pactivity, mod_resource o mod_scorm)
+    end
     Note over M: inserta en deploy {curso, fichero, sha, tipo, cmid}
     M-->>P: redirige al módulo publicado
 ```
@@ -311,7 +299,7 @@ número de commits de diferencia.
 | Contenido del material | Git: `main`, `edicion/*`, `resolucion/*` | Engine (commit y push) |
 | Token de edición (hash) | `local_liamateriales_token` | Plugin (`edit.php`, `materials.php`, `save.php`, `token.php`) |
 | Sesión de edición y último SHA guardado | `local_liamateriales_editsess` | Plugin (`edit.php`, `save.php`) |
-| Publicaciones (curso ↔ fichero ↔ SHA ↔ cmid) | `local_liamateriales_deploy` | Plugin (`publish_api.php`, `publish.php`) |
+| Publicaciones (curso ↔ fichero ↔ SHA ↔ cmid) | `local_liamateriales_deploy` | Plugin (`publish.php`) |
 | Artefacto publicado | Ficheros del módulo en Moodle | Plugin (`add_moduleinfo` / `update_moduleinfo`) |
 | Borrador sin guardar | IndexedDB del navegador | Editor |
 | Configuración LMS de la sesión | Memoria del editor (bloque `liascript-lms`) | Plugin la inyecta en cada apertura; nunca se guarda en Git |

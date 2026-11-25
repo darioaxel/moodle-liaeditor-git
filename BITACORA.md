@@ -28,6 +28,28 @@
 
 ## Registro de sesiones
 
+### 2026-11-25 — Sesión 42: Publicar solo desde el plugin; pie de versión; PDF sin código
+
+- **Repos revisados**: `contenidos-test` con `main` por carpetas
+  (`6d833bd`); fusión de `feature/generacion-web` en `feature/imagenes`.
+- **PDF de contenido**: un material sin bloques de código fallaba
+  («Undefined control sequence», `\RecustomVerbatimEnvironment`): se carga
+  `fvextra` y `Shaded` solo se renueva si existe. Pandoc local 3.9 → 3.14
+  (la imagen `pandoc/extra:latest` no está fijada: pendiente).
+- **Plugin 2.7.1 (2026112502)**: pie con versión y fecha del último cambio
+  en Materiales Editables y Publicar (la fecha sale de `$plugin->version`;
+  avisa si falta el upgrade).
+- **Plugin 2.8.0 (2026112503)**: publicar solo en `publish.php` (sesión).
+  Retirados `publish_api.php` y el límite `ratelimit_publish` (el upgrade
+  lo borra). `content.php` envía `publish_url` (sin token) si el usuario
+  tiene `:deploy`. **Editor**: fuera el botón y el selector de formato;
+  enlace «Publicar…» en otra pestaña, que avisa si hay cambios sin
+  guardar; `publish_url` solo del mismo origen que Moodle.
+- **Pruebas**: engine 163 ✓; editor 153 ✓ y e2e 31/31; plugin: lint (PHP
+  8.3) y arnés del pie. Documento de seguridad (§4.1, §6.5, §7.3, T4, R13)
+  y flujos de datos actualizados. LIA-125.
+- **Pendiente**: LIA-124 (prueba en el Moodle de pruebas).
+
 ### 2026-11-25 — Sesión 41: Imágenes, fase 3, y contenidos-test por carpetas
 
 - **contenidos-test** (rama `feature/imagenes`): un material por carpeta

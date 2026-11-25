@@ -30,7 +30,6 @@ class rate_limiter {
         'content' => ['ratelimit_content', 30, 60],
         'save' => ['ratelimit_save', 20, 60],
         'token' => ['ratelimit_token', 6, 60],
-        'publish' => ['ratelimit_publish', 5, 600],
         'asset' => ['ratelimit_asset', 240, 60],
     ];
 

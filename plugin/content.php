@@ -92,10 +92,16 @@ $lmsconfig = local_liamateriales_lms_config([
     'readonly' => (bool) $readonly,
     'return_url' => $returnurl,
 ], $result->committed_at ?? null);
-// Publicación en un clic (D7 fase 2): solo si el token conoce el curso de
-// origen — el editor muestra el botón Publicar solo si hay publish_endpoint.
-if (!$readonly && (int) $tokendata->courseid > 0) {
-    $lmsconfig['publish_endpoint'] = (new \moodle_url('/local/liamateriales/publish_api.php'))->out(false);
+// Publicar se hace en la página Publicar del plugin (con sesión de Moodle).
+// El editor solo enlaza a ella, con el material elegido, si el token conoce
+// el curso y el usuario puede publicar en él.
+$courseid = (int) $tokendata->courseid;
+if (!$readonly && $courseid > 0
+        && has_capability('local/liamateriales:deploy', \context_course::instance($courseid), (int) $tokendata->userid)) {
+    $lmsconfig['publish_url'] = (new \moodle_url('/local/liamateriales/publish.php', [
+        'id' => $courseid,
+        'file' => $file,
+    ]))->out(false);
 }
 
 $markdown = local_liamateriales_inject_lms_block($result->content, $lmsconfig);

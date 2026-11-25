@@ -379,8 +379,8 @@ class publisher {
     }
 
     /**
-     * Genera el artefacto desde Git y lo publica en el curso (un clic): usado
-     * por el botón Publicar del editor y por la página Publicar del plugin.
+     * Genera el artefacto desde Git y lo publica en el curso (página Publicar
+     * del plugin; el botón del editor y publish_api.php se retiraron en 2.8.0).
      *
      * @return int cmid del módulo creado o actualizado
      */

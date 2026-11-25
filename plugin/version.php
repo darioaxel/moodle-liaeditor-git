@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112502;        // Pie con versión y fecha; Publicar sin actividades borradas.
+$plugin->version = 2026112503;        // Publicar desde el editor retirado (publish_api.php).
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.7.1';
+$plugin->release = '2.8.0';

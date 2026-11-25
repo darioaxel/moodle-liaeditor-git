@@ -308,6 +308,10 @@ editor.
   ahora (D10) (sesión 41).
 - [ ] **LIA-124** (S) Probar en el Moodle de pruebas (ver, subir, guardar,
   409, publicar en los seis formatos).
+- [x] **LIA-125** (S) Publicar solo desde el plugin: fuera el botón y el
+  selector de formato del editor; enlace «Publicar…» a `publish.php` con el
+  material (`publish_url`, solo con `:deploy`); `publish_api.php` y el
+  límite `ratelimit_publish` retirados (plugin 2.8.0, sesión 42).
 
 ---
 
