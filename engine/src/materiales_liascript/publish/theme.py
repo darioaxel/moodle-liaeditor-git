@@ -1,13 +1,13 @@
 """Tema visual de los contenidos exportados.
 
-Los contenidos publicados (SCORM, H5P, PDF, ePub) los renderiza LiaScript.
+Los contenidos publicados (H5P, PDF, ePub) los renderiza LiaScript.
 Para que se vean como el editor, el engine añade al exportar una hoja CSS
 generada desde los temas del editor (``fpvirtual-crepe-editor``,
 ``npm run theme:liascript``) y guardada en ``publish/themes/<tema>.css``.
 
-- SCORM, H5P y PDF: se añade ``link: <hoja>`` a la cabecera del material en la
+- H5P y PDF: se añade ``link: <hoja>`` a la cabecera del material en la
   copia temporal (nunca en Git) y se copia la hoja junto al material; liaex la
-  empaqueta (SCORM), la incrusta (H5P) o la aplica al renderizar (PDF).
+  incrusta (H5P) o la aplica al renderizar (PDF).
 - ePub: liaex ignora ``link:``, así que la hoja se añade a las hojas de
   estilo del ePub ya generado.
 """

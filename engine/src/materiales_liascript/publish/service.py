@@ -21,7 +21,6 @@ from materiales_liascript.publish.models import (
     ARTIFACT_EXTENSIONS,
     ARTIFACT_MEDIA_TYPES,
     PANDOC_FORMATS,
-    SCORM_VERSIONS,
     PublishError,
     PublishRequest,
     PublishResult,
@@ -52,12 +51,6 @@ class LiaexDockerExecutor(ArtifactExecutor):
     la imagen es ``liaex`` y acepta ``--input``/``--format``/``--output``.
     PDF necesita Chromium → se ejecuta con ``--shm-size=1g`` (spec §11).
 
-    **SCORM**: el formato ``scorm`` de la API se genera como SCORM 1.2 (la
-    versión que Moodle soporta por completo y la de los presets de liaex para
-    Moodle 3/4/5) con ``--scorm-embed`` (restricciones de carga dinámica de
-    Moodle). Configurable a ``2004`` con ``MATERIALES_LIASCRIPT_SCORM_VERSION``.
-    Sale como ``.zip``.
-
     **Tema**: con ``theme_css`` (``MATERIALES_LIASCRIPT_THEME``, ver
     ``publish/theme.py``) los contenidos salen con el aspecto del editor: se
     añade ``link:`` a la cabecera en la copia temporal y la hoja junto al
@@ -85,15 +78,10 @@ class LiaexDockerExecutor(ArtifactExecutor):
         workdir: str | None = None,
         host_workdir: str | None = None,
         network: str = "none",
-        scorm_version: str = "1.2",
         theme_css: str | None = None,
     ) -> None:
-        if scorm_version not in SCORM_VERSIONS:
-            msg = f"versión de SCORM no soportada: {scorm_version!r} (usa 2004 o 1.2)"
-            raise ValueError(msg)
         self._image = image
         self._network = network
-        self._scorm_version = scorm_version
         self._theme_css = theme_css
         self._timeout = timeout
         self._docker = docker_binary
@@ -146,19 +134,13 @@ class LiaexDockerExecutor(ArtifactExecutor):
         ]
         if artifact_format == "pdf":
             args += ["--shm-size=1g"]
-        liaex_format = artifact_format
-        extra: list[str] = []
-        if artifact_format == "scorm":
-            liaex_format = f"scorm{self._scorm_version}"
-            extra = ["--scorm-embed"]
         args += [
             self._image,
             "liaex",
             "--input",
             f"/work/{file}",
             "--format",
-            liaex_format,
-            *extra,
+            artifact_format,
             "--output",
             f"/work/{output_base}",
         ]

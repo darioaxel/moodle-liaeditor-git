@@ -6,9 +6,7 @@
  * generado del material (H5P, ePub, PDF) y registra el despliegue
  * curso↔SHA↔cmid en ``local_liamateriales_deploy`` (trazabilidad D6).
  *
- * Mapeo tipo → módulo: ``scorm`` → mod_scorm (SCORM 1.2 de liaex, mostrado
- * como contenido: sin página de intentos, índice ni navegación) ·
- * ``h5p`` → mod_h5pactivity · ``epub``/``pdf``/``pdfcontenido`` →
+ * Mapeo tipo → módulo: ``h5p`` → mod_h5pactivity · ``epub``/``pdf``/``pdfcontenido`` →
  * mod_resource (descarga accesible) · ``web`` → mod_resource con todos los
  * ficheros de la web estática (Pandoc + lector LiaScript) e ``index.html``
  * como fichero principal, abierta en ventana emergente como los sitios de
@@ -31,17 +29,15 @@ class publisher {
         'h5p' => ['h5pactivity', 'packagefile'],
         'epub' => ['resource', 'files'],
         'pdf' => ['resource', 'files'],
-        'scorm' => ['scorm', 'packagefile'],
         'web' => ['resource', 'files'],
         'pdfcontenido' => ['resource', 'files'],
     ];
 
-    /** Extensión del fichero de cada formato (SCORM es un .zip). */
+    /** Extensión del fichero de cada formato (la web es un .zip). */
     private const EXTENSIONS = [
         'h5p' => 'h5p',
         'epub' => 'epub',
         'pdf' => 'pdf',
-        'scorm' => 'zip',
         'web' => 'zip',
         'pdfcontenido' => 'pdf',
     ];
@@ -55,18 +51,7 @@ class publisher {
     /** Avisos del lector LiaScript de la última generación (cabecera X-Liamat-Avisos). */
     private static array $lastavisos = [];
 
-    /**
-     * Ajustes de mod_scorm que su formulario toma de la configuración del
-     * sitio; scorm_add_instance los lee, así que se rellenan igual.
-     */
-    private const SCORM_DEFAULTS = [
-        'maxgrade', 'grademethod', 'whatgrade', 'maxattempt', 'forcecompleted', 'forcenewattempt',
-        'lastattemptlock', 'displayattemptstatus', 'displaycoursestructure', 'popup', 'skipview',
-        'hidebrowse', 'hidetoc', 'nav', 'navpositionleft', 'navpositiontop', 'collapsetocwinsize',
-        'displayactivityname', 'auto', 'autocommit', 'masteryoverride',
-    ];
-
-    /** Formatos publicables (h5p, epub, pdf, scorm, web, pdfcontenido). */
+    /** Formatos publicables (h5p, epub, pdf, web, pdfcontenido). */
     public static function types(): array {
         return array_keys(self::TYPES);
     }
@@ -83,7 +68,7 @@ class publisher {
      * @param int $courseid curso destino
      * @param int $section sección del curso (0 = general)
      * @param string $sourcefile ruta del .md en el repo
-     * @param string $artifacttype h5p | epub | pdf | scorm
+     * @param string $artifacttype h5p | epub | pdf | web | pdfcontenido
      * @param string $sha SHA del material publicado (trazabilidad)
      * @param int $draftitemid área de borrador con el paquete subido
      * @param string $name nombre visible del módulo
@@ -123,15 +108,12 @@ class publisher {
             'introformat' => FORMAT_HTML,
             $filefield => $draftitemid,
         ];
-        if ($modulename === 'scorm') {
-            self::apply_scorm_defaults($moduleinfo);
-        }
         if ($artifacttype === 'web') {
             foreach (self::web_settings(get_config('local_liamateriales')) as $key => $value) {
                 $moduleinfo->$key = $value;
             }
         } else if ($modulename === 'resource') {
-            // PDF, PDF de contenido y ePub: la visualización por defecto del
+            // PDF (contenido web), PDF (LaTeX) y ePub: la visualización por defecto del
             // sitio para Recurso, como en el formulario. Sin `display`,
             // resource_add_instance() avisaba en mitad de la respuesta JSON
             // («No se pudo completar: HTTP 200» al publicar por primera vez).
@@ -183,59 +165,7 @@ class publisher {
     }
 
     /**
-     * Ajustes de visualización del SCORM: el material se ve como un
-     * contenido, no como un examen. Valores de mod_scorm (lib.php/locallib.php):
-     * SCORM_SKIPVIEW_ALWAYS = 2, SCORM_TOC_DISABLED = 3, SCORM_NAV_DISABLED = 0,
-     * SCORM_DISPLAY_ATTEMPTSTATUS_NO = 0, SCORM_FORCEATTEMPT_NO = 0.
-     */
-    private const SCORM_DISPLAY = [
-        'skipview' => 2,               // Entra directo al contenido, sin página de intentos.
-        'displayattemptstatus' => 0,   // No muestra el estado de los intentos.
-        'hidetoc' => 3,                // Sin índice de SCORM: todo el ancho para el contenido.
-        'nav' => 0,                    // Sin botones de navegación de SCORM (LiaScript tiene los suyos).
-        'displaycoursestructure' => 0, // Sin estructura del curso en la página de entrada.
-        'hidebrowse' => 1,             // Sin modo «previsualizar».
-        'displayactivityname' => 0,    // Sin el título encima del reproductor.
-        'popup' => 0,                  // Ventana actual: el alto se ajusta al de la ventana.
-        'width' => 100,                // 100 % (mod_scorm trata ≤ 100 como porcentaje).
-        'height' => 100,
-        'maxattempt' => 0,             // Intentos ilimitados.
-        'forcenewattempt' => 0,
-        'lastattemptlock' => 0,
-    ];
-
-    /**
-     * Ajustes del módulo SCORM: los valores por defecto del sitio (como el
-     * formulario de mod_scorm) y, encima, la visualización de contenido.
-     *
-     * @param \stdClass $siteconfig get_config('scorm')
-     * @return array<string, mixed>
-     */
-    public static function scorm_settings(\stdClass $siteconfig): array {
-        $settings = [
-            'scormtype' => 'local',    // Paquete subido (SCORM_TYPE_LOCAL).
-            'cmidnumber' => '',
-            'timeopen' => 0,
-            'timeclose' => 0,
-            'updatefreq' => 0,
-        ];
-        foreach (self::SCORM_DEFAULTS as $key) {
-            if (isset($siteconfig->$key)) {
-                $settings[$key] = $siteconfig->$key;
-            }
-        }
-        return array_merge($settings, self::SCORM_DISPLAY);
-    }
-
-    /** Aplica scorm_settings() al moduleinfo. */
-    private static function apply_scorm_defaults(\stdClass $moduleinfo): void {
-        foreach (self::scorm_settings(get_config('scorm')) as $key => $value) {
-            $moduleinfo->$key = $value;
-        }
-    }
-
-    /**
-     * Ajustes de mod_resource para PDF, PDF de contenido y ePub: los valores
+     * Ajustes de mod_resource para PDF (contenido web), PDF (LaTeX) y ePub: los valores
      * por defecto del sitio para Recurso (como el formulario), sin descripción.
      *
      * @param \stdClass $config get_config('resource')
@@ -289,7 +219,7 @@ class publisher {
      *
      * @param string $sourcefile ruta del .md en el repo
      * @param string $sha commit exacto a exportar
-     * @param string $artifacttype h5p | epub | pdf | scorm | web | pdfcontenido
+     * @param string $artifacttype h5p | epub | pdf | web | pdfcontenido
      * @return string bytes del artefacto (los avisos del lector, en last_avisos())
      * @throws \moodle_exception con el motivo si el engine no lo genera
      */
@@ -397,13 +327,19 @@ class publisher {
         $cms = get_fast_modinfo($courseid)->get_cms();
         return $cmid && isset($cms[$cmid])
             ? $cms[$cmid]->name
-            : basename($sourcefile, '.md') . ' (' . self::label($artifacttype) . ')';
+            : basename($sourcefile, '.md') . ' · ' . self::label($artifacttype);
     }
 
     /** Etiqueta corta de un formato (nombres de módulo y progreso). */
     public static function label(string $artifacttype): string {
-        return ['web' => 'Web', 'pdfcontenido' => 'PDF de contenido', 'epub' => 'ePub'][$artifacttype]
-            ?? strtoupper($artifacttype);
+        // PDF: liaex imprime el contenido tal como se ve en la web; el de
+        // Pandoc se maqueta con LaTeX (XeLaTeX).
+        return [
+            'web' => 'Web',
+            'pdf' => 'PDF (contenido web)',
+            'pdfcontenido' => 'PDF (LaTeX)',
+            'epub' => 'ePub',
+        ][$artifacttype] ?? strtoupper($artifacttype);
     }
 
     /**

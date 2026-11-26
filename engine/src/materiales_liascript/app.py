@@ -71,7 +71,6 @@ def create_app(  # noqa: PLR0913 - dependencias inyectables, todas con defecto
             workdir=os.environ.get("MATERIALES_LIASCRIPT_WORKDIR"),
             host_workdir=os.environ.get("MATERIALES_LIASCRIPT_HOST_WORKDIR"),
             network=os.environ.get("MATERIALES_LIASCRIPT_LIAEX_NETWORK", "none"),
-            scorm_version=os.environ.get("MATERIALES_LIASCRIPT_SCORM_VERSION", "1.2"),
             theme_css=load_theme_css(os.environ.get("MATERIALES_LIASCRIPT_THEME", "verde")),
         )
         executor = docker_executor if docker_executor.available() else None

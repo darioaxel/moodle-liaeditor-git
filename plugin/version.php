@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112601;        // Una actividad borrada deja de figurar como publicada.
+$plugin->version = 2026112602;        // Sin SCORM; PDF (contenido web) y PDF (LaTeX).
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.8.0';
+$plugin->release = '2.9.0';

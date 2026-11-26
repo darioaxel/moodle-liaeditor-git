@@ -51,6 +51,25 @@
   fichero; ahora una por fichero y formato. Tests nuevos en
   `publisher_test.php` (sintaxis comprobada con `php -l`; falta lanzarlos
   en un Moodle). `version.php` → 2026112601.
+- **SCORM retirado** (ya no es necesario; revierte la R2 de
+  `docs/roadmap-editor-crepe.md`, que lo había recuperado el 2026-11-23):
+  fuera del engine (formato de la API, que ahora responde 422 a `scorm`;
+  `MATERIALES_LIASCRIPT_SCORM_VERSION` y `--scorm-embed`) y del plugin
+  (tipo, ajustes de mod_scorm, cadena, estimación de progreso). Las filas
+  `scorm` antiguas de `local_liamateriales_deploy` siguen en la pestaña de
+  publicados mientras exista su actividad.
+- **Nombres de los PDF**: `pdf` (liaex, el contenido con el aspecto de la
+  web) pasa a llamarse «PDF (contenido web)» y `pdfcontenido` (Pandoc +
+  XeLaTeX), «PDF (LaTeX)». Solo cambian las etiquetas; los identificadores
+  internos se mantienen (contrato con el engine y valores en BD). El nombre
+  por defecto de la actividad pasa a ser `<material> · <formato>` (antes
+  `<material> (<formato>)`, que daba paréntesis anidados); la página
+  Publicar muestra el formato de la última publicación con esa etiqueta.
+- Engine: `make check` en verde (175 tests). Plugin: e2e de JS 14/14
+  (descarga con la web en lugar de SCORM), `php -l` correcto; PHPUnit
+  pendiente de lanzar en un Moodle. `version.php` → 2026112602, release
+  2.9.0.
+
 
 
 ### 2026-11-25 — Sesión 43: Borrado de imágenes, ancho, dos columnas e iconos de tema

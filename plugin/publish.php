@@ -14,8 +14,8 @@
  * fichero generado por cuenta propia (p. ej. con el LiaScript Exporter en
  * el navegador), con el mismo registro.
  *
- * Formatos: H5P, ePub, PDF, SCORM 1.2 (mod_scorm), web estática y PDF de
- * contenido (Pandoc + lector LiaScript, docs/generacion_web). La versión se elige
+ * Formatos: H5P, ePub y PDF (contenido web) con liaex; web estática y PDF
+ * (LaTeX) con Pandoc + lector LiaScript (docs/generacion_web). La versión se elige
  * entre la última de la rama de edición del usuario y la oficial (`main`);
  * el SHA lo resuelve el servidor, no llega del formulario.
  *
@@ -207,7 +207,7 @@ $latest = publisher::latest_deploy($courseid, $file);
 if ($latest) {
     echo html_writer::tag('p', html_writer::tag('strong', get_string('material_published_sha', 'local_liamateriales') . ': ')
         . html_writer::tag('code', s(substr($latest->git_commit, 0, 8)))
-        . ' (' . s(strtoupper($latest->artifact_type)) . ', ' . userdate($latest->deployed_at) . ')');
+        . ' (' . s(publisher::label($latest->artifact_type)) . ', ' . userdate($latest->deployed_at) . ')');
 }
 echo $OUTPUT->box_end();
 
@@ -219,11 +219,11 @@ if (!$versions) {
 }
 
 // Progreso en el navegador (js/publish_progress.js): duración habitual de
-// cada formato en el servidor (medida: H5P/SCORM ~3 s, ePub/PDF ~18 s) y
+// cada formato en el servidor (medida: H5P ~3 s, ePub/PDF ~18 s) y
 // textos traducidos. Un porcentaje real no existe: liaex no informa de su
 // avance, así que se muestra tiempo transcurrido frente al habitual.
 $progress = [
-    'estimates' => ['h5p' => 6, 'scorm' => 6, 'epub' => 25, 'pdf' => 30, 'web' => 4, 'pdfcontenido' => 20, 'upload' => 6],
+    'estimates' => ['h5p' => 6, 'epub' => 25, 'pdf' => 30, 'web' => 4, 'pdfcontenido' => 20, 'upload' => 6],
     'strings' => [],
 ];
 foreach (['progress_generate', 'progress_download', 'progress_upload', 'progress_elapsed',

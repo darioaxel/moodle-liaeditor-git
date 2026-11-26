@@ -6,13 +6,12 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-ArtifactFormat = Literal["h5p", "epub", "pdf", "scorm", "web", "pdfcontenido"]
+ArtifactFormat = Literal["h5p", "epub", "pdf", "web", "pdfcontenido"]
 
 ARTIFACT_MEDIA_TYPES: dict[str, str] = {
     "h5p": "application/zip",
     "epub": "application/epub+zip",
     "pdf": "application/pdf",
-    "scorm": "application/zip",
     "web": "application/zip",
     "pdfcontenido": "application/pdf",
 }
@@ -22,7 +21,6 @@ ARTIFACT_EXTENSIONS: dict[str, str] = {
     "h5p": "h5p",
     "epub": "epub",
     "pdf": "pdf",
-    "scorm": "zip",
     "web": "zip",
     "pdfcontenido": "pdf",
 }
@@ -30,9 +28,6 @@ ARTIFACT_EXTENSIONS: dict[str, str] = {
 #: Formatos generados con Pandoc + lector LiaScript (docs/generacion_web);
 #: el resto, con liaex.
 PANDOC_FORMATS = frozenset({"web", "pdfcontenido"})
-
-#: Versiones de SCORM que admite liaex (``--format scorm1.2`` / ``scorm2004``).
-SCORM_VERSIONS = ("1.2", "2004")
 
 
 class PublishError(RuntimeError):

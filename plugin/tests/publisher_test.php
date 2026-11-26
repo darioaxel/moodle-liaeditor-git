@@ -1,5 +1,5 @@
 <?php
-// Tests de los formatos de publicación (incluido SCORM).
+// Tests de los formatos de publicación y de los despliegues vivos.
 
 namespace local_liamateriales;
 
@@ -19,12 +19,17 @@ use local_liamateriales\local\publisher;
  */
 final class publisher_test extends \advanced_testcase {
 
-    public function test_formatos_incluyen_scorm(): void {
-        $this->assertSame(['h5p', 'epub', 'pdf', 'scorm', 'web', 'pdfcontenido'], publisher::types());
+    public function test_formatos_sin_scorm(): void {
+        $this->assertSame(['h5p', 'epub', 'pdf', 'web', 'pdfcontenido'], publisher::types());
+    }
+
+    public function test_nombres_de_los_pdf(): void {
+        $this->assertSame('PDF (contenido web)', publisher::label('pdf'));
+        $this->assertSame('PDF (LaTeX)', publisher::label('pdfcontenido'));
+        $this->assertSame('H5P', publisher::label('h5p'));
     }
 
     public function test_extensiones(): void {
-        $this->assertSame('zip', publisher::extension('scorm'));
         $this->assertSame('h5p', publisher::extension('h5p'));
         $this->assertSame('pdf', publisher::extension('pdf'));
         $this->assertSame('epub', publisher::extension('epub'));
@@ -71,23 +76,6 @@ final class publisher_test extends \advanced_testcase {
             $byname[$file->get_filepath() . $file->get_filename()] = $file->get_sortorder();
         }
         $this->assertSame(['/1.1-tema.html' => 0, '/img/a.png' => 0, '/index.html' => 1], $byname);
-    }
-
-    public function test_scorm_se_muestra_como_contenido(): void {
-        // La configuración del sitio no puede volver a mostrar intentos ni índice.
-        $site = (object) ['skipview' => 0, 'hidetoc' => 0, 'nav' => 1, 'displayattemptstatus' => 1,
-            'maxgrade' => 100, 'grademethod' => 1];
-        $settings = publisher::scorm_settings($site);
-        $this->assertSame('local', $settings['scormtype']);
-        $this->assertSame(2, $settings['skipview']);
-        $this->assertSame(3, $settings['hidetoc']);
-        $this->assertSame(0, $settings['nav']);
-        $this->assertSame(0, $settings['displayattemptstatus']);
-        $this->assertSame(100, $settings['width']);
-        $this->assertSame(100, $settings['height']);
-        // La calificación sigue los valores del sitio.
-        $this->assertSame(100, $settings['maxgrade']);
-        $this->assertSame(1, $settings['grademethod']);
     }
 
     /**

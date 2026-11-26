@@ -238,9 +238,9 @@ mismo aspecto, el engine aplica al exportar la hoja del tema del editor
 (`publish/themes/verde.css`, generada desde el editor con
 `npm run theme:liascript`; `MATERIALES_LIASCRIPT_THEME`, defecto `verde`):
 
-- SCORM, H5P y PDF: añade `link:` a la cabecera **en la copia temporal** y
-  copia la hoja junto al material. liaex la empaqueta (SCORM), la incrusta
-  en la cabecera (H5P) o la aplica al renderizar (PDF).
+- H5P y PDF (contenido web): añade `link:` a la cabecera **en la copia
+  temporal** y copia la hoja junto al material. liaex la incrusta en la
+  cabecera (H5P) o la aplica al renderizar (PDF).
 - ePub: liaex ignora `link:`; el engine añade la hoja a las hojas de estilo
   del ePub ya generado.
 
@@ -251,7 +251,7 @@ El material en Git no cambia.
 `publisher::publish_generated`, con sesión de Moodle. Una publicación a la
 vez por usuario y material (bloqueo). El profesor elige la versión (la última de su
 rama de edición, es decir, su HEAD, o la oficial de `main`), el formato
-(H5P, ePub, PDF o SCORM 1.2), el nombre y la sección; el SHA lo resuelve
+(H5P, ePub, PDF (contenido web), web estática o PDF (LaTeX)), el nombre y la sección; el SHA lo resuelve
 el servidor. «Descargar sin publicar» genera el mismo fichero y lo entrega
 al navegador sin crear módulo ni registro.
 
@@ -275,7 +275,7 @@ sequenceDiagram
     alt ya hay un módulo de ese formato para el fichero y sigue existiendo
         M->>C: update_moduleinfo (actualiza el módulo)
     else primera vez, otro formato o módulo borrado
-        M->>C: add_moduleinfo (mod_h5pactivity, mod_resource o mod_scorm)
+        M->>C: add_moduleinfo (mod_h5pactivity o mod_resource)
     end
     Note over M: inserta en deploy {curso, fichero, sha, tipo, cmid}
     M-->>P: redirige al módulo publicado

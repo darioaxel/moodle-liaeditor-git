@@ -27,7 +27,7 @@ src/materiales_liascript/
 | `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha, committed_at}` o `409` con rama `resolucion/...` (D5). Acepta `images: [{path, content_base64}]` (PNG, JPEG, GIF; máx. 20, 2 MB cada una y 10 MB en total): Markdown e imágenes en un único commit |
 | `GET` | `/edit/asset?file=&branch=&path=` | Imagen de la carpeta del material (ruta relativa a su `.md`; PNG, JPEG, GIF, WebP) para el editor; cualquier fallo, 404 |
 | `GET` | `/edit/state?file=&sha=&branch=` | `up_to_date` / `update_available` por comparación de SHAs |
-| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `scorm`, `web`, `pdfcontenido`) de un fichero en un SHA. El PDF de contenido convierte a PNG (Pillow) las imágenes WebP y GIF, que XeLaTeX no admite. Los formatos de liaex se generan desde una copia sin los otros `.md` de la carpeta del material (el H5P los empaquetaba) |
+| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `web`, `pdfcontenido`) de un fichero en un SHA. El PDF de contenido convierte a PNG (Pillow) las imágenes WebP y GIF, que XeLaTeX no admite. Los formatos de liaex se generan desde una copia sin los otros `.md` de la carpeta del material (el H5P los empaquetaba) |
 | `GET` | `/health` | Healthcheck |
 
 Sin repo Git, `/edit/*` y `/publish` responden 503; sin Docker en el host,
@@ -53,7 +53,6 @@ CONTENT_REPO=/ruta/al/clon make serve
 | `MATERIALES_LIASCRIPT_SHARED_SECRET` | sí | Secreto compartido con el plugin (ajuste «Secreto compartido con el engine» o `$CFG->local_liamateriales_service_secret`). Todas las rutas salvo `GET /health` exigen la firma HMAC-SHA256 del plugin (`X-Liamat-Timestamp`, `X-Liamat-Signature`; ±60 s, sin réplicas); si no, 401. Sin él, el servicio no arranca salvo con `MATERIALES_LIASCRIPT_ALLOW_UNSIGNED=1` (solo desarrollo) |
 | `MATERIALES_LIASCRIPT_WORKDIR` / `MATERIALES_LIASCRIPT_HOST_WORKDIR` | no | Traducción de rutas docker-in-docker para liaex (mismo bind mount visto desde el contenedor y desde el host) |
 | `MATERIALES_LIASCRIPT_LIAEX_NETWORK` | no | Red del contenedor de liaex (defecto `none`). `bridge` si los materiales usan `import:` de plantillas, que liaex descarga al exportar |
-| `MATERIALES_LIASCRIPT_SCORM_VERSION` | no | Versión de SCORM del formato `scorm`: `1.2` (defecto; la que Moodle soporta por completo y la de los presets de liaex para Moodle) o `2004` |
 | `MATERIALES_LIASCRIPT_THEME` | no | Tema de los contenidos exportados: `verde` (defecto, el del editor) o `none` (aspecto original de LiaScript). Las hojas están en `publish/themes/` y se generan desde el editor con `npm run theme:liascript` |
 | `MATERIALES_LIASCRIPT_PANDOC_IMAGE` | no | Imagen de Pandoc de los formatos `web` y `pdfcontenido` (defecto `pandoc/extra:latest`; requiere Pandoc ≥ 3, XeLaTeX y `pandoc-latex-environment`) |
 | `MATERIALES_LIASCRIPT_PDF_THEME_DIR` | no | Plantilla del PDF de contenido (`fpvirtual.latex`, `content-boxes.*`). Defecto: la copia incluida en `publish/pandoc/fpvirtual-theme/` |
