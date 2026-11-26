@@ -204,14 +204,9 @@ echo html_writer::start_tag('div', [
     'aria-labelledby' => $tabidpublished . '-tab',
 ]);
 
-$deploys = $DB->get_records('local_liamateriales_deploy', ['courseid' => $courseid], 'deployed_at DESC, id DESC');
-// La fila más reciente por fichero (historial completo en el log de Moodle).
-$latest = [];
-foreach ($deploys as $deploy) {
-    if (!isset($latest[$deploy->source_file])) {
-        $latest[$deploy->source_file] = $deploy;
-    }
-}
+// Lo publicado que sigue en el curso: el último despliegue por fichero y
+// formato cuya actividad no se ha borrado (historial completo en el log).
+$latest = \local_liamateriales\local\publisher::live_deploys($courseid);
 if ($latest) {
     $table = new html_table();
     $table->head = [
@@ -221,7 +216,12 @@ if ($latest) {
         get_string('material_state', 'local_liamateriales'),
         get_string('actions', 'local_liamateriales'),
     ];
+    $cms = get_fast_modinfo($courseid)->get_cms();
     foreach ($latest as $deploy) {
+        $cm = $cms[(int) $deploy->cmid] ?? null;
+        if (!$cm) {
+            continue;
+        }
         try {
             $state = local_liamateriales_service_get('/edit/state', [
                 'file' => $deploy->source_file,
@@ -235,17 +235,10 @@ if ($latest) {
             local_liamateriales_state_label($statekey),
             'badge bg-' . local_liamateriales_state_class($statekey)
         );
-        $cmlink = '—';
-        $cm = get_coursemodule_from_id('', $deploy->cmid, 0, false, IGNORE_MISSING);
-        if ($cm && empty($cm->deletioninprogress)) {
-            $modinfo = get_fast_modinfo($courseid);
-            $cms = $modinfo->get_cms();
-            $cmname = isset($cms[$deploy->cmid]) ? $cms[$deploy->cmid]->name : $deploy->source_file;
-            $cmlink = html_writer::link(
-                new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cm->id]),
-                format_string($cmname)
-            );
-        }
+        $cmlink = html_writer::link(
+            new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cm->id]),
+            format_string($cm->name)
+        );
         $actions = '';
         if ($candeploy && $statekey === 'update_available') {
             $actions = html_writer::link(

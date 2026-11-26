@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112600;        // «Volver a Moodle» del editor regresa al catálogo del curso.
+$plugin->version = 2026112601;        // Una actividad borrada deja de figurar como publicada.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->release = '2.8.0';

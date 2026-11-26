@@ -5,6 +5,9 @@ namespace local_liamateriales;
 
 defined('MOODLE_INTERNAL') || die();
 
+global $CFG;
+require_once($CFG->dirroot . '/course/lib.php');
+
 use local_liamateriales\local\publisher;
 
 /**
@@ -85,5 +88,84 @@ final class publisher_test extends \advanced_testcase {
         // La calificación sigue los valores del sitio.
         $this->assertSame(100, $settings['maxgrade']);
         $this->assertSame(1, $settings['grademethod']);
+    }
+
+    /**
+     * Registra un despliegue como lo hace publish().
+     */
+    private function desplegar(int $courseid, string $file, string $type, int $cmid, int $when): void {
+        global $DB;
+        $DB->insert_record('local_liamateriales_deploy', (object) [
+            'courseid' => $courseid, 'source_file' => $file, 'git_commit' => str_repeat('a', 40),
+            'artifact_type' => $type, 'cmid' => $cmid, 'deployed_at' => $when, 'deployed_by' => 'profe',
+            'status' => 'ok',
+        ]);
+    }
+
+    public function test_actividad_borrada_deja_de_estar_publicada(): void {
+        global $DB;
+        $this->resetAfterTest();
+        // Sin papelera: el borrado no hace copia de seguridad del módulo.
+        set_config('coursebinenable', 0, 'tool_recyclebin');
+        $course = $this->getDataGenerator()->create_course();
+        $pdf = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $this->desplegar((int) $course->id, 'tema1.md', 'pdf', (int) $pdf->cmid, 100);
+
+        $this->assertCount(1, publisher::live_deploys((int) $course->id));
+        $this->assertSame((int) $pdf->cmid, publisher::reusable_cmid((int) $course->id, 'tema1.md', 'pdf'));
+        $this->assertNotNull(publisher::latest_deploy((int) $course->id, 'tema1.md'));
+
+        course_delete_module((int) $pdf->cmid);
+
+        $this->assertSame([], publisher::live_deploys((int) $course->id));
+        $this->assertSame(0, publisher::reusable_cmid((int) $course->id, 'tema1.md', 'pdf'));
+        $this->assertNull(publisher::latest_deploy((int) $course->id, 'tema1.md'));
+        // El historial (trazabilidad D6) se conserva.
+        $this->assertSame(1, $DB->count_records('local_liamateriales_deploy'));
+    }
+
+    public function test_actividad_en_borrado_no_cuenta_como_publicada(): void {
+        global $DB;
+        $this->resetAfterTest();
+        // Sin papelera: el borrado no hace copia de seguridad del módulo.
+        set_config('coursebinenable', 0, 'tool_recyclebin');
+        $course = $this->getDataGenerator()->create_course();
+        $pdf = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $this->desplegar((int) $course->id, 'tema1.md', 'pdf', (int) $pdf->cmid, 100);
+
+        $DB->set_field('course_modules', 'deletioninprogress', 1, ['id' => $pdf->cmid]);
+
+        $this->assertSame([], publisher::live_deploys((int) $course->id));
+    }
+
+    public function test_un_despliegue_vivo_por_fichero_y_formato(): void {
+        $this->resetAfterTest();
+        // Sin papelera: el borrado no hace copia de seguridad del módulo.
+        set_config('coursebinenable', 0, 'tool_recyclebin');
+        $course = $this->getDataGenerator()->create_course();
+        $pdf = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $epub = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $this->desplegar((int) $course->id, 'tema1.md', 'pdf', (int) $pdf->cmid, 100);
+        $this->desplegar((int) $course->id, 'tema1.md', 'pdf', (int) $pdf->cmid, 200);
+        $this->desplegar((int) $course->id, 'tema1.md', 'epub', (int) $epub->cmid, 300);
+
+        $live = publisher::live_deploys((int) $course->id);
+        $this->assertSame(['epub', 'pdf'], array_map(static fn($row) => $row->artifact_type, $live));
+        $this->assertSame(200, (int) $live[1]->deployed_at);
+
+        // Borrar el ePub deja publicado el PDF.
+        course_delete_module((int) $epub->cmid);
+        $this->assertSame('pdf', publisher::latest_deploy((int) $course->id, 'tema1.md')->artifact_type);
+    }
+
+    public function test_modulo_de_otro_tipo_no_cuenta(): void {
+        $this->resetAfterTest();
+        // Sin papelera: el borrado no hace copia de seguridad del módulo.
+        set_config('coursebinenable', 0, 'tool_recyclebin');
+        $course = $this->getDataGenerator()->create_course();
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $this->desplegar((int) $course->id, 'tema1.md', 'pdf', (int) $page->cmid, 100);
+
+        $this->assertSame([], publisher::live_deploys((int) $course->id));
     }
 }

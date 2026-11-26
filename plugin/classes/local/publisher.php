@@ -466,49 +466,76 @@ class publisher {
     }
 
     /**
-     * Módulo que se puede actualizar al volver a publicar un fichero en un
-     * formato: el del último despliegue de ese mismo formato, si el módulo
-     * sigue existiendo en el curso y es del tipo esperado. 0 = crear uno nuevo
-     * (primera publicación, otro formato o módulo borrado por el profesor).
+     * Despliegues vivos de un curso: el más reciente por fichero y formato
+     * cuyo módulo sigue en el curso y es del tipo esperado.
+     *
+     * La tabla de despliegues es historial (trazabilidad D6) y no se borra
+     * cuando el profesor elimina la actividad: aquí se descartan las filas
+     * de módulos borrados o en borrado (``deletioninprogress``, la actividad
+     * ya no se ve en el curso aunque el cron aún no la haya eliminado).
+     *
+     * @param int $courseid curso
+     * @param string $sourcefile solo este fichero ('' = todos)
+     * @return \stdClass[] filas de ``local_liamateriales_deploy``, de la más reciente a la más antigua
      */
-    public static function reusable_cmid(int $courseid, string $sourcefile, string $artifacttype): int {
+    public static function live_deploys(int $courseid, string $sourcefile = ''): array {
         global $DB;
-        if (!isset(self::TYPES[$artifacttype])) {
-            return 0;
+        $conditions = ['courseid' => $courseid];
+        if ($sourcefile !== '') {
+            $conditions['source_file'] = $sourcefile;
         }
-        $rows = $DB->get_records(
-            'local_liamateriales_deploy',
-            ['courseid' => $courseid, 'source_file' => $sourcefile, 'artifact_type' => $artifacttype],
-            'deployed_at DESC, id DESC',
-            'id, cmid',
-            0,
-            1
+        $rows = $DB->get_records('local_liamateriales_deploy', $conditions, 'deployed_at DESC, id DESC');
+        if (!$rows) {
+            return [];
+        }
+        $cmids = array_values(array_unique(array_map(static fn($row) => (int) $row->cmid, $rows)));
+        [$insql, $params] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED);
+        $params['courseid'] = $courseid;
+        // Módulos vivos del curso: cmid => nombre del tipo de módulo.
+        $alive = $DB->get_records_sql_menu(
+            "SELECT cm.id, m.name
+               FROM {course_modules} cm
+               JOIN {modules} m ON m.id = cm.module
+              WHERE cm.id $insql AND cm.course = :courseid AND cm.deletioninprogress = 0",
+            $params
         );
-        $row = $rows ? reset($rows) : null;
-        if (!$row) {
-            return 0;
+        $live = [];
+        foreach ($rows as $row) {
+            $key = $row->source_file . "\0" . $row->artifact_type;
+            $modname = $alive[(int) $row->cmid] ?? null;
+            $expected = self::TYPES[$row->artifact_type][0] ?? $modname;
+            if (isset($live[$key]) || $modname === null || $modname !== $expected) {
+                continue;
+            }
+            $live[$key] = $row;
         }
-        $cm = get_coursemodule_from_id(self::TYPES[$artifacttype][0], (int) $row->cmid, $courseid, false, IGNORE_MISSING);
-        // Una actividad borrada sigue en la tabla, oculta, hasta que el cron
-        // termina de eliminarla (deletioninprogress): no se reutiliza, porque
-        // se actualizaría una actividad que ya no se ve en el curso.
-        return $cm && empty($cm->deletioninprogress) ? (int) $cm->id : 0;
+        return array_values($live);
     }
 
     /**
-     * Último despliegue de un fichero en el curso (para pre-rellenar el
-     * formulario de actualización), o null.
+     * Módulo que se puede actualizar al volver a publicar un fichero en un
+     * formato: el del último despliegue vivo de ese mismo formato. 0 = crear
+     * uno nuevo (primera publicación, otro formato o módulo borrado por el
+     * profesor).
+     */
+    public static function reusable_cmid(int $courseid, string $sourcefile, string $artifacttype): int {
+        if (!isset(self::TYPES[$artifacttype])) {
+            return 0;
+        }
+        foreach (self::live_deploys($courseid, $sourcefile) as $row) {
+            if ($row->artifact_type === $artifacttype) {
+                return (int) $row->cmid;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Último despliegue vivo de un fichero en el curso (para pre-rellenar el
+     * formulario de actualización), o null si no está publicado o se borró
+     * su actividad.
      */
     public static function latest_deploy(int $courseid, string $sourcefile): ?\stdClass {
-        global $DB;
-        $rows = $DB->get_records(
-            'local_liamateriales_deploy',
-            ['courseid' => $courseid, 'source_file' => $sourcefile],
-            'deployed_at DESC, id DESC',
-            '*',
-            0,
-            1
-        );
-        return $rows ? reset($rows) : null;
+        return self::live_deploys($courseid, $sourcefile)[0] ?? null;
     }
 }

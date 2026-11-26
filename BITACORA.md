@@ -40,6 +40,18 @@
   quedan ahora asociados al curso.
 - `version.php` → 2026112600. Pendiente: probarlo en el Moodle de
   desarrollo (no hay PHP en el host para `php -l`).
+- **Actividad borrada seguía «publicada»**: la pestaña «Publicados en este
+  curso» listaba la tabla `local_liamateriales_deploy` sin comprobar si el
+  módulo existía. Nuevo `publisher::live_deploys()`: el último despliegue
+  por fichero **y formato** cuyo módulo sigue en el curso, es del tipo
+  esperado y no está en borrado (`deletioninprogress`). Lo usan la
+  pestaña de publicados, `latest_deploy()` (página Publicar: «SHA
+  publicado» y aviso de actualización) y `reusable_cmid()`. El historial
+  de la tabla se conserva (D6). Antes la pestaña mostraba una fila por
+  fichero; ahora una por fichero y formato. Tests nuevos en
+  `publisher_test.php` (sintaxis comprobada con `php -l`; falta lanzarlos
+  en un Moodle). `version.php` → 2026112601.
+
 
 ### 2026-11-25 — Sesión 43: Borrado de imágenes, ancho, dos columnas e iconos de tema
 
