@@ -245,6 +245,52 @@ function local_liamateriales_inject_lms_block(string $markdown, array $config): 
 }
 
 /**
+ * Estado de una publicación («Actualizado» / «Actualización disponible»)
+ * comparado con la rama de la que salió.
+ *
+ * Antes se comparaba siempre con `main`: lo publicado desde la rama de
+ * edición del profesor figuraba como «Actualización disponible» aunque fuera
+ * su última versión. La rama se guarda en el despliegue desde 2026112603.
+ * Para los despliegues anteriores (sin rama): `main` si el SHA publicado está
+ * en `main`; si no, la rama de edición abierta del usuario para ese fichero.
+ *
+ * @param \stdClass $deploy fila de local_liamateriales_deploy
+ * @param int $userid usuario que mira la lista (su rama de edición)
+ * @return \stdClass respuesta de /edit/state (state, branch, head_sha, …)
+ * @throws \moodle_exception si el engine no responde
+ */
+function local_liamateriales_deploy_state(\stdClass $deploy, int $userid): \stdClass {
+    global $DB;
+    $query = ['file' => $deploy->source_file, 'sha' => $deploy->git_commit];
+    $branch = (string) ($deploy->branch ?? '');
+    if ($branch !== '') {
+        try {
+            return local_liamateriales_service_get('/edit/state', $query + ['branch' => $branch]);
+        } catch (\moodle_exception $e) {
+            // Rama borrada (p. ej. tras fusionarla): se decide como sin rama.
+            debugging("deploy_state: rama {$branch}: " . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+    $main = local_liamateriales_service_get('/edit/state', $query);
+    if ($main->commits_ahead !== null) {
+        return $main; // El SHA publicado está en main.
+    }
+    $session = $DB->get_record('local_liamateriales_editsess', [
+        'userid' => $userid,
+        'file' => $deploy->source_file,
+        'closed_at' => null,
+    ]);
+    if ($session && $session->branch !== 'main') {
+        try {
+            return local_liamateriales_service_get('/edit/state', $query + ['branch' => $session->branch]);
+        } catch (\moodle_exception $e) {
+            debugging("deploy_state: rama {$session->branch}: " . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+    return $main;
+}
+
+/**
  * Fecha de commit válida para el editor, o null.
  *
  * Acepta solo ISO 8601 con zona horaria en una línea (formato de

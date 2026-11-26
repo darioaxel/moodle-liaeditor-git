@@ -82,6 +82,7 @@ foreach ($branches as $key => $branchname) {
     $date = local_liamateriales_commit_date($head->committed_at ?? null);
     $versions[$key] = (object) [
         'sha' => $head->sha,
+        'branch' => $branchname,
         'label' => get_string($key === 'main' ? 'publish_version_main' : 'publish_version_branch', 'local_liamateriales', (object) [
             'branch' => $branchname,
             'date' => $date ? userdate((new \DateTimeImmutable($date))->getTimestamp()) : '—',
@@ -114,6 +115,8 @@ if (data_submitted() && confirm_sesskey()) {
             throw new \moodle_exception('publishnosha', 'local_liamateriales');
         }
         $sha = $versions[$versionkey]->sha;
+        // Rama de la versión publicada: el estado de «Publicados» se compara con ella.
+        $branch = $versions[$versionkey]->branch;
 
         if ($mode === 'download') {
             // Descargar: genera el fichero desde el Markdown sin publicarlo.
@@ -147,7 +150,8 @@ if (data_submitted() && confirm_sesskey()) {
                 publisher::stage_artifact((int) $USER->id, $upload['name'], file_get_contents($upload['tmp_name']), $artifacttype),
                 $name !== '' ? $name : publisher::default_name($courseid, $file, $artifacttype),
                 publisher::reusable_cmid($courseid, $file, $artifacttype),
-                $USER->username
+                $USER->username,
+                $branch
             );
         } else {
             $cmid = publisher::publish_generated(
@@ -157,7 +161,8 @@ if (data_submitted() && confirm_sesskey()) {
                 $artifacttype,
                 $sha,
                 $name !== '' ? $name : null,
-                $USER
+                $USER,
+                $branch
             );
         }
     } catch (\moodle_exception $e) {

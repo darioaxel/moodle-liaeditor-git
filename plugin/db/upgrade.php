@@ -53,5 +53,16 @@ function xmldb_local_liamateriales_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026112503, 'local', 'liamateriales');
     }
 
+    if ($oldversion < 2026112603) {
+        // Rama de la versión publicada: el estado de «Publicados» se compara con
+        // ella y no siempre con main. Los despliegues anteriores quedan con ''.
+        $table = new xmldb_table('local_liamateriales_deploy');
+        $field = new xmldb_field('branch', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, '', 'git_commit');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026112603, 'local', 'liamateriales');
+    }
+
     return true;
 }

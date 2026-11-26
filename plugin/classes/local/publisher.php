@@ -74,6 +74,7 @@ class publisher {
      * @param string $name nombre visible del módulo
      * @param int $existingcmid cmid a actualizar (0 = crear nuevo)
      * @param string $deployedby username que publica
+     * @param string $branch rama de la versión publicada ('' si no se conoce)
      * @return int cmid del módulo
      */
     public static function publish(
@@ -85,7 +86,8 @@ class publisher {
         int $draftitemid,
         string $name,
         int $existingcmid,
-        string $deployedby
+        string $deployedby,
+        string $branch = ''
     ): int {
         global $DB, $CFG, $USER;
         require_once($CFG->dirroot . '/course/modlib.php');
@@ -148,6 +150,7 @@ class publisher {
             'courseid' => $courseid,
             'source_file' => $sourcefile,
             'git_commit' => $sha,
+            'branch' => $branch,
             'artifact_type' => $artifacttype,
             'cmid' => $cmid,
             'deployed_at' => time(),
@@ -346,6 +349,7 @@ class publisher {
      * Genera el artefacto desde Git y lo publica en el curso (página Publicar
      * del plugin; el botón del editor y publish_api.php se retiraron en 2.8.0).
      *
+     * @param string $branch rama de la versión publicada ('' si no se conoce)
      * @return int cmid del módulo creado o actualizado
      */
     public static function publish_generated(
@@ -355,7 +359,8 @@ class publisher {
         string $artifacttype,
         string $sha,
         ?string $name,
-        \stdClass $user
+        \stdClass $user,
+        string $branch = ''
     ): int {
         // Una publicación a la vez por usuario y material (LIA-065): dos clics
         // seguidos no crean dos módulos ni lanzan dos generaciones.
@@ -365,7 +370,7 @@ class publisher {
             throw new \moodle_exception('publishbusy', 'local_liamateriales');
         }
         try {
-            return self::generate_and_publish($courseid, $section, $sourcefile, $artifacttype, $sha, $name, $user);
+            return self::generate_and_publish($courseid, $section, $sourcefile, $artifacttype, $sha, $name, $user, $branch);
         } finally {
             $lock->release();
         }
@@ -379,7 +384,8 @@ class publisher {
         string $artifacttype,
         string $sha,
         ?string $name,
-        \stdClass $user
+        \stdClass $user,
+        string $branch = ''
     ): int {
         $bytes = self::generate_artifact($sourcefile, $sha, $artifacttype);
         $draftitemid = self::stage_artifact(
@@ -397,7 +403,8 @@ class publisher {
             $draftitemid,
             $name ?? self::default_name($courseid, $sourcefile, $artifacttype),
             self::reusable_cmid($courseid, $sourcefile, $artifacttype),
-            $user->username
+            $user->username,
+            $branch
         );
     }
 

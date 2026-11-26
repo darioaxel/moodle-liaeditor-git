@@ -56,6 +56,16 @@
   `main` (historial conservado).
 - `feature/imagenes` fusionada en `main` de `fpvirtual-crepe-editor`
   (`c709138`, merge sin conflictos).
+- **«Publicados» comparaba siempre con `main`**: lo publicado desde la rama
+  de edición figuraba como «Actualización disponible» aunque fuera la última
+  versión guardada. El despliegue guarda ahora la rama de la versión
+  publicada (columna `branch`, `version.php` → 2026112603) y el estado se
+  compara con ella (`local_liamateriales_deploy_state()`). Despliegues
+  anteriores sin rama: `main` si el SHA está en `main`; si no, la rama de
+  edición abierta del usuario. Test en `publisher_test.php` (también cubre
+  el Recurso PDF sin avisos); sin ejecutar, no hay PHPUnit en el servidor.
+- **Servidor de pruebas**: zona horaria del sitio `Europe/London` →
+  `Europe/Madrid` (todas las fechas salían una hora menos).
 - Pendiente: PHPUnit no está instalado en el Moodle de pruebas; decidir qué
   hacer con los bloques de imagen vacíos (`![]()`).
 

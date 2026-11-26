@@ -156,4 +156,22 @@ final class publisher_test extends \advanced_testcase {
 
         $this->assertSame([], publisher::live_deploys((int) $course->id));
     }
+
+    public function test_publicar_guarda_la_rama_y_crea_el_recurso_sin_avisos(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $itemid = publisher::stage_artifact((int) $user->id, 'tema1.pdf', "%PDF-1.4\n%%EOF\n", 'pdf');
+        // Sin `display`, resource_add_instance() avisaba (rompía el JSON de Publicar).
+        $cmid = publisher::publish(
+            (int) $course->id, 0, 'materiales/tema1/tema1.md', 'pdf', str_repeat('a', 40),
+            $itemid, 'Tema 1 (PDF)', 0, $user->username, 'edicion/profe/materiales-tema1'
+        );
+        $this->assertDebuggingNotCalled();
+        $deploy = publisher::latest_deploy((int) $course->id, 'materiales/tema1/tema1.md');
+        $this->assertSame('edicion/profe/materiales-tema1', $deploy->branch);
+        $this->assertSame($cmid, (int) $deploy->cmid);
+        $this->assertSame('resource', get_coursemodule_from_id('', $cmid)->modname);
+    }
 }

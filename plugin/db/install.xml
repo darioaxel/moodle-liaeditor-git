@@ -10,6 +10,7 @@
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="source_file" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Ruta del .md en el repo"/>
         <FIELD NAME="git_commit" TYPE="char" LENGTH="40" NOTNULL="true" SEQUENCE="false" COMMENT="SHA publicado"/>
+        <FIELD NAME="branch" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="Rama de la versión publicada ('' en despliegues anteriores a 2026112603)"/>
         <FIELD NAME="artifact_type" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="h5p | epub | pdf"/>
         <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="course_modules id del módulo creado"/>
         <FIELD NAME="deployed_at" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="epoch"/>

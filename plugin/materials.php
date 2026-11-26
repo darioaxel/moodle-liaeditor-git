@@ -223,11 +223,7 @@ if ($latest) {
             continue;
         }
         try {
-            $state = local_liamateriales_service_get('/edit/state', [
-                'file' => $deploy->source_file,
-                'sha' => $deploy->git_commit,
-            ]);
-            $statekey = $state->state;
+            $statekey = local_liamateriales_deploy_state($deploy, (int) $USER->id)->state;
         } catch (\moodle_exception $e) {
             $statekey = 'ERROR';
         }

@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112602;        // Sin SCORM; PDF (contenido web) y PDF (LaTeX).
+$plugin->version = 2026112603;        // Publicados: el estado se compara con la rama publicada, no con main.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->release = '2.9.0';
