@@ -956,28 +956,29 @@ $if(titlepage)$
 \NoBgThispage
 \begin{titlepage}
 \thispagestyle{empty}
+% Materiales Editables: logo grande centrado y, debajo, título (módulo),
+% subtítulo (unidad), autor y fecha de publicación apilados en un solo
+% nodo para que los títulos largos no se monten unos sobre otros.
 \begin{tikzpicture}[remember picture, overlay]
   % Left line + dot: same as the interior pages (portada-fondo.png)
   \draw[fpv-orange, line width=3pt] ([xshift=10.67mm]current page.north west) -- ([xshift=10.67mm]current page.south west);
   \fill[fpv-orange] ([xshift=10.67mm, yshift=-58.92mm]current page.north west) circle (1.65mm);
-  \node[anchor=north west] at ([xshift=72.8mm, yshift=-65.2mm]current page.north west)
-    {\includegraphics[width=40.6mm]{$if(titlepage-logo)$$titlepage-logo$$else$fpvirtual/logo-cdfp.png$endif$}};
-  \node[anchor=north west, align=left, text=fpv-darkgray, text width=130mm,
-        font=\fontsize{40}{46}\selectfont\bfseries\sffamily]
-    at ([xshift=53mm, yshift=-135mm]current page.north west)
-    {\MakeUppercase{$title$}};
+  \node[anchor=north] at ([xshift=5mm, yshift=-30mm]current page.north)
+    {\includegraphics[width=85mm]{$if(titlepage-logo)$$titlepage-logo$$else$fpvirtual/logo-cdfp.png$endif$}};
+  \node[anchor=north west, align=left, text width=140mm]
+    at ([xshift=45mm, yshift=-135mm]current page.north west)
+    {\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000% sin guiones de partición
+     {\color{fpv-darkgray}\fontsize{30}{36}\selectfont\bfseries\sffamily\MakeUppercase{$title$}\par}%
 $if(subtitle)$
-  \node[anchor=north west, align=left, text=fpv-orange, text width=130mm,
-        font=\fontsize{22}{27}\selectfont\sffamily]
-    at ([xshift=53mm, yshift=-173mm]current page.north west)
-    {$subtitle$};
+     \vspace{8mm}{\color{fpv-orange}\fontsize{20}{25}\selectfont\sffamily $subtitle$\par}%
 $endif$
 $if(author)$
-  \node[anchor=north west, align=left, text=fpv-darkgray, text width=130mm,
-        font=\fontsize{14}{18}\selectfont\sffamily]
-    at ([xshift=53mm, yshift=-203mm]current page.north west)
-    {$for(author)$$author$$sep$, $endfor$};
+     \vspace{14mm}{\color{fpv-darkgray}\fontsize{14}{18}\selectfont\sffamily $for(author)$$author$$sep$, $endfor$\par}%
 $endif$
+$if(date)$
+     \vspace{3mm}{\color{fpv-midgray}\fontsize{12}{16}\selectfont\sffamily $date$\par}%
+$endif$
+    };
 \end{tikzpicture}
 \null
 \end{titlepage}
@@ -995,14 +996,19 @@ $if(abstract)$
 $abstract$
 \end{abstract}
 $endif$
+% Materiales Editables: la licencia va debajo del índice (misma página);
+% sin índice, aquí, como en la plantilla original.
+\newcommand{\fpvlicencia}{%
+\begin{center}
 $if(license)$
-\begin{center}
 {\small\sffamily\color{fpv-darkgray}$license$}
-\end{center}
 $else$
-\begin{center}
 {\small\sffamily\color{fpv-darkgray}Este documento se distribuye bajo licencia Creative Commons Atribución 3.0 (CC BY 3.0)}
-\end{center}
+$endif$
+\end{center}}
+$if(toc)$
+$else$
+\fpvlicencia
 $endif$
 $endif$
 
@@ -1028,6 +1034,10 @@ $endif$
 $endif$
 \setcounter{tocdepth}{$toc-depth$}
 {\hypersetup{allcolors=black}\setkomafont{section}{\color{black}}\tableofcontents}
+$if(title)$
+\vspace{10mm}
+\fpvlicencia
+$endif$
 $if(toc-own-page)$
 \newpage
 $endif$

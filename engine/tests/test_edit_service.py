@@ -255,6 +255,17 @@ def test_save_ok_incluye_fecha_del_nuevo_commit(service: EditService, git_repo: 
     assert result.committed_at == _log_date(git_repo, result.new_sha)
 
 
+def test_content_incluye_el_ultimo_autor_del_fichero(service: EditService) -> None:
+    # En main, el autor del commit de los fixtures.
+    assert service.content(FILE, "main").last_author == "Test"
+    opened = service.open(USER, FILE)
+    # Rama recién abierta: aún es el contenido de main.
+    assert service.content(FILE, BRANCH).last_author == "Test"
+    service.save(_save(USER, BRANCH, opened.sha, "# Nuevo\n"))
+    # Tras guardar, el usuario de Moodle que hizo el commit.
+    assert service.content(FILE, BRANCH).last_author == USER
+
+
 class _SinFecha(LocalGitProvider):
     """Provider cuyo Git no da la fecha: el campo se omite sin error."""
 

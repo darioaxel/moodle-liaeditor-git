@@ -244,10 +244,12 @@ class PublishService:
         avisos: list[str] = []
         with self._git.checkout_ref(request.sha) as checkout:
             if self._pandoc is not None and request.format == "web":
-                generado = self._pandoc.web(checkout, file)
+                generado = self._pandoc.web(checkout, file, author=request.author)
                 content, avisos = generado.content, generado.avisos
             elif self._pandoc is not None and request.format == "pdfcontenido":
-                generado = self._pandoc.content_pdf(checkout, file)
+                generado = self._pandoc.content_pdf(
+                    checkout, file, author=request.author, module=request.module
+                )
                 content, avisos = generado.content, generado.avisos
             else:
                 assert self._executor is not None  # comprobado arriba

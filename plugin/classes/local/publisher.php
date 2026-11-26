@@ -48,6 +48,12 @@ class publisher {
     /** Modos de visualización ofrecidos para la web: automático, incrustar, abrir, emergente, nueva ventana. */
     public const WEB_DISPLAYS = [0, 1, 5, 6, 3];
 
+    /** Formatos en los que el autor lo decide el plugin y no la cabecera del material. */
+    private const AUTHOR_TYPES = ['web', 'pdfcontenido'];
+
+    /** Formatos con portada: título del módulo (el curso) y la unidad como subtítulo. */
+    private const MODULE_TYPES = ['pdfcontenido'];
+
     /** Avisos del lector LiaScript de la última generación (cabecera X-Liamat-Avisos). */
     private static array $lastavisos = [];
 
@@ -223,21 +229,38 @@ class publisher {
      * @param string $sourcefile ruta del .md en el repo
      * @param string $sha commit exacto a exportar
      * @param string $artifacttype h5p | epub | pdf | web | pdfcontenido
+     * @param string|null $author autor que figura en lo generado (ver author_name());
+     *     solo se envía en los formatos de AUTHOR_TYPES
+     * @param string|null $module título del módulo para la portada (ver module_title());
+     *     solo se envía en los formatos de MODULE_TYPES
      * @return string bytes del artefacto (los avisos del lector, en last_avisos())
      * @throws \moodle_exception con el motivo si el engine no lo genera
      */
-    public static function generate_artifact(string $sourcefile, string $sha, string $artifacttype): string {
+    public static function generate_artifact(
+        string $sourcefile,
+        string $sha,
+        string $artifacttype,
+        ?string $author = null,
+        ?string $module = null
+    ): string {
         if (!isset(self::TYPES[$artifacttype])) {
             throw new \moodle_exception('invalidartifacttype', 'local_liamateriales', '', $artifacttype);
         }
         self::$lastavisos = [];
         // La generación puede superar el límite de ejecución PHP por defecto.
         \core_php_time_limit::raise(self::GENERATE_TIMEOUT + 30);
+        $body = ['file' => $sourcefile, 'sha' => $sha, 'format' => $artifacttype];
+        if ($author !== null && trim($author) !== '' && in_array($artifacttype, self::AUTHOR_TYPES, true)) {
+            $body['author'] = \core_text::substr(trim($author), 0, 200);
+        }
+        if ($module !== null && trim($module) !== '' && in_array($artifacttype, self::MODULE_TYPES, true)) {
+            $body['module'] = \core_text::substr(trim($module), 0, 255);
+        }
         $result = engine_client::send(
             'POST',
             '/publish',
             [],
-            ['file' => $sourcefile, 'sha' => $sha, 'format' => $artifacttype],
+            $body,
             'application/octet-stream',
             ['CURLOPT_TIMEOUT' => self::GENERATE_TIMEOUT, 'CURLOPT_CONNECTTIMEOUT' => 10]
         );
@@ -251,6 +274,44 @@ class publisher {
         }
         self::$lastavisos = self::parse_avisos($result->headers);
         return $result->body;
+    }
+
+    /**
+     * Autor que figura en el contenido generado.
+     *
+     * - Versión oficial (``main``): la institución («FPVirtual Aragón»,
+     *   cadena ``publish_author_default``).
+     * - Rama de edición: nombre y apellidos del usuario de Moodle autor del
+     *   último commit que modificó el material (el engine commitea los
+     *   guardados con el ``username`` como autor, ``last_author`` de
+     *   ``/edit/content``). Si no es un usuario de Moodle (p. ej. un cambio
+     *   hecho directamente en Git), la institución.
+     *
+     * @param string $versionkey ``main`` o ``branch`` (página Publicar)
+     * @param string|null $lastauthor autor Git del último commit del material
+     */
+    public static function author_name(string $versionkey, ?string $lastauthor): string {
+        global $CFG, $DB;
+        $default = get_string('publish_author_default', 'local_liamateriales');
+        if ($versionkey === 'main' || $lastauthor === null || trim($lastauthor) === '') {
+            return $default;
+        }
+        $user = $DB->get_record('user', [
+            'username' => \core_text::strtolower(trim($lastauthor)),
+            'mnethostid' => $CFG->mnet_localhost_id,
+            'deleted' => 0,
+        ]);
+        return $user ? fullname($user) : $default;
+    }
+
+    /**
+     * Título del módulo para la portada del PDF (LaTeX): el nombre completo
+     * del curso, como texto plano (filtros de idioma aplicados, sin HTML).
+     */
+    public static function module_title(int $courseid): string {
+        $course = get_course($courseid);
+        $name = format_string($course->fullname, true, ['context' => \context_course::instance($courseid)]);
+        return trim(html_entity_decode(strip_tags($name), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     /**
@@ -350,6 +411,7 @@ class publisher {
      * del plugin; el botón del editor y publish_api.php se retiraron en 2.8.0).
      *
      * @param string $branch rama de la versión publicada ('' si no se conoce)
+     * @param string|null $author autor de lo generado (ver author_name())
      * @return int cmid del módulo creado o actualizado
      */
     public static function publish_generated(
@@ -360,7 +422,8 @@ class publisher {
         string $sha,
         ?string $name,
         \stdClass $user,
-        string $branch = ''
+        string $branch = '',
+        ?string $author = null
     ): int {
         // Una publicación a la vez por usuario y material (LIA-065): dos clics
         // seguidos no crean dos módulos ni lanzan dos generaciones.
@@ -370,7 +433,9 @@ class publisher {
             throw new \moodle_exception('publishbusy', 'local_liamateriales');
         }
         try {
-            return self::generate_and_publish($courseid, $section, $sourcefile, $artifacttype, $sha, $name, $user, $branch);
+            return self::generate_and_publish(
+                $courseid, $section, $sourcefile, $artifacttype, $sha, $name, $user, $branch, $author
+            );
         } finally {
             $lock->release();
         }
@@ -385,9 +450,10 @@ class publisher {
         string $sha,
         ?string $name,
         \stdClass $user,
-        string $branch = ''
+        string $branch,
+        ?string $author
     ): int {
-        $bytes = self::generate_artifact($sourcefile, $sha, $artifacttype);
+        $bytes = self::generate_artifact($sourcefile, $sha, $artifacttype, $author, self::module_title($courseid));
         $draftitemid = self::stage_artifact(
             (int) $user->id,
             basename($sourcefile, '.md') . '@' . substr($sha, 0, 8) . '.' . self::extension($artifacttype),

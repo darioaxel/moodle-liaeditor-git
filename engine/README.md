@@ -22,12 +22,12 @@ src/materiales_liascript/
 | Método | Ruta | Uso |
 | --- | --- | --- |
 | `GET` | `/edit/files?branch=` | Materiales `.md` de la rama con su título LiaScript |
-| `GET` | `/edit/content?file=&branch=` | Contenido + SHA del HEAD + `committed_at` (fecha del commit, ISO 8601 con zona) |
+| `GET` | `/edit/content?file=&branch=` | Contenido + SHA del HEAD + `committed_at` (fecha del commit, ISO 8601 con zona) + `last_author` (autor Git del último commit que modificó el fichero: el usuario de Moodle en los guardados del editor) |
 | `POST` | `/edit/open` | Asegura la rama `edicion/<user>/<file>` desde `main` (D4) |
 | `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha, committed_at}` o `409` con rama `resolucion/...` (D5). Acepta `images: [{path, content_base64}]` (PNG, JPEG, GIF; máx. 20, 2 MB cada una y 10 MB en total): Markdown e imágenes en un único commit |
 | `GET` | `/edit/asset?file=&branch=&path=` | Imagen de la carpeta del material (ruta relativa a su `.md`; PNG, JPEG, GIF, WebP) para el editor; cualquier fallo, 404 |
 | `GET` | `/edit/state?file=&sha=&branch=` | `up_to_date` / `update_available` por comparación de SHAs |
-| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `web`, `pdfcontenido`) de un fichero en un SHA. El PDF de contenido convierte a PNG (Pillow) las imágenes WebP y GIF, que XeLaTeX no admite. Los formatos de liaex se generan desde una copia sin los otros `.md` de la carpeta del material (el H5P los empaquetaba) |
+| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `web`, `pdfcontenido`) de un fichero en un SHA. Con `author` opcional, en los formatos de Pandoc (`web`, `pdfcontenido`) ese nombre sustituye al `author:` de la cabecera del material. Con `module` opcional, el PDF de contenido lleva en la portada el título del módulo y la unidad como subtítulo (sin él, la unidad como título). El PDF de contenido tiene portada (logo de la plantilla, título, subtítulo, autor y fecha de publicación), índice con la licencia debajo y, en cada página, la unidad a la izquierda de la cabecera y el autor a la derecha. El PDF de contenido convierte a PNG (Pillow) las imágenes WebP y GIF, que XeLaTeX no admite. Los formatos de liaex se generan desde una copia sin los otros `.md` de la carpeta del material (el H5P los empaquetaba) |
 | `GET` | `/health` | Healthcheck |
 
 Sin repo Git, `/edit/*` y `/publish` responden 503; sin Docker en el host,

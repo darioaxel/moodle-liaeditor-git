@@ -45,6 +45,12 @@ class PublishRequest(BaseModel):
     file: str = Field(min_length=1)
     sha: str = Field(min_length=40, max_length=40)
     format: ArtifactFormat
+    #: Autor que figura en lo generado con Pandoc (web, PDF LaTeX) en lugar
+    #: del ``author:`` de la cabecera del material; lo decide el plugin.
+    author: str | None = Field(default=None, min_length=1, max_length=200)
+    #: Título del módulo (el curso de Moodle): título de la portada del PDF
+    #: LaTeX, con la unidad como subtítulo. Sin él, el título es la unidad.
+    module: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 class PublishResult(BaseModel):

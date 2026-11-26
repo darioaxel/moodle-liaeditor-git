@@ -83,6 +83,8 @@ foreach ($branches as $key => $branchname) {
     $versions[$key] = (object) [
         'sha' => $head->sha,
         'branch' => $branchname,
+        // Autor Git del último commit del material (autor de la web y del PDF LaTeX).
+        'lastauthor' => isset($head->last_author) && is_string($head->last_author) ? $head->last_author : null,
         'label' => get_string($key === 'main' ? 'publish_version_main' : 'publish_version_branch', 'local_liamateriales', (object) [
             'branch' => $branchname,
             'date' => $date ? userdate((new \DateTimeImmutable($date))->getTimestamp()) : '—',
@@ -117,10 +119,11 @@ if (data_submitted() && confirm_sesskey()) {
         $sha = $versions[$versionkey]->sha;
         // Rama de la versión publicada: el estado de «Publicados» se compara con ella.
         $branch = $versions[$versionkey]->branch;
+        $author = publisher::author_name($versionkey, $versions[$versionkey]->lastauthor);
 
         if ($mode === 'download') {
             // Descargar: genera el fichero desde el Markdown sin publicarlo.
-            $bytes = publisher::generate_artifact($file, $sha, $artifacttype);
+            $bytes = publisher::generate_artifact($file, $sha, $artifacttype, $author, publisher::module_title($courseid));
             $avisos = publisher::last_avisos();
             if ($avisos) {
                 // Para que el JS los muestre tras la descarga (ASCII: json_encode escapa).
@@ -162,7 +165,8 @@ if (data_submitted() && confirm_sesskey()) {
                 $sha,
                 $name !== '' ? $name : null,
                 $USER,
-                $branch
+                $branch,
+                $author
             );
         }
     } catch (\moodle_exception $e) {

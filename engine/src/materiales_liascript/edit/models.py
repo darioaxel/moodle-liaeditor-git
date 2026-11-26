@@ -31,6 +31,8 @@ class EditContent(BaseModel):
     content: str
     stale: bool = False  # el fichero ya no existe en main (rama desactualizada)
     committed_at: str | None = None  # fecha del commit ``sha`` (ISO 8601 con zona)
+    #: autor (usuario de Moodle) del último commit que modificó el fichero
+    last_author: str | None = None
 
 
 #: Máximo de imágenes por guardado (docs/imagenes, D7).

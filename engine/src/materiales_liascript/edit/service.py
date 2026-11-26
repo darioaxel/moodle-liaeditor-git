@@ -108,6 +108,7 @@ class EditService:
             content=content,
             stale=stale,
             committed_at=self._git.commit_date(sha),
+            last_author=self._git.last_author(sha, file),
         )
 
     def save(self, request: SaveRequest) -> SaveResult:

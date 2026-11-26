@@ -78,6 +78,36 @@ final class publisher_test extends \advanced_testcase {
         $this->assertSame(['/1.1-tema.html' => 0, '/img/a.png' => 0, '/index.html' => 1], $byname);
     }
 
+    public function test_autor_de_la_version_oficial_es_la_institucion(): void {
+        $this->resetAfterTest();
+        $this->getDataGenerator()->create_user(['username' => 'ana', 'firstname' => 'Ana', 'lastname' => 'Pérez']);
+        // Aunque el último commit sea de un usuario: main es el contenido oficial.
+        $this->assertSame('FPVirtual Aragón', publisher::author_name('main', 'ana'));
+    }
+
+    public function test_autor_de_la_rama_es_el_ultimo_que_edito(): void {
+        $this->resetAfterTest();
+        $this->getDataGenerator()->create_user(['username' => 'ana', 'firstname' => 'Ana', 'lastname' => 'Pérez López']);
+        $this->assertSame('Ana Pérez López', publisher::author_name('branch', 'ana'));
+    }
+
+    public function test_autor_de_la_rama_sin_usuario_de_moodle(): void {
+        $this->resetAfterTest();
+        // Commit hecho fuera de Moodle (directamente en Git) o sin autor.
+        $this->assertSame('FPVirtual Aragón', publisher::author_name('branch', 'Equipo DWES'));
+        $this->assertSame('FPVirtual Aragón', publisher::author_name('branch', null));
+        // Usuario borrado: tampoco cuenta.
+        $user = $this->getDataGenerator()->create_user(['username' => 'luis']);
+        delete_user($user);
+        $this->assertSame('FPVirtual Aragón', publisher::author_name('branch', 'luis'));
+    }
+
+    public function test_titulo_del_modulo_es_el_curso_en_texto_plano(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course(['fullname' => 'Desarrollo web <b>en</b> entorno servidor &amp; más']);
+        $this->assertSame('Desarrollo web en entorno servidor & más', publisher::module_title((int) $course->id));
+    }
+
     /**
      * Registra un despliegue como lo hace publish().
      */

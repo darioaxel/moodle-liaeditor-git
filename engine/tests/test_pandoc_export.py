@@ -19,11 +19,12 @@ import shutil
 import subprocess
 import zipfile
 from collections import Counter
+from datetime import date
 from pathlib import Path
 
 import pytest
 
-from materiales_liascript.publish.pandoc_export import PandocExporter, _extension_dir
+from materiales_liascript.publish.pandoc_export import PandocExporter, _extension_dir, fecha_es
 
 FIXTURES = Path(__file__).parent / "fixtures" / "liascript"
 MATERIALES = sorted(p.name for p in FIXTURES.glob("*.md"))
@@ -247,3 +248,59 @@ def test_columnas_lado_a_lado_en_el_pdf(material: Path) -> None:
     assert any(
         "COLUMNA-IZQUIERDA" in linea and "COLUMNA-DERECHA" in linea for linea in texto.splitlines()
     )
+
+
+@requiere_pandoc
+def test_autor_de_la_web_sustituye_al_de_la_cabecera(material: Path) -> None:
+    fichero = "materiales/ut06-imagenes.md"  # cabecera: «author: Equipo DWES»
+    resultado = PandocExporter(PANDOC_IMAGE).web(material, fichero, author="Ana Pérez López")
+    paquete = zipfile.ZipFile(io.BytesIO(resultado.content))
+    html = paquete.read("index.html").decode("utf-8")
+    assert "Ana Pérez López" in html
+    assert "Equipo DWES" not in html
+    # Sin autor explícito se mantiene el de la cabecera.
+    sin_autor = PandocExporter(PANDOC_IMAGE).web(material, fichero)
+    html = zipfile.ZipFile(io.BytesIO(sin_autor.content)).read("index.html").decode("utf-8")
+    assert "Equipo DWES" in html
+
+
+def test_fecha_en_espanol() -> None:
+    assert fecha_es(date(2026, 11, 26)) == "26 de noviembre de 2026"
+    assert fecha_es(date(2027, 1, 1)) == "1 de enero de 2027"
+
+
+@requiere_pandoc
+@pytest.mark.skipif(not shutil.which("pdftotext"), reason="sin pdftotext")
+def test_pdf_de_contenido_portada_indice_y_cabeceras(material: Path) -> None:
+    resultado = PandocExporter(PANDOC_IMAGE).content_pdf(
+        material,
+        "materiales/ut04-pdo.md",
+        author="Ana Pérez López",
+        module="Desarrollo web en entorno servidor",
+        published=date(2026, 11, 26),
+    )
+    pdf = material / "salida.pdf"
+    pdf.write_bytes(resultado.content)
+
+    def pagina(n: int) -> str:
+        return subprocess.run(
+            ["pdftotext", "-layout", "-f", str(n), "-l", str(n), str(pdf), "-"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+
+    portada = " ".join(pagina(1).split())
+    assert "DESARROLLO WEB EN ENTORNO SERVIDOR" in portada
+    assert "UT04 — La capa de acceso a datos con PDO" in portada
+    assert "Ana Pérez López" in portada
+    assert "26 de noviembre de 2026" in portada
+    assert "Equipo DWES" not in portada
+    # Primera página tras la portada: índice y, debajo, la licencia.
+    indice = pagina(2)
+    assert indice.index("Índice") < indice.index("Creative Commons")
+    # Cabecera: unidad a la izquierda y autor a la derecha.
+    primera_linea = indice.strip().splitlines()[0]
+    assert "UT04" in primera_linea
+    assert "Ana Pérez López" in primera_linea
+    assert "Ana Pérez López" in pagina(3).strip().splitlines()[0]

@@ -27,6 +27,7 @@ import shutil
 import subprocess
 import zipfile
 from dataclasses import dataclass, field
+from datetime import date
 from importlib import resources
 from pathlib import Path
 
@@ -74,8 +75,11 @@ class PandocExporter:
 
     # -- API ------------------------------------------------------------------
 
-    def web(self, checkout: Path, file: str) -> PandocResult:
-        """Web estática del material como zip (``index.html`` en la raíz)."""
+    def web(self, checkout: Path, file: str, *, author: str | None = None) -> PandocResult:
+        """Web estática del material como zip (``index.html`` en la raíz).
+
+        Con ``author``, ese nombre sustituye al ``author:`` de la cabecera.
+        """
         work = self._prepare(checkout)
         site = work / "web"
         try:
@@ -91,6 +95,7 @@ class PandocExporter:
                     f"--template=/work/{_WORK}/ext/web.html",
                     f"--lua-filter=/work/{_WORK}/ext/web.lua",
                     "--math-method=mathml",
+                    *_author_args(author),
                     "-o",
                     f"/work/{_WORK}/web",
                 ],
@@ -104,8 +109,25 @@ class PandocExporter:
         finally:
             shutil.rmtree(work, ignore_errors=True)
 
-    def content_pdf(self, checkout: Path, file: str) -> PandocResult:
-        """PDF solo con el contenido, con la plantilla FP Virtual."""
+    def content_pdf(
+        self,
+        checkout: Path,
+        file: str,
+        *,
+        author: str | None = None,
+        module: str | None = None,
+        published: date | None = None,
+    ) -> PandocResult:
+        """PDF solo con el contenido, con la plantilla FP Virtual.
+
+        Portada con el logo de la plantilla, el título del módulo (``module``;
+        sin él, el de la unidad), la unidad como subtítulo, el autor y la fecha
+        de publicación (``published``, hoy por defecto). Tras la portada, el
+        índice y, debajo, la licencia; en la cabecera de cada página, la unidad
+        a la izquierda y el autor a la derecha (``contenido.lua``).
+
+        Con ``author``, ese nombre sustituye al ``author:`` de la cabecera.
+        """
         work = self._prepare(checkout)
         shutil.copytree(self._theme_dir or work / "ext" / "fpvirtual-theme", work / "theme")
         output = work / "contenido.pdf"
@@ -127,6 +149,8 @@ class PandocExporter:
                     "-H",
                     f"/work/{_WORK}/theme/content-boxes.tex",
                     "--syntax-highlighting=default",
+                    *_author_args(author),
+                    *_cover_args(module, published or date.today()),
                     "-o",
                     f"/work/{_WORK}/contenido.pdf",
                 ],
@@ -214,6 +238,52 @@ def _copy_resources(checkout: Path, file: str, site: Path) -> None:
         if not target.exists():
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)
+
+
+def _author_args(author: str | None) -> list[str]:
+    """``-M author=...``: los metadatos de la línea de órdenes prevalecen
+    sobre los que pone el lector LiaScript a partir de la cabecera."""
+    return ["-M", f"author={author}"] if author else []
+
+
+_MESES = (
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+)
+
+
+def fecha_es(dia: date) -> str:
+    """Fecha en español: «26 de noviembre de 2026»."""
+    return f"{dia.day} de {_MESES[dia.month - 1]} de {dia.year}"
+
+
+def _cover_args(module: str | None, published: date) -> list[str]:
+    """Metadatos de la portada, el índice y la cabecera del PDF de contenido."""
+    args = [
+        "-M",
+        "titlepage=true",
+        "-M",
+        "toc=true",
+        "-M",
+        "toc-depth=2",
+        "-M",
+        "toc-own-page=true",
+        "-M",
+        f"date={fecha_es(published)}",
+    ]
+    if module:
+        args += ["-M", f"liamat-modulo={module}"]
+    return args
 
 
 def _zip_dir(directory: Path) -> bytes:

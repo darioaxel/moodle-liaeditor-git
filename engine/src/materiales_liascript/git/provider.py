@@ -52,6 +52,15 @@ class GitProvider(ABC):
         """
         return None
 
+    def last_author(self, ref: str, path: str) -> str | None:
+        """Nombre del autor del último commit de ``ref`` que modificó ``path``.
+
+        Los guardados del editor se commitean con el usuario de Moodle como
+        autor. ``None`` si no se puede obtener: es informativo y nunca debe
+        hacer fallar una operación.
+        """
+        return None
+
     @abstractmethod
     def commits_ahead(self, base: str, ref: str) -> int:
         """Commits de ``ref`` que no están en ``base``."""

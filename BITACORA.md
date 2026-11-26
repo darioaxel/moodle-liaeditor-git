@@ -28,6 +28,48 @@
 
 ## Registro de sesiones
 
+### 2026-11-26 — Sesión 47: Autor de lo generado y PDF (LaTeX) con portada
+
+- **Autor de la web generada**: salía el `author:` de la cabecera del
+  material («Equipo DWES»). Ahora el plugin lo decide y el engine lo
+  aplica con `-M author=...` (los metadatos de la línea de órdenes de
+  Pandoc prevalecen sobre los del lector LiaScript):
+  - versión oficial (`main`) → «FPVirtual Aragón» (cadena
+    `publish_author_default`, personalizable desde el idioma);
+  - rama de edición → nombre y apellidos del usuario de Moodle autor del
+    último commit que modificó el material (nuevo `last_author` en
+    `/edit/content`); si no es un usuario de Moodle, «FPVirtual Aragón».
+  - Engine: `author` opcional en `POST /publish` (web y PDF LaTeX; el
+    plugin solo lo envía para la web, `publisher::AUTHOR_TYPES`).
+  - Tests: engine `make check` en verde (178, incluido uno con el Pandoc
+    real); plugin, tests de `author_name()` en `publisher_test.php`
+    (`php -l` correcto, PHPUnit pendiente).
+- **PDF (LaTeX) con portada, índice y cabeceras**:
+  - Portada: logo grande de la plantilla, título = módulo (nombre completo
+    del curso de Moodle, `publisher::module_title()`; campo `module` de
+    `POST /publish`), subtítulo = unidad (título del material), autor
+    (misma regla que la web: ahora `AUTHOR_TYPES` incluye `pdfcontenido`)
+    y fecha de publicación en español (`fecha_es`, el día de generación).
+    Sin módulo, el título es la unidad y no hay subtítulo.
+  - Página siguiente: índice y, debajo, la licencia.
+  - Cabecera de todas las páginas tras la portada: unidad a la izquierda,
+    autor a la derecha (`contenido.lua` rellena `header-left`/`header-right`).
+  - La plantilla `fpvirtual.latex` es copia de `fpvirtual-markdown-a-pdf`:
+    sus cambios locales (portada apilada con fecha, licencia tras el índice)
+    quedan anotados en su `LEEME.md` para llevarlos al repositorio original.
+  - Engine `make check` en verde (181, con un test del PDF real que lee
+    portada, índice y cabeceras con `pdftotext`). Plugin: test de
+    `module_title()`; PHPUnit pendiente.
+- **Fusión con la sesión 46** (pull antes de subir): el remoto añadió
+  `$branch` a `publish_generated()`/`publish()` y usó la versión
+  2026112603; se conservan ambos parámetros (`$branch`, `$author`) y esta
+  sesión queda como `version.php` → 2026112604 (el paso de upgrade de la
+  2026112603 es el de la columna `branch`).
+- Sobre la pregunta «la versión no se actualiza al volver a Publicar»: la
+  causa principal (estado de «Publicados» comparado con `main`) la resolvió
+  la sesión 46. Queda como mejora mostrar el SHA en las opciones de versión
+  de la página Publicar.
+
 ### 2026-11-26 — Sesión 46: Despliegue de imágenes en el servidor de pruebas, LIA-124 y paso a `main`
 
 - **Despliegue** en 192.168.2.253 de `feature/imagenes` (plugin, engine y
@@ -110,8 +152,6 @@
   (descarga con la web en lugar de SCORM), `php -l` correcto; PHPUnit
   pendiente de lanzar en un Moodle. `version.php` → 2026112602, release
   2.9.0.
-
-
 
 ### 2026-11-25 — Sesión 43: Borrado de imágenes, ancho, dos columnas e iconos de tema
 

@@ -103,6 +103,13 @@ class LocalGitProvider(GitProvider):
             return None
         return value if _ISO_8601.fullmatch(value) else None
 
+    def last_author(self, ref: str, path: str) -> str | None:
+        try:
+            value = self._git("log", "-1", "--format=%an", f"{ref}^{{commit}}", "--", path)
+        except GitProviderError:
+            return None
+        return value or None
+
     # -- historia --------------------------------------------------------------------
 
     def commits_ahead(self, base: str, ref: str) -> int:

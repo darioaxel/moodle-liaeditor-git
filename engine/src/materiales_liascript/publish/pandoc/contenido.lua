@@ -19,6 +19,9 @@ que se muevan.
 - Columnas del editor (`<div class="lia-columnas">` con `lia-columna`): una
   minipage por columna, lado a lado; sus figuras dejan de ser flotantes (una
   figura no puede ir dentro de una minipage) y el pie va debajo, en cursiva.
+- Portada y cabeceras: con ``liamat-modulo`` (título del módulo, lo manda el
+  engine) el título pasa a ser el módulo y la unidad (título del material)
+  el subtítulo. Cabecera izquierda: la unidad; derecha: el autor.
 ]]
 
 local OMITIR = { narracion = true }
@@ -174,6 +177,29 @@ function Blocks(bloques)
     end
   end
   return salida
+end
+
+local function texto(valor)
+  if valor == nil then return '' end
+  return pandoc.utils.stringify(valor)
+end
+
+--- Portada (título = módulo, subtítulo = unidad) y cabeceras de página.
+function Meta(meta)
+  local unidad = meta.title
+  local modulo = texto(meta['liamat-modulo'])
+  if unidad ~= nil and modulo ~= '' then
+    meta.subtitle = unidad
+    meta.title = pandoc.MetaString(modulo)
+  end
+  if unidad ~= nil then
+    meta['header-left'] = pandoc.MetaString(texto(unidad))
+  end
+  local autor = texto(meta.author)
+  if autor ~= '' then
+    meta['header-right'] = pandoc.MetaString(autor)
+  end
+  return meta
 end
 
 --- Quita los títulos sin contenido hasta el siguiente título de igual o mayor nivel.

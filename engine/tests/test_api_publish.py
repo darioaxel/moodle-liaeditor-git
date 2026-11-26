@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -224,14 +225,27 @@ class FakePandoc(PandocExporter):
     def __init__(self) -> None:
         super().__init__()
         self.calls: list[tuple[str, str]] = []
+        self.authors: list[str | None] = []
+        self.modules: list[str | None] = []
 
-    def web(self, checkout: Path, file: str) -> PandocResult:
+    def web(self, checkout: Path, file: str, *, author: str | None = None) -> PandocResult:
         self.calls.append(("web", file))
+        self.authors.append(author)
         assert (checkout / file).is_file()
         return PandocResult(b"PK-WEB", ["macro · @Pyodide.eval no se puede expandir"])
 
-    def content_pdf(self, checkout: Path, file: str) -> PandocResult:
+    def content_pdf(
+        self,
+        checkout: Path,
+        file: str,
+        *,
+        author: str | None = None,
+        module: str | None = None,
+        published: date | None = None,
+    ) -> PandocResult:
         self.calls.append(("pdfcontenido", file))
+        self.authors.append(author)
+        self.modules.append(module)
         return PandocResult(b"%PDF-CONTENIDO", [])
 
 
@@ -251,6 +265,22 @@ def test_publish_web_con_avisos(
         "macro · @Pyodide.eval no se puede expandir"
     ]
     assert pandoc.calls == [("web", FILE)]
+    assert pandoc.authors == [None]
+
+
+def test_publish_web_con_autor(
+    git_repo: Path, provider: LocalGitProvider, material_sha: str
+) -> None:
+    pandoc = FakePandoc()
+    client = TestClient(
+        create_app(git_repo, provider=provider, executor=FakeExecutor(), pandoc=pandoc)
+    )
+    body = {"file": FILE, "sha": material_sha, "format": "web", "author": "FPVirtual Aragón"}
+    assert client.post("/publish", json=body).status_code == HTTP_OK
+    assert pandoc.authors == ["FPVirtual Aragón"]
+    # Un autor vacío no se admite (el plugin manda un nombre o nada).
+    body["author"] = ""
+    assert client.post("/publish", json=body).status_code == 422  # noqa: PLR2004
 
 
 def test_publish_pdf_de_contenido(
@@ -275,3 +305,22 @@ def test_publish_web_sin_pandoc_es_503(
     with pytest.raises(PublishError) as excinfo:
         service.publish(PublishRequest(file=FILE, sha=material_sha, format="web"))
     assert excinfo.value.status_code == HTTP_UNAVAILABLE
+
+
+def test_publish_pdf_de_contenido_con_modulo_y_autor(
+    git_repo: Path, provider: LocalGitProvider, material_sha: str
+) -> None:
+    pandoc = FakePandoc()
+    client = TestClient(
+        create_app(git_repo, provider=provider, executor=FakeExecutor(), pandoc=pandoc)
+    )
+    body = {
+        "file": FILE,
+        "sha": material_sha,
+        "format": "pdfcontenido",
+        "author": "Ana Pérez",
+        "module": "Desarrollo web en entorno servidor",
+    }
+    assert client.post("/publish", json=body).status_code == HTTP_OK
+    assert pandoc.authors == ["Ana Pérez"]
+    assert pandoc.modules == ["Desarrollo web en entorno servidor"]
