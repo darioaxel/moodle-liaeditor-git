@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112605;        // Actualizar los contenidos dependientes de la versión oficial (LIA-129).
+$plugin->version = 2026112606;        // Incorporar la versión oficial a la rama de edición (LIA-130).
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.10.0';
+$plugin->release = '2.11.0';

@@ -42,9 +42,13 @@ abstract class material_event extends \core\event\base {
     public function get_description() {
         $other = $this->other;
         $detail = s($other['file'] ?? '');
-        foreach (['branch' => 'rama', 'sha' => 'SHA', 'format' => 'formato', 'cmid' => 'cmid'] as $key => $label) {
+        $labels = [
+            'branch' => 'rama', 'sha' => 'SHA', 'format' => 'formato', 'cmid' => 'cmid',
+            'merged_main' => 'incorpora main', // LIA-130
+        ];
+        foreach ($labels as $key => $label) {
             if (!empty($other[$key])) {
-                $value = $key === 'sha' ? substr((string) $other[$key], 0, 8) : (string) $other[$key];
+                $value = in_array($key, ['sha', 'merged_main'], true) ? substr((string) $other[$key], 0, 8) : (string) $other[$key];
                 $detail .= " · {$label} " . s($value);
             }
         }

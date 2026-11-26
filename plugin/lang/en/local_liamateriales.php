@@ -46,6 +46,8 @@ $string['tokenmismatch'] = 'El token de edición no corresponde a este fichero y
 $string['editornotconfigured'] = 'El LiaEditor no está configurado. Establece la URL del LiaEditor en la configuración del plugin.';
 $string['invalidfile'] = 'Ruta de material no válida: {$a}';
 $string['savedok'] = 'Cambios guardados en tu rama de edición.';
+$string['mergedok'] = 'Cambios de la versión oficial incorporados a tu rama de edición.';
+$string['mergefailed'] = 'No se pudieron incorporar los cambios de la versión oficial.';
 $string['saveconflict'] = 'El material ha cambiado en el servidor mientras editabas. Tu trabajo está a salvo en una rama de resolución.';
 
 // LiaEditor: materials page (LIA-016/018).
@@ -152,6 +154,7 @@ $string['event_conflict'] = 'Conflicto al guardar un material';
 $string['event_published'] = 'Material publicado en el curso';
 $string['internalerror'] = 'No se pudo completar la operación por un error del servidor. Si se repite, avisa al administrador con la incidencia {$a}.';
 $string['settings_ratelimit_asset'] = 'Imágenes que el editor pide para mostrarlas';
+$string['settings_ratelimit_sync'] = 'Consultas e incorporaciones de la versión oficial';
 $string['assetnotfound'] = 'Imagen no encontrada.';
 $string['imageinvalid'] = 'La imagen «{$a}» no es válida: se admiten PNG, JPEG y GIF de hasta 2 MB, en una ruta sin espacios.';
 $string['imagestoomany'] = 'Demasiadas imágenes nuevas en un guardado (máximo {$a}). Guarda en varias veces.';

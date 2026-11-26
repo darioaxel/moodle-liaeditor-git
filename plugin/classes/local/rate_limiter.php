@@ -31,6 +31,7 @@ class rate_limiter {
         'save' => ['ratelimit_save', 20, 60],
         'token' => ['ratelimit_token', 6, 60],
         'asset' => ['ratelimit_asset', 240, 60],
+        'sync' => ['ratelimit_sync', 20, 60],
     ];
 
     /** Fallos de token por IP antes del bloqueo, ventana y duración del bloqueo (s). */

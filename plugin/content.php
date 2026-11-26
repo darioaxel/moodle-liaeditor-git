@@ -109,6 +109,11 @@ if (!$readonly && $courseid > 0
     ]))->out(false);
 }
 
+// Incorporar la versión oficial (LIA-130): solo en una rama de edición.
+if (!$readonly && $branch !== 'main') {
+    $lmsconfig['sync_endpoint'] = (new \moodle_url('/local/liamateriales/sync.php'))->out(false);
+}
+
 $markdown = local_liamateriales_inject_lms_block($result->content, $lmsconfig);
 
 // Auditoría (LIA-069): quién abrió qué versión, y si fue en solo lectura.

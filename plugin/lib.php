@@ -115,7 +115,7 @@ function local_liamateriales_cors_origin(): string {
 
 /**
  * Cabeceras de las respuestas de los scripts que usa el editor
- * (content.php, save.php, token.php, asset.php; LIA-063): CORS
+ * (content.php, save.php, token.php, asset.php, sync.php; LIA-063): CORS
  * restringido al origen del editor, sin Referer, sin sniffing y sin caché.
  */
 function local_liamateriales_api_headers(): void {
