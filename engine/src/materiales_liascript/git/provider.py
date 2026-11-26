@@ -10,6 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from contextlib import AbstractContextManager
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -19,6 +20,18 @@ class GitProviderError(RuntimeError):
 
 class BranchMovedError(GitProviderError):
     """La rama avanzó entre la lectura del HEAD y el commit (CAS fallido)."""
+
+
+@dataclass(frozen=True)
+class MergeTree:
+    """Resultado de fusionar dos commits en memoria (``git merge-tree``).
+
+    ``tree`` es el árbol fusionado; si hay conflictos, sus ficheros llevan
+    marcas de conflicto y ``conflicts`` dice cuáles son.
+    """
+
+    tree: str
+    conflicts: tuple[str, ...]
 
 
 class GitProvider(ABC):
@@ -68,6 +81,39 @@ class GitProvider(ABC):
     @abstractmethod
     def is_ancestor(self, ref_a: str, ref_b: str) -> bool:
         """``True`` si ``ref_a`` es ancestro (o igual) de ``ref_b``."""
+
+    # -- incorporar main a las ramas de edición (LIA-130) -------------------------
+
+    def merge_base(self, ref_a: str, ref_b: str) -> str | None:
+        """Ancestro común más reciente de ``ref_a`` y ``ref_b`` (``None`` si no hay)."""
+        raise NotImplementedError
+
+    def merge_tree(self, ours: str, theirs: str) -> MergeTree:
+        """Fusiona ``theirs`` en ``ours`` sin tocar ningún worktree."""
+        raise NotImplementedError
+
+    def tree_file(self, tree: str, path: str) -> bytes:
+        """Contenido de ``path`` en el árbol ``tree`` (p. ej. el de ``merge_tree``)."""
+        raise NotImplementedError
+
+    def commit_merge(  # noqa: PLR0913 - todo lo que define el commit de fusión
+        self,
+        branch: str,
+        *,
+        expected_head: str,
+        theirs: str,
+        tree: str,
+        files: Mapping[str, str | bytes | None],
+        message: str,
+        author: str,
+    ) -> str:
+        """Commit de fusión (padres ``expected_head`` y ``theirs``) con ``tree``
+        y, encima, ``files`` (p. ej. el material con los conflictos resueltos).
+
+        Compare-and-swap como ``commit_files``: si ``branch`` ya no apunta a
+        ``expected_head`` lanza ``BranchMovedError``.
+        """
+        raise NotImplementedError
 
     def paths_differ(self, ref_a: str, ref_b: str, path: str) -> bool:
         """``True`` si algo bajo ``path`` (fichero o carpeta; ``''`` = todo el

@@ -13,10 +13,13 @@ from materiales_liascript.edit.models import (
     EditState,
     MaterialFile,
     MaterialList,
+    MergeRequest,
+    MergeSegment,
     SaveConflict,
     SaveOk,
     SaveRequest,
     SaveResult,
+    SyncStatus,
 )
 from materiales_liascript.edit.service import EditService, build_compare_url
 
@@ -29,10 +32,13 @@ __all__ = [
     "EditState",
     "MaterialFile",
     "MaterialList",
+    "MergeRequest",
+    "MergeSegment",
     "SaveConflict",
     "SaveOk",
     "SaveRequest",
     "SaveResult",
+    "SyncStatus",
     "build_compare_url",
     "edit_branch_name",
     "resolution_branch_name",

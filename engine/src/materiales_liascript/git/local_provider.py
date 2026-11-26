@@ -27,7 +27,12 @@ from git import Repo
 from git.exc import BadName, GitCommandError, InvalidGitRepositoryError
 from git.objects import Blob, Commit, Tree
 
-from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
+from materiales_liascript.git.provider import (
+    BranchMovedError,
+    GitProvider,
+    GitProviderError,
+    MergeTree,
+)
 
 # Fecha ISO 8601 con zona horaria, como la da `git --format=%cI`.
 _ISO_8601 = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})")
@@ -35,6 +40,18 @@ _ISO_8601 = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2}
 # SHA del árbol vacío (constante bien conocida de Git), para crear
 # directorios intermedios al commitear un archivo en una ruta nueva.
 _EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+
+
+def _author_env(author: str) -> dict[str, str]:
+    """Variables de entorno de autor y committer para ``git commit-tree``."""
+    author_name, _, email_part = author.partition("<")
+    author_email = email_part.rstrip("> ") or f"{author_name.strip()}@liaeditor.local"
+    return {
+        "GIT_AUTHOR_NAME": author_name.strip(),
+        "GIT_AUTHOR_EMAIL": author_email,
+        "GIT_COMMITTER_NAME": "materiales-liascript-git",
+        "GIT_COMMITTER_EMAIL": "engine@materiales-liascript.local",
+    }
 
 
 class LocalGitProvider(GitProvider):
@@ -191,24 +208,9 @@ class LocalGitProvider(GitProvider):
         if not files:
             msg = "commit sin archivos"
             raise GitProviderError(msg)
-        author_name, _, email_part = author.partition("<")
-        author_email = email_part.rstrip("> ") or f"{author_name.strip()}@liaeditor.local"
         base = self.get_commit(branch)
-        tree = f"{base}^{{tree}}"
-        for path, content in files.items():
-            if content is None:
-                blob = None  # borrar
-            else:
-                data = content.encode("utf-8") if isinstance(content, str) else content
-                blob = self._hash_blob(data)
-            tree = self._replace_tree_entry(tree, path.split("/"), blob)
-        env = {
-            "GIT_AUTHOR_NAME": author_name.strip(),
-            "GIT_AUTHOR_EMAIL": author_email,
-            "GIT_COMMITTER_NAME": "materiales-liascript-git",
-            "GIT_COMMITTER_EMAIL": "engine@materiales-liascript.local",
-        }
-        commit = self._git_in(["commit-tree", tree, "-p", base], message, env=env)
+        tree = self._apply_files(f"{base}^{{tree}}", files)
+        commit = self._git_in(["commit-tree", tree, "-p", base], message, env=_author_env(author))
         try:
             self._git("update-ref", f"refs/heads/{branch}", commit, base)
         except GitProviderError as exc:
@@ -216,6 +218,99 @@ class LocalGitProvider(GitProvider):
             raise BranchMovedError(
                 f"la rama {branch!r} avanzó durante el commit de {paths}"
             ) from exc
+        return commit
+
+    def _apply_files(self, tree: str, files: Mapping[str, str | bytes | None]) -> str:
+        """Árbol ``tree`` con ``files`` escritos encima (``None`` = borrar)."""
+        for path, content in files.items():
+            if content is None:
+                blob = None  # borrar
+            else:
+                data = content.encode("utf-8") if isinstance(content, str) else content
+                blob = self._hash_blob(data)
+            tree = self._replace_tree_entry(tree, path.split("/"), blob)
+        return tree
+
+    # -- incorporar main a las ramas de edición (LIA-130) -------------------------
+
+    def merge_base(self, ref_a: str, ref_b: str) -> str | None:
+        result = subprocess.run(
+            ["git", "-C", str(self._root), "merge-base", ref_a, ref_b],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+        if result.returncode == 1:
+            return None  # historias sin ancestro común
+        msg = f"git merge-base falló: {result.stderr.strip()}"
+        raise GitProviderError(msg)
+
+    def merge_tree(self, ours: str, theirs: str) -> MergeTree:
+        # Git >= 2.38: fusión en memoria; escribe el árbol (con marcas de
+        # conflicto en los ficheros que chocan) sin worktree ni índice.
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self._root),
+                "merge-tree",
+                "--write-tree",
+                "--name-only",
+                "--no-messages",
+                ours,
+                theirs,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode not in (0, 1):
+            msg = f"git merge-tree falló: {result.stderr.strip()}"
+            raise GitProviderError(msg)
+        lines = result.stdout.splitlines()
+        if not lines:
+            msg = "git merge-tree no devolvió ningún árbol"
+            raise GitProviderError(msg)
+        conflicts = tuple(sorted({line for line in lines[1:] if line.strip()}))
+        return MergeTree(tree=lines[0].strip(), conflicts=conflicts)
+
+    def tree_file(self, tree: str, path: str) -> bytes:
+        result = subprocess.run(
+            ["git", "-C", str(self._root), "cat-file", "blob", f"{tree}:{path}"],
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            msg = f"no está {path!r} en el árbol {tree[:8]}"
+            raise GitProviderError(msg)
+        return result.stdout
+
+    def commit_merge(  # noqa: PLR0913 - todo lo que define el commit de fusión
+        self,
+        branch: str,
+        *,
+        expected_head: str,
+        theirs: str,
+        tree: str,
+        files: Mapping[str, str | bytes | None],
+        message: str,
+        author: str,
+    ) -> str:
+        if not self.branch_exists(branch):
+            msg = f"La rama no existe: {branch!r}"
+            raise GitProviderError(msg)
+        tree = self._apply_files(tree, files)
+        commit = self._git_in(
+            ["commit-tree", tree, "-p", expected_head, "-p", theirs],
+            message,
+            env=_author_env(author),
+        )
+        try:
+            self._git("update-ref", f"refs/heads/{branch}", commit, expected_head)
+        except GitProviderError as exc:
+            raise BranchMovedError(f"la rama {branch!r} avanzó durante la fusión") from exc
         return commit
 
     def _hash_blob(self, data: bytes) -> str:

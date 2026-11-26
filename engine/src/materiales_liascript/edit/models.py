@@ -106,3 +106,60 @@ class MaterialList(BaseModel):
     branch: str
     head: str
     files: list[MaterialFile]
+
+
+# -- Incorporar main a las ramas de edición (LIA-130) ------------------------
+
+
+class MergeSegment(BaseModel):
+    """Trozo del material al fusionar: común (``text``) o en conflicto."""
+
+    kind: Literal["same", "conflict"]
+    text: str = ""
+    ours: str = ""  # versión de la rama de edición (la del profesor)
+    base: str = ""  # versión de la que partieron las dos
+    theirs: str = ""  # versión oficial (main)
+
+
+SyncState = Literal["up_to_date", "clean", "conflict", "conflict_other", "not_applicable"]
+
+
+class SyncStatus(BaseModel):
+    """¿Trae ``main`` cambios del material que la rama de edición no tiene?
+
+    - ``up_to_date``: no hay nada que incorporar (o solo cambió otro material).
+    - ``clean``: se pueden incorporar sin conflictos.
+    - ``conflict``: el material choca; ``segments`` trae lo necesario para
+      resolverlo en el editor.
+    - ``conflict_other``: chocan otros ficheros (o el material ya no está en
+      main); lo resuelve coordinación (Meld en local).
+    - ``not_applicable``: la rama es la propia ``main``.
+    """
+
+    file: str
+    branch: str
+    status: SyncState
+    head_sha: str
+    main_sha: str
+    behind: int = 0  # commits de main que la rama no tiene
+    conflicts: list[str] = Field(default_factory=list)
+    segments: list[MergeSegment] = Field(default_factory=list)
+    #: el material en la rama, y, si la fusión es limpia, cómo quedará (para revisarlo)
+    ours: str = ""
+    merged: str = ""
+
+
+class MergeRequest(BaseModel):
+    """Cuerpo de ``POST /edit/merge``: incorpora ``main`` a la rama.
+
+    ``head_sha`` y ``main_sha`` son los que vio el editor en ``/edit/sync``:
+    si alguno cambió, 409 y vuelta a empezar. ``content`` es el material con
+    los conflictos resueltos (solo si los había).
+    """
+
+    user: str = Field(min_length=1)
+    file: str = Field(min_length=1)
+    branch: str = Field(min_length=1)
+    head_sha: str = Field(min_length=40, max_length=40)
+    main_sha: str = Field(min_length=40, max_length=40)
+    content: str | None = Field(default=None, max_length=MAX_FILE_SIZE)

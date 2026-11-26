@@ -24,15 +24,18 @@ from materiales_liascript.edit.branches import (
     resolution_branch_name,
     validate_file_path,
 )
+from materiales_liascript.edit.merge import diff3_segments, has_conflict_markers
 from materiales_liascript.edit.models import (
     EditContent,
     EditState,
     MaterialFile,
     MaterialList,
+    MergeRequest,
     SaveConflict,
     SaveOk,
     SaveRequest,
     SaveResult,
+    SyncStatus,
 )
 from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
 
@@ -295,6 +298,108 @@ class EditService:
             state="update_available" if changed else "up_to_date",
             commits_ahead=ahead,
             content_changed=changed,
+        )
+
+    # -- Incorporar main a la rama de edición (LIA-130) -------------------------
+
+    def sync_status(self, file: str, branch: str) -> SyncStatus:  # noqa: PLR0911 - uno por estado
+        """¿Trae ``main`` cambios del material que ``branch`` no tiene?
+
+        Se fusiona en memoria (``git merge-tree``), sin tocar la rama. Solo
+        cuentan los cambios de ``main`` en la carpeta del material: si main
+        solo cambió otros materiales, no hay nada que incorporar.
+        """
+        file = validate_file_path(file)
+        main = self._default_branch
+        if not self._git.branch_exists(branch):
+            raise EditError(404, f"la rama no existe: {branch!r}")
+        if not self._git.branch_exists(main):
+            raise EditError(503, f"no existe la rama principal: {main!r}")
+        head = self._git.get_commit(branch)
+        main_sha = self._git.get_commit(main)
+
+        def status(state: str, **extra: object) -> SyncStatus:
+            return SyncStatus.model_validate(
+                {
+                    "file": file,
+                    "branch": branch,
+                    "status": state,
+                    "head_sha": head,
+                    "main_sha": main_sha,
+                    **extra,
+                }
+            )
+
+        if branch == main:
+            return status("not_applicable")
+        base = self._git.merge_base(head, main_sha)
+        if base == main_sha:
+            return status("up_to_date")
+        behind = self._git.commits_ahead(head, main_sha) if base else 0
+        if base and not self._git.paths_differ(base, main_sha, posixpath.dirname(file)):
+            return status("up_to_date", behind=behind)
+        if not self._file_exists(main_sha, file):
+            return status("conflict_other", behind=behind, conflicts=[file])
+        merged = self._git.merge_tree(head, main_sha)
+        ours = self._git.get_file(head, file)
+        if not merged.conflicts:
+            result = self._git.tree_file(merged.tree, file).decode("utf-8")
+            return status("clean", behind=behind, ours=ours, merged=result)
+        if merged.conflicts != (file,):
+            return status("conflict_other", behind=behind, conflicts=list(merged.conflicts))
+        original = self._git.get_file(base, file) if base and self._file_exists(base, file) else ""
+        segments = diff3_segments(original, ours, self._git.get_file(main_sha, file))
+        return status("conflict", behind=behind, conflicts=[file], segments=segments, ours=ours)
+
+    def merge(self, request: MergeRequest) -> SaveOk:
+        """Incorpora ``main`` a la rama de edición con un commit de fusión.
+
+        Exige que la rama y ``main`` sigan donde los vio el editor (409 si
+        no). Si hay conflicto en el material, ``content`` es su versión
+        resuelta (sin marcas); si chocan otros ficheros, 409 (coordinación).
+        """
+        file = validate_file_path(request.file)
+        main = self._default_branch
+        if request.branch == main:
+            raise EditError(400, "la rama principal no se fusiona consigo misma")
+        if not self._git.branch_exists(request.branch):
+            raise EditError(404, f"la rama no existe: {request.branch!r}")
+        head = self._git.get_commit(request.branch)
+        if head != request.head_sha:
+            raise EditError(
+                409, "la rama ha cambiado desde que se revisó: vuelve a cargar el material"
+            )
+        main_sha = self._git.get_commit(main)
+        if main_sha != request.main_sha:
+            raise EditError(
+                409, "la versión oficial ha vuelto a cambiar: revisa de nuevo los cambios"
+            )
+        merged = self._git.merge_tree(head, main_sha)
+        files: dict[str, str | bytes | None] = {}
+        if merged.conflicts:
+            if merged.conflicts != (file,) or request.content is None:
+                raise EditError(409, "hay conflictos sin resolver")
+            if has_conflict_markers(request.content):
+                raise EditError(400, "el material conserva marcas de conflicto sin resolver")
+            files[file] = request.content
+        try:
+            new_sha = self._git.commit_merge(
+                request.branch,
+                expected_head=head,
+                theirs=main_sha,
+                tree=merged.tree,
+                files=files,
+                message=f"Incorpora la versión oficial (main) a {request.branch}",
+                author=f"{request.user} <{request.user}@liaeditor.local>",
+            )
+        except BranchMovedError as exc:
+            raise EditError(
+                409, "la rama ha cambiado durante la fusión: vuelve a cargar el material"
+            ) from exc
+        self._git.push_branch(request.branch)
+        _log.info("main_incorporada", file=file, branch=request.branch, main=main_sha, sha=new_sha)
+        return SaveOk(
+            branch=request.branch, new_sha=new_sha, committed_at=self._git.commit_date(new_sha)
         )
 
     def _file_exists(self, ref: str, file: str) -> bool:

@@ -12,6 +12,10 @@ estas rutas; la lógica Git vive en ``materiales_liascript.edit`` (D2):
   (§5.3 de la v1), para el panel del curso y las notificaciones.
 - ``GET /edit/asset``: imagen de la carpeta del material, para que el editor
   la muestre (docs/imagenes).
+- ``GET /edit/sync``: ¿trae ``main`` cambios del material que la rama de
+  edición no tiene? (sin conflictos / conflicto con sus trozos) (LIA-130).
+- ``POST /edit/merge``: incorpora ``main`` a la rama con un commit de fusión
+  (con el material resuelto si había conflicto).
 
 El router se monta siempre; sin provider Git responde 503 con JSON claro.
 """
@@ -24,7 +28,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
 from materiales_liascript.edit.branches import EditError
-from materiales_liascript.edit.models import EditOpenRequest, SaveRequest
+from materiales_liascript.edit.models import EditOpenRequest, MergeRequest, SaveRequest
 from materiales_liascript.edit.service import EditService
 from materiales_liascript.git.provider import GitProvider, GitProviderError
 
@@ -117,6 +121,28 @@ def create_edit_router(deps: EditApiDeps) -> APIRouter:  # noqa: PLR0915 - una r
         """Estado por comparación de SHAs (LIA-005): up_to_date / update_available."""
         try:
             result = service().state(file, sha, branch=branch)
+        except EditError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        except GitProviderError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return JSONResponse(result.model_dump(mode="json"))
+
+    @router.get("/edit/sync")
+    def sync(file: str = Query(min_length=1), branch: str = Query(min_length=1)) -> JSONResponse:
+        """Cambios de main pendientes de incorporar a la rama (LIA-130)."""
+        try:
+            result = service().sync_status(file, branch)
+        except EditError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        except GitProviderError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return JSONResponse(result.model_dump(mode="json"))
+
+    @router.post("/edit/merge")
+    def merge(request: MergeRequest) -> JSONResponse:
+        """Incorpora main a la rama de edición (commit de fusión) (LIA-130)."""
+        try:
+            result = service().merge(request)
         except EditError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         except GitProviderError as exc:
