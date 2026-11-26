@@ -78,7 +78,12 @@ try {
 $baseurl = (new \moodle_url('/local/liamateriales/save.php'))->out(false);
 $tokenurl = (new \moodle_url('/local/liamateriales/token.php'))->out(false);
 $asseturl = (new \moodle_url('/local/liamateriales/asset.php'))->out(false);
-$returnurl = (new \moodle_url('/my/courses.php'))->out(false);
+// «Volver a Moodle» del editor: al catálogo de materiales del curso desde el
+// que se abrió (el token conserva el curso); sin curso, a «Mis cursos».
+$returncourseid = (int) $tokendata->courseid;
+$returnurl = ($returncourseid > 0
+    ? new \moodle_url('/local/liamateriales/materials.php', ['id' => $returncourseid])
+    : new \moodle_url('/my/courses.php'))->out(false);
 
 // committed_at (fecha del commit sha) solo si el engine la da en ISO 8601.
 $lmsconfig = local_liamateriales_lms_config([

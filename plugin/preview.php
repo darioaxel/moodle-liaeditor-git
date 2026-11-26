@@ -28,4 +28,5 @@ if (local_liamateriales_editor_url() === '') {
     throw new \moodle_exception('editornotconfigured', 'local_liamateriales');
 }
 
-redirect(local_liamateriales_open_in_editor((int) $USER->id, $file, 'main', 0, true));
+// El curso viaja en el token para que «Volver a Moodle» regrese al catálogo.
+redirect(local_liamateriales_open_in_editor((int) $USER->id, $file, 'main', $courseid, true));

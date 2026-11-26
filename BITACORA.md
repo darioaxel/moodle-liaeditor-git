@@ -28,6 +28,19 @@
 
 ## Registro de sesiones
 
+### 2026-11-26 — Sesión 45: «Volver a Moodle» regresa al catálogo del curso
+
+- El botón «Volver a Moodle» del editor llevaba siempre a `/my/courses.php`
+  (`return_url` fijo en `content.php`). Ahora `content.php` toma el curso
+  del token y devuelve `materials.php?id=<curso>`; sin curso (tokens
+  antiguos), sigue yendo a «Mis cursos».
+- `preview.php` emite el token de solo lectura con el curso (antes `0`)
+  para que la vista previa también vuelva al catálogo. Publicar sigue
+  vetado en solo lectura; los eventos de auditoría de la vista previa
+  quedan ahora asociados al curso.
+- `version.php` → 2026112600. Pendiente: probarlo en el Moodle de
+  desarrollo (no hay PHP en el host para `php -l`).
+
 ### 2026-11-25 — Sesión 43: Borrado de imágenes, ancho, dos columnas e iconos de tema
 
 - **Borrado** (LIA-126): en la prueba LIA-124 quedaron tres imágenes
