@@ -28,6 +28,30 @@
 
 ## Registro de sesiones
 
+### 2026-11-26 — Sesión 49: Actualizar los contenidos dependientes de la versión oficial
+
+Rama `feature/actualizar-dependientes` (sale de `main`, 70ce32b).
+
+- **Engine**: `/edit/state` marcaba como desactualizado todo lo publicado
+  desde `main` con cualquier commit de `main`, aunque tocara otro material.
+  Ahora mira si cambió la carpeta del material (`paths_differ`, `git diff
+  --quiet`); nuevo campo `content_changed`.
+- **Plugin 2.10.0 (2026112605)** (LIA-129): aviso en `materials.php` y
+  botón «Actualizar todos los contenidos dependientes de esta versión» en
+  cada contenido publicado desde `main` y desactualizado. Al pulsarlo
+  (con confirmación), `update_dependents.php` regenera cada uno desde el
+  HEAD de `main` y lo sustituye en el mismo módulo; `js/update_dependents.js`
+  los procesa de uno en uno con su estado. Sin JS, todos en una petición.
+  Qué depende de `main` lo decide el servidor (`publisher::main_dependents`).
+- **Corregido**: actualizar un módulo forzaba `visible = 1` (una actividad
+  oculta se volvía visible); ahora conserva su visibilidad.
+- **Pruebas**: engine 183 ✓ (ruff, mypy); plugin: lint PHP 8.3, e2e del JS
+  8/8 (`tests/js/update_dependents_e2e.mjs`) y el de Publicar 14/14. Tests
+  PHPUnit nuevos (visibilidad, `is_main_dependent`) sin ejecutar: falta un
+  Moodle con PHPUnit.
+- **Pendiente**: probarlo en el Moodle de pruebas; LIA-130 (incorporar
+  `main` a las ramas de edición).
+
 ### 2026-11-26 — Sesión 48: Playground al día con `main` (2.9.0) y portada comprobada
 
 - **Despliegue** en el servidor de pruebas de `main` hasta `21fd8f0`:

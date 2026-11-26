@@ -287,10 +287,49 @@ registra igual.
 
 ### 4.3 Estado de lo publicado
 
-`materials.php` consulta, para cada despliegue registrado,
-`GET /edit/state?file&sha` del engine. El engine compara el SHA publicado
-con el HEAD de `main` y responde `up_to_date` o `update_available`, con el
-número de commits de diferencia.
+`materials.php` consulta, para cada despliegue vivo,
+`GET /edit/state?file&sha&branch` del engine contra la rama de la versión
+publicada (`main` o la rama de edición). Hay `update_available` solo si la
+**carpeta del material** (su `.md` y sus imágenes, lo que entra en lo
+generado) cambió entre el SHA publicado y el HEAD de esa rama: un commit en
+`main` que toca otro material no deja nada desactualizado.
+
+### 4.4 Actualizar los contenidos dependientes de la versión oficial
+
+Cuando cambia `main`, los contenidos publicados **desde `main`** cuyo
+material ha cambiado quedan desactualizados. `materials.php` muestra un
+aviso (visible desde cualquier pestaña) y, en cada uno de esos contenidos
+de «Publicados», el botón **«Actualizar todos los contenidos dependientes
+de esta versión»** (`:deploy`). Lo publicado desde una rama de edición
+sigue con su botón «Actualizar» de siempre, de uno en uno.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor P as Profesor
+    participant M as Plugin (materials.php)
+    participant U as Plugin (update_dependents.php)
+    participant E as Engine
+    participant C as Curso de Moodle
+
+    M->>E: GET /edit/state por cada despliegue vivo
+    M-->>P: aviso + botón en los dependientes de main
+    P->>M: Actualizar todos… (confirma)
+    loop un contenido cada vez (js/update_dependents.js)
+        M->>U: POST {id, deploy, ajax=1, sesskey}
+        Note over U: :deploy + manageactivities<br/>el deploy debe estar en main_dependents()
+        U->>E: GET /edit/content (main): SHA actual
+        U->>E: POST /publish {file, sha, format}
+        E-->>U: artefacto
+        U->>C: update_moduleinfo del MISMO módulo<br/>(nombre, sección y visibilidad intactos)
+        Note over U: nuevo despliegue {sha de main, branch main}
+        U-->>M: {status: updated | skipped | error}
+    end
+    M-->>P: lista con el estado de cada uno y «Cerrar»
+```
+
+Sin JavaScript, el mismo formulario actualiza todos en una petición y
+vuelve a la lista con un resumen.
 
 ## 5. Dónde vive cada dato
 

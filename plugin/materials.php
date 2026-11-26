@@ -40,7 +40,83 @@ $tabidmaster = 'cacc-master';
 $tabidminedit = 'cacc-minedit';
 $tabidpublished = 'cacc-published';
 
+// Lo publicado que sigue en el curso (el último despliegue por fichero y
+// formato cuya actividad no se ha borrado) y su estado frente a su rama.
+$latest = \local_liamateriales\local\publisher::live_deploys($courseid);
+$states = [];
+$dependents = [];
+foreach ($latest as $deploy) {
+    try {
+        $states[$deploy->id] = local_liamateriales_deploy_state($deploy, (int) $USER->id);
+    } catch (\moodle_exception $e) {
+        $states[$deploy->id] = null;
+        continue;
+    }
+    // Generado desde main y obsoleto tras un cambio de main (LIA-129).
+    if (\local_liamateriales\local\publisher::is_main_dependent($states[$deploy->id])) {
+        $dependents[$deploy->id] = $deploy;
+    }
+}
+
+/**
+ * Botón «Actualizar todos los contenidos dependientes de esta versión»
+ * (formulario POST a update_dependents.php; js/update_dependents.js muestra
+ * el progreso).
+ */
+$dependentsbutton = static function () use ($courseid): string {
+    return html_writer::start_tag('form', [
+        'method' => 'post',
+        'action' => (new moodle_url('/local/liamateriales/update_dependents.php'))->out(false),
+        'class' => 'liamat-update-dependents d-inline',
+    ])
+        . html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()])
+        . html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'id', 'value' => $courseid])
+        . html_writer::tag('button', get_string('dependents_update', 'local_liamateriales'), [
+            'type' => 'submit',
+            'class' => 'btn btn-warning btn-sm',
+        ])
+        . html_writer::end_tag('form');
+};
+
 echo $OUTPUT->header();
+
+if ($candeploy && $dependents) {
+    // Aviso visible desde cualquier pestaña: la versión oficial cambió.
+    echo $OUTPUT->notification(
+        get_string(count($dependents) === 1 ? 'dependents_notice_one' : 'dependents_notice', 'local_liamateriales', count($dependents))
+            . ' ' . $dependentsbutton(),
+        \core\output\notification::NOTIFY_WARNING
+    );
+    $items = [];
+    foreach ($dependents as $deploy) {
+        $items[] = [
+            'id' => (int) $deploy->id,
+            'label' => $deploy->source_file . ' · '
+                . \local_liamateriales\local\publisher::label($deploy->artifact_type),
+        ];
+    }
+    echo html_writer::div('', '', [
+        'id' => 'liamat-dependents',
+        'hidden' => 'hidden',
+        'data-config' => json_encode([
+            'items' => $items,
+            'returnurl' => (new moodle_url('/local/liamateriales/materials.php', ['id' => $courseid]))->out(false),
+            'strings' => [
+                'confirm' => get_string('dependents_confirm', 'local_liamateriales', count($items)),
+                'title' => get_string('dependents_update', 'local_liamateriales'),
+                'pending' => get_string('dependents_pending', 'local_liamateriales'),
+                'running' => get_string('dependents_running', 'local_liamateriales'),
+                'updated' => get_string('dependents_updated', 'local_liamateriales'),
+                'skipped' => get_string('dependents_skipped', 'local_liamateriales'),
+                'error' => get_string('dependents_error', 'local_liamateriales'),
+                'keepopen' => get_string('progress_keepopen', 'local_liamateriales'),
+                'done' => get_string('dependents_finished', 'local_liamateriales'),
+                'close' => get_string('dependents_close', 'local_liamateriales'),
+            ],
+        ]),
+    ]);
+    $PAGE->requires->js(new moodle_url('/local/liamateriales/js/update_dependents.js'));
+}
 
 // -- Navegación por pestañas -------------------------------------------------
 
@@ -204,9 +280,7 @@ echo html_writer::start_tag('div', [
     'aria-labelledby' => $tabidpublished . '-tab',
 ]);
 
-// Lo publicado que sigue en el curso: el último despliegue por fichero y
-// formato cuya actividad no se ha borrado (historial completo en el log).
-$latest = \local_liamateriales\local\publisher::live_deploys($courseid);
+// Lo publicado que sigue en el curso ($latest, calculado arriba con su estado).
 if ($latest) {
     $table = new html_table();
     $table->head = [
@@ -222,11 +296,7 @@ if ($latest) {
         if (!$cm) {
             continue;
         }
-        try {
-            $statekey = local_liamateriales_deploy_state($deploy, (int) $USER->id)->state;
-        } catch (\moodle_exception $e) {
-            $statekey = 'ERROR';
-        }
+        $statekey = $states[$deploy->id]->state ?? 'ERROR';
         $badge = html_writer::span(
             local_liamateriales_state_label($statekey),
             'badge bg-' . local_liamateriales_state_class($statekey)
@@ -236,7 +306,10 @@ if ($latest) {
             format_string($cm->name)
         );
         $actions = '';
-        if ($candeploy && $statekey === 'update_available') {
+        if ($candeploy && isset($dependents[$deploy->id])) {
+            // Generado desde main y obsoleto: se actualizan todos a la vez.
+            $actions = $dependentsbutton();
+        } else if ($candeploy && $statekey === 'update_available') {
             $actions = html_writer::link(
                 new moodle_url('/local/liamateriales/publish.php', [
                     'id' => $courseid,

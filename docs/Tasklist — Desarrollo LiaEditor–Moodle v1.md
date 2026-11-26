@@ -320,6 +320,13 @@ editor.
   contenido (sesión 43).
 - [x] **LIA-128** (XS) Tema del editor con iconos en lugar del desplegable
   (sesión 43).
+- [x] **LIA-129** (M) «Actualizar todos los contenidos dependientes de esta
+  versión»: al cambiar `main`, lo publicado desde `main` cuyo material
+  cambió se regenera y sustituye en el mismo módulo (plugin 2.10.0; el
+  estado del engine mira la carpeta del material) (sesión 49).
+- [ ] **LIA-130** (M) Incorporar a las ramas de edición los cambios de
+  `main` (fusión a tres vías; conflictos con una vista tipo Meld en el
+  editor o, mientras tanto, con Meld en local).
 
 ---
 

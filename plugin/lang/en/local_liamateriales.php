@@ -71,6 +71,21 @@ $string['material_continue'] = 'Continuar editando';
 $string['material_publish'] = 'Publicar';
 $string['material_update'] = 'Actualizar';
 
+// Contenidos dependientes de la versión oficial (LIA-129).
+$string['dependents_update'] = 'Actualizar todos los contenidos dependientes de esta versión';
+$string['dependents_notice_one'] = 'La versión oficial (main) ha cambiado: 1 contenido publicado desde ella ha quedado desactualizado.';
+$string['dependents_notice'] = 'La versión oficial (main) ha cambiado: {$a} contenidos publicados desde ella han quedado desactualizados.';
+$string['dependents_confirm'] = 'Se volverán a generar {$a} contenido(s) desde la versión oficial y sustituirán a los publicados (mismo nombre, sección y visibilidad). ¿Continuar?';
+$string['dependents_pending'] = 'Pendiente';
+$string['dependents_running'] = 'Actualizando…';
+$string['dependents_updated'] = 'Actualizado';
+$string['dependents_skipped'] = 'Ya estaba al día';
+$string['dependents_error'] = 'Error';
+$string['dependents_finished'] = 'Terminado.';
+$string['dependents_close'] = 'Cerrar';
+$string['dependents_done'] = 'Contenidos actualizados desde la versión oficial: {$a}.';
+$string['dependents_failed'] = 'No se pudieron actualizar:';
+
 // LiaEditor: publish page (LIA-017).
 $string['publish_name'] = 'Nombre del módulo';
 $string['publish_type'] = 'Tipo de artefacto';

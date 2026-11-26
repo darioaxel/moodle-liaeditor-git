@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112604;        // Autor de la web y PDF (LaTeX) con portada, índice y cabeceras.
+$plugin->version = 2026112605;        // Actualizar los contenidos dependientes de la versión oficial (LIA-129).
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.9.0';
+$plugin->release = '2.10.0';

@@ -204,4 +204,34 @@ final class publisher_test extends \advanced_testcase {
         $this->assertSame($cmid, (int) $deploy->cmid);
         $this->assertSame('resource', get_coursemodule_from_id('', $cmid)->modname);
     }
+
+    public function test_actualizar_no_cambia_la_visibilidad(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $file = 'materiales/tema1/tema1.md';
+        $first = publisher::stage_artifact((int) $user->id, 'tema1.pdf', "%PDF-1.4\n%%EOF\n", 'pdf');
+        $cmid = publisher::publish(
+            (int) $course->id, 0, $file, 'pdf', str_repeat('a', 40), $first, 'Tema 1 (PDF)', 0, $user->username, 'main'
+        );
+        // El profesor oculta la actividad; actualizarla (p. ej. desde main) no la vuelve a mostrar.
+        set_coursemodule_visible($cmid, 0);
+        $second = publisher::stage_artifact((int) $user->id, 'tema1.pdf', "%PDF-1.4\n%%EOF\n", 'pdf');
+        $updated = publisher::publish(
+            (int) $course->id, 0, $file, 'pdf', str_repeat('b', 40), $second, 'Tema 1 (PDF)', $cmid, $user->username, 'main'
+        );
+        $this->assertSame($cmid, $updated);
+        $this->assertSame(0, (int) get_coursemodule_from_id('', $cmid)->visible);
+        $this->assertSame(str_repeat('b', 40), publisher::latest_deploy((int) $course->id, $file)->git_commit);
+    }
+
+    public function test_dependiente_de_main_solo_si_esta_desactualizado(): void {
+        $estado = static fn(string $branch, string $state): \stdClass => (object) ['branch' => $branch, 'state' => $state];
+        $this->assertTrue(publisher::is_main_dependent($estado('main', 'update_available')));
+        $this->assertFalse(publisher::is_main_dependent($estado('main', 'up_to_date')));
+        // Lo publicado desde una rama de edición se actualiza con «Actualizar», de uno en uno.
+        $this->assertFalse(publisher::is_main_dependent($estado('edicion/profe/materiales-tema1', 'update_available')));
+        $this->assertFalse(publisher::is_main_dependent((object) []));
+    }
 }

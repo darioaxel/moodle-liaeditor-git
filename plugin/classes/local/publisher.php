@@ -132,6 +132,9 @@ class publisher {
 
         if ($existingcmid > 0) {
             $cm = get_coursemodule_from_id('', $existingcmid, 0, false, MUST_EXIST);
+            // Actualizar no cambia la visibilidad: una actividad que el
+            // profesor ocultó sigue oculta (antes se forzaba visible = 1).
+            $moduleinfo->visible = (int) $cm->visible;
             $moduleinfo->id = $cm->instance;
             $moduleinfo->coursemodule = $cm->id;
             $moduleinfo->cmidnumber = $cm->idnumber;
@@ -546,5 +549,77 @@ class publisher {
      */
     public static function latest_deploy(int $courseid, string $sourcefile): ?\stdClass {
         return self::live_deploys($courseid, $sourcefile)[0] ?? null;
+    }
+
+    /**
+     * ¿Depende este despliegue de la versión oficial y ha quedado obsoleto?
+     *
+     * Sí si su estado (local_liamateriales_deploy_state) se calculó contra
+     * ``main`` (publicado desde main, o un despliegue antiguo sin rama cuyo
+     * SHA está en main) y el engine ve cambios en la carpeta del material.
+     *
+     * @param \stdClass $state respuesta de ``/edit/state``
+     */
+    public static function is_main_dependent(\stdClass $state): bool {
+        return ($state->branch ?? '') === 'main' && ($state->state ?? '') === 'update_available';
+    }
+
+    /**
+     * Contenidos publicados en el curso desde ``main`` que un cambio posterior
+     * de ``main`` ha dejado obsoletos («Actualizar todos los contenidos
+     * dependientes de esta versión»).
+     *
+     * @param int $courseid curso
+     * @param int $userid usuario (para el estado de despliegues antiguos sin rama)
+     * @return \stdClass[] despliegues vivos, indexados por id
+     */
+    public static function main_dependents(int $courseid, int $userid): array {
+        global $CFG;
+        require_once($CFG->dirroot . '/local/liamateriales/lib.php');
+        $dependents = [];
+        foreach (self::live_deploys($courseid) as $deploy) {
+            try {
+                $state = local_liamateriales_deploy_state($deploy, $userid);
+            } catch (\moodle_exception $e) {
+                continue; // engine caído o material ilegible: no se ofrece
+            }
+            if (self::is_main_dependent($state)) {
+                $dependents[(int) $deploy->id] = $deploy;
+            }
+        }
+        return $dependents;
+    }
+
+    /**
+     * Regenera un contenido publicado desde la versión actual de ``main`` y
+     * sustituye al obsoleto en el mismo módulo: mismo formato, nombre,
+     * sección y visibilidad. Queda registrado como un despliegue nuevo.
+     *
+     * @param \stdClass $deploy despliegue vivo (de main_dependents())
+     * @param \stdClass $user quien actualiza
+     * @return int cmid del módulo actualizado
+     */
+    public static function update_from_main(\stdClass $deploy, \stdClass $user): int {
+        global $CFG;
+        require_once($CFG->dirroot . '/local/liamateriales/lib.php');
+        $courseid = (int) $deploy->courseid;
+        $cm = get_coursemodule_from_id('', (int) $deploy->cmid, $courseid, false, MUST_EXIST);
+        // Versión oficial actual del material (el SHA lo resuelve el servidor).
+        $head = local_liamateriales_service_get('/edit/content', ['file' => $deploy->source_file, 'branch' => 'main']);
+        if (empty($head->sha) || strlen((string) $head->sha) !== 40) {
+            throw new \moodle_exception('publishnosha', 'local_liamateriales');
+        }
+        $lastauthor = isset($head->last_author) && is_string($head->last_author) ? $head->last_author : null;
+        return self::publish_generated(
+            $courseid,
+            (int) $cm->sectionnum,
+            $deploy->source_file,
+            $deploy->artifact_type,
+            $head->sha,
+            $cm->name,
+            $user,
+            'main',
+            self::author_name('main', $lastauthor)
+        );
     }
 }

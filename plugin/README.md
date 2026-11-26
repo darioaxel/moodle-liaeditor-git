@@ -21,7 +21,12 @@ en Moodle 6.0dev.
 - **Página "Materiales"** (`/local/liamateriales/materials.php`, entrada en la
   navegación del curso): catálogo master de materiales `.md` del repo
   (`GET /edit/files`), sesiones de edición del profesor y módulos publicados
-  con su estado por comparación de SHAs (`GET /edit/state`).
+  con su estado (`GET /edit/state`: hay actualización si cambió la carpeta
+  del material en su rama). Si cambia `main`, los contenidos publicados
+  desde `main` que quedan obsoletos muestran **«Actualizar todos los
+  contenidos dependientes de esta versión»** (`update_dependents.php` +
+  `js/update_dependents.js`): se regeneran desde `main` y sustituyen a los
+  publicados en el mismo módulo (nombre, sección y visibilidad intactos).
 - **Edición** (`edit.php` → LiaEdit self-hosted): asegura la rama
   `edicion/<user>/<file>` vía `POST /edit/open` del engine (D4), emite un
   **token de un solo uso** (D9, tabla `local_liamateriales_token`, gestionado
