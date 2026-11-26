@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import posixpath
 import re
 from collections.abc import Callable
 from datetime import datetime
@@ -262,7 +263,13 @@ class EditService:
         return fallback
 
     def state(self, file: str, published_sha: str, branch: str | None = None) -> EditState:
-        """Estado por comparación de SHAs (§5.3 de la v1): UP_TO_DATE / UPDATE_AVAILABLE."""
+        """Estado de lo publicado (§5.3 de la v1): UP_TO_DATE / UPDATE_AVAILABLE.
+
+        Hay actualización si la **carpeta del material** (su ``.md`` y sus
+        imágenes: lo que entra en lo generado) cambió entre ``published_sha``
+        y el HEAD de la rama. Un commit en ``main`` que solo toca otros
+        materiales no deja desactualizado lo publicado de este.
+        """
         branch = branch or self._default_branch
         file = validate_file_path(file)
         if not self._git.branch_exists(branch):
@@ -274,13 +281,20 @@ class EditService:
                 ahead = self._git.commits_ahead(published_sha, branch)
         except GitProviderError:
             ahead = None
+        changed = head != published_sha
+        if changed:
+            try:
+                changed = self._git.paths_differ(published_sha, head, posixpath.dirname(file))
+            except GitProviderError:
+                changed = True  # SHA desconocido (p. ej. de una rama borrada): ante la duda, sí
         return EditState(
             file=file,
             branch=branch,
             published_sha=published_sha,
             head_sha=head,
-            state="up_to_date" if head == published_sha else "update_available",
+            state="update_available" if changed else "up_to_date",
             commits_ahead=ahead,
+            content_changed=changed,
         )
 
     def _file_exists(self, ref: str, file: str) -> bool:

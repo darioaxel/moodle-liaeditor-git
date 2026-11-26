@@ -130,6 +130,19 @@ class LocalGitProvider(GitProvider):
                 raise GitProviderError(msg) from exc
             return bool(bases) and bases[0].hexsha == sha_a
 
+    def paths_differ(self, ref_a: str, ref_b: str, path: str) -> bool:
+        # Sin GitPython (subproceso propio): no necesita el bloqueo de lecturas.
+        result = subprocess.run(
+            ["git", "-C", str(self._root), "diff", "--quiet", ref_a, ref_b, "--", path or "."],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode in (0, 1):
+            return result.returncode == 1
+        msg = f"git diff falló: {result.stderr.strip()}"
+        raise GitProviderError(msg)
+
     # -- escritura (LIA-003/004) -------------------------------------------------
 
     def branch_exists(self, branch: str) -> bool:

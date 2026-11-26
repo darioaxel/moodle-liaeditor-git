@@ -89,6 +89,8 @@ class EditState(BaseModel):
     head_sha: str
     state: Literal["up_to_date", "update_available"]
     commits_ahead: int | None = None  # None si published_sha no es ancestro
+    # La carpeta del material cambió entre lo publicado y el HEAD de la rama.
+    content_changed: bool = False
 
 
 class MaterialFile(BaseModel):

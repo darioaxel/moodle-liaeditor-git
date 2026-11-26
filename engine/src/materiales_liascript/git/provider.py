@@ -69,6 +69,15 @@ class GitProvider(ABC):
     def is_ancestor(self, ref_a: str, ref_b: str) -> bool:
         """``True`` si ``ref_a`` es ancestro (o igual) de ``ref_b``."""
 
+    def paths_differ(self, ref_a: str, ref_b: str, path: str) -> bool:
+        """``True`` si algo bajo ``path`` (fichero o carpeta; ``''`` = todo el
+        repositorio) es distinto entre ``ref_a`` y ``ref_b``.
+
+        Lo usa el estado de lo publicado: un cambio en ``main`` que no toca la
+        carpeta del material no lo deja desactualizado.
+        """
+        raise NotImplementedError
+
     # -- escritura (flujo de edición: ramas edicion/*, D4/D5) ---------------------
 
     @abstractmethod

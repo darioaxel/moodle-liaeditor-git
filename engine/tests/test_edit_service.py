@@ -210,6 +210,30 @@ def test_state_sha_no_ancestro(service: EditService, provider: LocalGitProvider)
     assert result.commits_ahead is None  # no se puede calcular sin ancestro común
 
 
+def test_state_un_cambio_en_otro_material_no_desactualiza(
+    service: EditService, provider: LocalGitProvider
+) -> None:
+    published = provider.get_commit("main")
+    provider.commit_file("main", "materiales/otro/otro.md", "# Otro\n", "otro", "t <t@t.local>")
+    result = service.state(FILE, published)
+    assert result.head_sha != published
+    assert result.state == "up_to_date"
+    assert result.content_changed is False
+    assert result.commits_ahead == 1
+
+
+def test_state_una_imagen_nueva_del_material_si_desactualiza(
+    service: EditService, provider: LocalGitProvider
+) -> None:
+    published = provider.get_commit("main")
+    provider.commit_files(
+        "main", {"materiales/ut03-mvc/img/x.png": b"\x89PNG"}, "imagen", "t <t@t.local>"
+    )
+    result = service.state(FILE, published)
+    assert result.state == "update_available"
+    assert result.content_changed is True
+
+
 def test_state_rama_inexistente(service: EditService) -> None:
     with pytest.raises(EditError):
         service.state(FILE, "a" * 40, branch="no-existe")
