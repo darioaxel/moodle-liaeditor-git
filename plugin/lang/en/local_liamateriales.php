@@ -16,6 +16,8 @@ $string['liamateriales:editmain'] = 'Editar materiales directamente en la rama p
 $string['privacy:metadata:reason'] = 'El plugin solo almacena metadatos de edición y publicación de materiales.';
 $string['servicenotconfigured'] = 'El engine no está configurado. Establece $CFG->local_liamateriales_service_url (ver README).';
 $string['servicerror'] = 'El engine devolvió un error: {$a}';
+$string['versionfooter'] = 'Materiales Editables {$a->release} ({$a->version}) · último cambio: {$a->date}';
+$string['versionpending'] = 'actualización pendiente: instalada {$a}';
 
 // Material states (by SHA comparison, §5.3).
 $string['state_up_to_date'] = 'Actualizado';
@@ -23,8 +25,12 @@ $string['state_update_available'] = 'Actualización disponible';
 $string['state_error'] = 'Error';
 
 // LiaEditor: settings (LIA-012).
+$string['settings_service_secret'] = 'Secreto compartido con el engine';
+$string['settings_service_secret_desc'] = 'Firma de cada petición al engine (HMAC-SHA256). Debe coincidir con MATERIALES_LIASCRIPT_SHARED_SECRET del engine; sin él, el engine rechaza las peticiones (401). Genera uno largo y aleatorio (p. ej. openssl rand -hex 32). Si se define $CFG->local_liamateriales_service_secret en config.php, tiene prioridad sobre este ajuste.';
 $string['settings_liaeditor_url'] = 'URL del LiaEditor';
 $string['settings_liaeditor_url_desc'] = 'URL base de la instancia autoalojada de LiaEdit (p. ej. https://liascript-editor.example.com).';
+$string['settings_legacy_open_url'] = 'Apertura antigua (token en la URL)';
+$string['settings_legacy_open_url_desc'] = 'Solo para el fork de LiveEditor. Pone el token de edición en la URL del editor, donde queda en registros, historial y Referer. Desactivado, el plugin abre el editor con un código de un solo uso en el fragmento de la URL (editor Crepe).';
 $string['settings_cors_origin'] = 'Origen CORS para el editor';
 $string['settings_cors_origin_desc'] = 'Origen permitido en las respuestas de content.php. Si se deja vacío, se usará el origen de la URL del LiaEditor.';
 $string['settings_token_ttl'] = 'Tiempo de vida del token de edición (segundos)';
@@ -84,6 +90,16 @@ $string['publish_type_h5p'] = 'H5P (actividad interactiva)';
 $string['publish_type_epub'] = 'ePub (libro electrónico descargable)';
 $string['publish_type_pdf'] = 'PDF (documento descargable)';
 $string['publish_type_scorm'] = 'SCORM 1.2 (paquete con seguimiento)';
+$string['publish_type_web'] = 'Web (páginas HTML navegables, con autoevaluación)';
+$string['publish_type_pdfcontenido'] = 'PDF de contenido (solo el contenido, sin preguntas)';
+$string['publishwebinvalid'] = 'El paquete web no es válido: debe ser un .zip con index.html en la raíz.';
+$string['publish_avisos'] = 'Publicado, pero hay partes del material que este formato no representa:';
+$string['settings_web_heading'] = 'Publicación como web';
+$string['settings_web_heading_desc'] = 'La web estática se publica como recurso «Archivo» con todas sus páginas (index.html como fichero principal).';
+$string['settings_web_display'] = 'Mostrar la web';
+$string['settings_web_display_desc'] = 'Cómo se abre la web en el curso. Por defecto, ventana emergente (como los sitios de eXeLearning).';
+$string['settings_web_popupwidth'] = 'Ancho de la ventana emergente (píxeles)';
+$string['settings_web_popupheight'] = 'Alto de la ventana emergente (píxeles)';
 $string['publish_name_default'] = 'Por defecto, el nombre del módulo actual o el del material';
 $string['publish_generate'] = 'Generar y publicar';
 $string['publish_generate_hint'] = 'El servidor genera el fichero a partir del material (puede tardar hasta un minuto en PDF). «Generar y publicar» lo añade al curso; «Descargar sin publicar» te lo entrega para usarlo en otra plataforma.';
@@ -101,4 +117,27 @@ $string['progress_keepopen'] = 'No cierres ni recargues esta página.';
 $string['progress_published'] = 'Publicado. Abriendo la actividad…';
 $string['progress_downloaded'] = 'Fichero generado. Se está descargando.';
 $string['progress_error'] = 'No se pudo completar: {message}';
+$string['progress_avisos'] = 'Fichero generado. Partes del material que este formato no representa:';
 $string['progress_nofile'] = 'Selecciona primero el fichero que quieres subir.';
+
+// Seguridad (fase S).
+$string['cachedef_ratelimit'] = 'Contadores de los límites de uso y bloqueos por IP';
+$string['ratelimited'] = 'Demasiadas peticiones. Espera {$a} segundos y vuelve a intentarlo.';
+$string['publishbusy'] = 'Ya se está publicando este material. Espera a que termine.';
+$string['settings_ratelimit_heading'] = 'Límites de uso';
+$string['settings_ratelimit_heading_desc'] = 'Peticiones máximas por usuario desde el editor (0 = sin límite). Al superarlas, el editor recibe «Demasiadas peticiones» y no pierde el trabajo. Además, una IP con 20 tokens inválidos en 10 minutos queda bloqueada 15 minutos.';
+$string['settings_ratelimit_window'] = 'Por usuario, en {$a} min.';
+$string['settings_ratelimit_content'] = 'Aperturas y recargas del material';
+$string['settings_ratelimit_save'] = 'Guardados';
+$string['settings_ratelimit_token'] = 'Renovaciones del token';
+$string['taskcleanup'] = 'Limpieza de tokens caducados y sesiones de edición inactivas';
+$string['event_opened'] = 'Material abierto en el editor';
+$string['event_saved'] = 'Material guardado';
+$string['event_conflict'] = 'Conflicto al guardar un material';
+$string['event_published'] = 'Material publicado en el curso';
+$string['internalerror'] = 'No se pudo completar la operación por un error del servidor. Si se repite, avisa al administrador con la incidencia {$a}.';
+$string['settings_ratelimit_asset'] = 'Imágenes que el editor pide para mostrarlas';
+$string['assetnotfound'] = 'Imagen no encontrada.';
+$string['imageinvalid'] = 'La imagen «{$a}» no es válida: se admiten PNG, JPEG y GIF de hasta 2 MB, en una ruta sin espacios.';
+$string['imagestoomany'] = 'Demasiadas imágenes nuevas en un guardado (máximo {$a}). Guarda en varias veces.';
+$string['imagestoobig'] = 'Las imágenes nuevas superan {$a} MB en un guardado. Guarda en varias veces.';

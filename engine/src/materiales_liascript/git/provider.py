@@ -8,6 +8,7 @@ estructura permite providers remotos futuros (API de GitHub/GitLab).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from pathlib import Path
 
@@ -34,6 +35,10 @@ class GitProvider(ABC):
     @abstractmethod
     def get_file(self, ref: str, path: str) -> str:
         """Contenido textual de un archivo en ``ref``."""
+
+    @abstractmethod
+    def get_bytes(self, ref: str, path: str) -> bytes:
+        """Contenido binario de un archivo en ``ref`` (imágenes)."""
 
     @abstractmethod
     def get_commit(self, ref: str) -> str:
@@ -82,6 +87,22 @@ class GitProvider(ABC):
         de la rama es compare-and-swap sobre el HEAD leído: si la rama avanzó
         entre la lectura y el commit, lanza ``BranchMovedError``.
         """
+
+    def commit_files(
+        self,
+        branch: str,
+        files: Mapping[str, str | bytes | None],
+        message: str,
+        author: str,
+    ) -> str:
+        """Un único commit con varios archivos (texto o binario) sobre ``branch``.
+
+        Mismas garantías que ``commit_file`` (plumbing, compare-and-swap).
+        Lo usa el guardado con imágenes (docs/imagenes): Markdown e imágenes
+        en el mismo commit. ``None`` borra el archivo (las imágenes que el
+        material deja de usar); un directorio que se queda vacío desaparece.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def push_branch(self, branch: str) -> None:

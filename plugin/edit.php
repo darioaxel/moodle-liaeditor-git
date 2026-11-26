@@ -6,8 +6,8 @@
  *
  * Flujo (§5.1 de la v1): verifica la capacidad ``edit`` en el curso, pide
  * al engine que asegure la rama ``edicion/<user>/<file>`` (POST /edit/open,
- * D4), emite un token de un solo uso (D9), registra la sesión de edición y
- * redirige al editor self-hosted con la URL de content.php.
+ * D4), registra la sesión de edición y redirige al editor self-hosted con
+ * un código de apertura de un solo uso en el fragmento (LIA-062).
  *
  * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -15,8 +15,6 @@
 
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
-
-use local_liamateriales\local\token_manager;
 
 $courseid = required_param('id', PARAM_INT);
 $file = required_param('file', PARAM_PATH);
@@ -60,13 +58,7 @@ if ($branch === '') {
     $branch = $opened->branch;
 }
 
-$token = token_manager::issue((int) $USER->id, $file, $branch, $courseid);
 local_liamateriales_touch_session((int) $USER->id, $file, $branch);
 
-$contenturl = (new \moodle_url('/local/liamateriales/content.php', [
-    'file' => $file,
-    'branch' => $branch,
-    'token' => $token->token,
-]))->out(false);
-
-redirect(local_liamateriales_editor_open_url($contenturl, false));
+// Código de apertura de un solo uso en el fragmento de la URL (LIA-062).
+redirect(local_liamateriales_open_in_editor((int) $USER->id, $file, $branch, $courseid, false));

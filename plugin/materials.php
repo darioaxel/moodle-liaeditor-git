@@ -108,22 +108,9 @@ if ($materials && !empty($materials->files)) {
     foreach ($materials->files as $material) {
         $file = $material->path;
         $actions = [];
-        // Vista previa con token de solo lectura (no permite guardar ni publicar).
-        $previewtoken = \local_liamateriales\local\token_manager::issue(
-            (int) $USER->id,
-            $file,
-            $materials->branch,
-            0,
-            true
-        );
-        $previewcontent = (new moodle_url('/local/liamateriales/content.php', [
-            'file' => $file,
-            'branch' => $materials->branch,
-            'token' => $previewtoken->token,
-            'readonly' => 1,
-        ]))->out(false);
+        // Vista previa de solo lectura: el código se emite al pulsar (preview.php, LIA-067).
         $actions[] = html_writer::link(
-            local_liamateriales_editor_open_url($previewcontent, true),
+            new moodle_url('/local/liamateriales/preview.php', ['id' => $courseid, 'file' => $file]),
             get_string('material_preview', 'local_liamateriales'),
             ['target' => '_blank', 'rel' => 'noopener noreferrer', 'class' => 'btn btn-secondary btn-sm']
         );
@@ -217,14 +204,9 @@ echo html_writer::start_tag('div', [
     'aria-labelledby' => $tabidpublished . '-tab',
 ]);
 
-$deploys = $DB->get_records('local_liamateriales_deploy', ['courseid' => $courseid], 'deployed_at DESC, id DESC');
-// La fila más reciente por fichero (historial completo en el log de Moodle).
-$latest = [];
-foreach ($deploys as $deploy) {
-    if (!isset($latest[$deploy->source_file])) {
-        $latest[$deploy->source_file] = $deploy;
-    }
-}
+// Lo publicado que sigue en el curso: el último despliegue por fichero y
+// formato cuya actividad no se ha borrado (historial completo en el log).
+$latest = \local_liamateriales\local\publisher::live_deploys($courseid);
 if ($latest) {
     $table = new html_table();
     $table->head = [
@@ -234,7 +216,12 @@ if ($latest) {
         get_string('material_state', 'local_liamateriales'),
         get_string('actions', 'local_liamateriales'),
     ];
+    $cms = get_fast_modinfo($courseid)->get_cms();
     foreach ($latest as $deploy) {
+        $cm = $cms[(int) $deploy->cmid] ?? null;
+        if (!$cm) {
+            continue;
+        }
         try {
             $state = local_liamateriales_service_get('/edit/state', [
                 'file' => $deploy->source_file,
@@ -248,16 +235,10 @@ if ($latest) {
             local_liamateriales_state_label($statekey),
             'badge bg-' . local_liamateriales_state_class($statekey)
         );
-        $cmlink = '—';
-        if ($cm = get_coursemodule_from_id('', $deploy->cmid, 0, false, IGNORE_MISSING)) {
-            $modinfo = get_fast_modinfo($courseid);
-            $cms = $modinfo->get_cms();
-            $cmname = isset($cms[$deploy->cmid]) ? $cms[$deploy->cmid]->name : $deploy->source_file;
-            $cmlink = html_writer::link(
-                new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cm->id]),
-                format_string($cmname)
-            );
-        }
+        $cmlink = html_writer::link(
+            new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cm->id]),
+            format_string($cm->name)
+        );
         $actions = '';
         if ($candeploy && $statekey === 'update_available') {
             $actions = html_writer::link(
@@ -286,4 +267,5 @@ if ($latest) {
 echo html_writer::end_tag('div');
 echo html_writer::end_tag('div');
 
+echo local_liamateriales_version_footer();
 echo $OUTPUT->footer();

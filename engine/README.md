@@ -24,9 +24,10 @@ src/materiales_liascript/
 | `GET` | `/edit/files?branch=` | Materiales `.md` de la rama con su título LiaScript |
 | `GET` | `/edit/content?file=&branch=` | Contenido + SHA del HEAD + `committed_at` (fecha del commit, ISO 8601 con zona) |
 | `POST` | `/edit/open` | Asegura la rama `edicion/<user>/<file>` desde `main` (D4) |
-| `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha, committed_at}` o `409` con rama `resolucion/...` (D5) |
+| `POST` | `/edit/save` | Commit con optimistic locking: `200 {new_sha, committed_at}` o `409` con rama `resolucion/...` (D5). Acepta `images: [{path, content_base64}]` (PNG, JPEG, GIF; máx. 20, 2 MB cada una y 10 MB en total): Markdown e imágenes en un único commit |
+| `GET` | `/edit/asset?file=&branch=&path=` | Imagen de la carpeta del material (ruta relativa a su `.md`; PNG, JPEG, GIF, WebP) para el editor; cualquier fallo, 404 |
 | `GET` | `/edit/state?file=&sha=&branch=` | `up_to_date` / `update_available` por comparación de SHAs |
-| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `scorm`) de un fichero en un SHA |
+| `POST` | `/publish` | Bytes del artefacto (`h5p`, `epub`, `pdf`, `scorm`, `web`, `pdfcontenido`) de un fichero en un SHA. El PDF de contenido convierte a PNG (Pillow) las imágenes WebP y GIF, que XeLaTeX no admite. Los formatos de liaex se generan desde una copia sin los otros `.md` de la carpeta del material (el H5P los empaquetaba) |
 | `GET` | `/health` | Healthcheck |
 
 Sin repo Git, `/edit/*` y `/publish` responden 503; sin Docker en el host,
@@ -49,10 +50,13 @@ CONTENT_REPO=/ruta/al/clon make serve
 | --- | --- | --- |
 | `CONTENT_REPO` | sí | Clon del repo de contenidos; su `origin` necesita credenciales de escritura (push de ramas, D1) |
 | `CONTENT_REPO_URL` | no | URL del repo en la forja, para la `diff_url` de los conflictos |
+| `MATERIALES_LIASCRIPT_SHARED_SECRET` | sí | Secreto compartido con el plugin (ajuste «Secreto compartido con el engine» o `$CFG->local_liamateriales_service_secret`). Todas las rutas salvo `GET /health` exigen la firma HMAC-SHA256 del plugin (`X-Liamat-Timestamp`, `X-Liamat-Signature`; ±60 s, sin réplicas); si no, 401. Sin él, el servicio no arranca salvo con `MATERIALES_LIASCRIPT_ALLOW_UNSIGNED=1` (solo desarrollo) |
 | `MATERIALES_LIASCRIPT_WORKDIR` / `MATERIALES_LIASCRIPT_HOST_WORKDIR` | no | Traducción de rutas docker-in-docker para liaex (mismo bind mount visto desde el contenedor y desde el host) |
 | `MATERIALES_LIASCRIPT_LIAEX_NETWORK` | no | Red del contenedor de liaex (defecto `none`). `bridge` si los materiales usan `import:` de plantillas, que liaex descarga al exportar |
 | `MATERIALES_LIASCRIPT_SCORM_VERSION` | no | Versión de SCORM del formato `scorm`: `1.2` (defecto; la que Moodle soporta por completo y la de los presets de liaex para Moodle) o `2004` |
 | `MATERIALES_LIASCRIPT_THEME` | no | Tema de los contenidos exportados: `verde` (defecto, el del editor) o `none` (aspecto original de LiaScript). Las hojas están en `publish/themes/` y se generan desde el editor con `npm run theme:liascript` |
+| `MATERIALES_LIASCRIPT_PANDOC_IMAGE` | no | Imagen de Pandoc de los formatos `web` y `pdfcontenido` (defecto `pandoc/extra:latest`; requiere Pandoc ≥ 3, XeLaTeX y `pandoc-latex-environment`) |
+| `MATERIALES_LIASCRIPT_PDF_THEME_DIR` | no | Plantilla del PDF de contenido (`fpvirtual.latex`, `content-boxes.*`). Defecto: la copia incluida en `publish/pandoc/fpvirtual-theme/` |
 | `MATERIALES_LIASCRIPT_LOG_FORMAT` | no | `console` (defecto) o `json` |
 | `HOST` / `PORT` | no | Interfaz y puerto (defecto `0.0.0.0:8000`) |
 
@@ -62,6 +66,24 @@ CONTENT_REPO=/ruta/al/clon make serve
 healthcheck en `/health`). Para publicar necesita el socket de Docker del
 host montado (`/var/run/docker.sock`) y el grupo `docker` (`--group-add`).
 El repo de contenidos se monta en `/content`.
+
+### Superficie expuesta (LIA-060, LIA-061)
+
+El navegador nunca habla con el engine: solo Moodle (servidor a servidor).
+Como el engine tiene el socket de Docker (equivale a root en el host):
+
+- **Sin puerto publicado.** El contenedor va solo en la red Docker de
+  Moodle, sin `ports:` (o, como mucho, `127.0.0.1:8000:8000` para
+  diagnóstico local). Moodle lo alcanza por el nombre del servicio:
+  `$CFG->local_liamateriales_service_url = 'http://<servicio>:8000';`.
+- **Firma obligatoria.** `MATERIALES_LIASCRIPT_SHARED_SECRET` en el engine y
+  el mismo valor en Moodle (`$CFG->local_liamateriales_service_secret` en
+  `config.php`, o el ajuste del plugin). Generarlo con `openssl rand -hex 32`.
+  Los relojes de Moodle y del engine deben estar sincronizados (±60 s).
+
+Comprobación: desde otra máquina, `curl http://<host>:<puerto>/health` no
+conecta; desde el contenedor de Moodle, `curl http://<servicio>:8000/health`
+responde y cualquier otra ruta sin firma da 401.
 
 ## Integración continua
 

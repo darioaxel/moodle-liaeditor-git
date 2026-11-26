@@ -8,6 +8,8 @@ se verifican sin Docker.
 
 from __future__ import annotations
 
+import posixpath
+import re
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -18,11 +20,13 @@ from materiales_liascript.git.provider import GitProvider, GitProviderError
 from materiales_liascript.publish.models import (
     ARTIFACT_EXTENSIONS,
     ARTIFACT_MEDIA_TYPES,
+    PANDOC_FORMATS,
     SCORM_VERSIONS,
     PublishError,
     PublishRequest,
     PublishResult,
 )
+from materiales_liascript.publish.pandoc_export import PandocExporter
 from materiales_liascript.publish.theme import (
     THEME_FILENAME,
     add_stylesheet_link,
@@ -175,6 +179,47 @@ class LiaexDockerExecutor(ArtifactExecutor):
                 leftover.unlink(missing_ok=True)
 
 
+_MD_REF = re.compile(r"[\w./-]+\.md\b", re.IGNORECASE)
+
+
+def isolate_material(checkout: Path, file: str) -> list[str]:
+    """Quita de la copia los otros ``.md`` de la carpeta del material.
+
+    liaex empaqueta la carpeta del material (el H5P incluye todos sus
+    ``.md``): sin esto, cada paquete llevaría los demás materiales de la
+    carpeta y el alumnado podría descargarlos (roadmap de imágenes, fase 3).
+    Se conservan los ``.md`` que el material referencia por ruta relativa
+    (plantillas locales en ``import:``, enlaces). Solo toca la copia temporal
+    del SHA, nunca Git.
+
+    Returns:
+        Rutas (relativas al checkout) de los ficheros quitados.
+    """
+    source = checkout / file
+    base = source.parent
+    text = source.read_text(encoding="utf-8", errors="replace")
+    material_dir = posixpath.dirname(file)
+    keep = {
+        posixpath.normpath(posixpath.join(material_dir, ref))
+        for ref in _MD_REF.findall(text)
+        if "://" not in ref
+    }
+    removed: list[str] = []
+    for path in base.rglob("*"):
+        rel = path.relative_to(checkout).as_posix()
+        if (
+            path.suffix.lower() != ".md"
+            or not path.is_file()
+            or rel == file
+            or rel in keep
+            or any(part.startswith(".") for part in path.relative_to(base).parts)
+        ):
+            continue
+        path.unlink()
+        removed.append(rel)
+    return sorted(removed)
+
+
 def _find_artifact(directory: Path, base: str, extension: str) -> Path | None:
     """Fichero generado por liaex: ``<base>.<extensión>`` o, si una versión de
     liaex lo nombra de otra forma, cualquier ``<base>*.<extensión>``."""
@@ -186,26 +231,50 @@ def _find_artifact(directory: Path, base: str, extension: str) -> Path | None:
 
 
 class PublishService:
-    """Orquesta checkout del SHA + generación del artefacto."""
+    """Orquesta checkout del SHA + generación del artefacto.
 
-    def __init__(self, git: GitProvider, executor: ArtifactExecutor | None) -> None:
+    ``web`` y ``pdfcontenido`` se generan con Pandoc (``PandocExporter``); el
+    resto de formatos, con liaex (``executor``).
+    """
+
+    def __init__(
+        self,
+        git: GitProvider,
+        executor: ArtifactExecutor | None,
+        pandoc: PandocExporter | None = None,
+    ) -> None:
         self._git = git
         self._executor = executor
+        self._pandoc = pandoc
 
     def publish(self, request: PublishRequest) -> PublishResult:
         file = validate_file_path(request.file)
-        if self._executor is None:
+        con_pandoc = request.format in PANDOC_FORMATS
+        if con_pandoc and self._pandoc is None:
+            raise PublishError(503, "publicación web no disponible: no hay Pandoc (Docker)")
+        if not con_pandoc and self._executor is None:
             raise PublishError(503, "publicación no disponible: no hay ejecutor de artefactos")
         try:
             self._git.get_commit(request.sha)
             self._git.get_file(request.sha, file)
         except (GitProviderError, EditError) as exc:
             raise PublishError(404, f"material no encontrado en {request.sha[:8]}: {file}") from exc
+        avisos: list[str] = []
         with self._git.checkout_ref(request.sha) as checkout:
-            content = self._executor.generate(checkout, file, request.format)
+            if self._pandoc is not None and request.format == "web":
+                generado = self._pandoc.web(checkout, file)
+                content, avisos = generado.content, generado.avisos
+            elif self._pandoc is not None and request.format == "pdfcontenido":
+                generado = self._pandoc.content_pdf(checkout, file)
+                content, avisos = generado.content, generado.avisos
+            else:
+                assert self._executor is not None  # comprobado arriba
+                isolate_material(checkout, file)
+                content = self._executor.generate(checkout, file, request.format)
         slug = file.removesuffix(".md").replace("/", "-")
         return PublishResult(
             filename=f"{slug}@{request.sha[:8]}.{ARTIFACT_EXTENSIONS[request.format]}",
             media_type=ARTIFACT_MEDIA_TYPES[request.format],
             content=content,
+            avisos=avisos,
         )

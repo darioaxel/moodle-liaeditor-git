@@ -10,25 +10,22 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__ . '/../../lib/filelib.php'); // clase \curl (cliente server-to-server)
+require_once(__DIR__ . '/../../lib/filelib.php'); // send_file y clase \curl
+
 
 /**
  * URL base del engine (configuración obligatoria en producción).
  */
 function local_liamateriales_service_url(): string {
-    global $CFG;
-    if (empty($CFG->local_liamateriales_service_url)) {
-        throw new \moodle_exception('servicenotconfigured', 'local_liamateriales');
-    }
-    return rtrim($CFG->local_liamateriales_service_url, '/');
+    return \local_liamateriales\local\engine_client::base_url();
 }
 
 /**
- * Petición server-to-server contra la API del engine.
+ * Petición server-to-server contra la API del engine (firmada, LIA-060).
  *
  * Comprueba el status HTTP: las respuestas de error del engine son JSON
  * ``{"detail": ...}`` (HTTPException de FastAPI) y se convierten en
- * ``moodle_exception`` accionable.
+ * ``moodle_exception``.
  *
  * @param string $method GET | POST
  * @param array<string, string> $query
@@ -36,22 +33,13 @@ function local_liamateriales_service_url(): string {
  * @return mixed body decodificado
  */
 function local_liamateriales_service_request(string $method, string $path, array $query = [], ?array $payload = null) {
-    $url = local_liamateriales_service_url() . $path . ($query ? '?' . http_build_query($query) : '');
-    $headers = ['Accept: application/json'];
-    $curl = new \curl();
-    if ($method === 'POST') {
-        $headers[] = 'Content-Type: application/json';
-        $response = $curl->post($url, json_encode($payload ?? []), ['CURLOPT_HTTPHEADER' => $headers]);
-    } else {
-        $response = $curl->get($url, [], ['CURLOPT_HTTPHEADER' => $headers]);
+    $result = \local_liamateriales\local\engine_client::send($method, $path, $query, $method === 'POST' ? ($payload ?? []) : null);
+    if ($result->errno) {
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $result->error);
     }
-    if ($curl->get_errno()) {
-        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $curl->error);
-    }
-    $status = (int) ($curl->get_info()['http_code'] ?? 0);
-    $data = json_decode($response);
-    if ($status >= 400) {
-        $detail = (is_object($data) && !empty($data->detail)) ? $data->detail : "HTTP {$status}";
+    $data = json_decode($result->body);
+    if ($result->status >= 400) {
+        $detail = (is_object($data) && !empty($data->detail)) ? $data->detail : "HTTP {$result->status}";
         throw new \moodle_exception('servicerror', 'local_liamateriales', '', $detail);
     }
     if ($data === null) {
@@ -90,22 +78,15 @@ function local_liamateriales_service_post(string $path, array $payload) {
  * @return array{0: int, 1: mixed} (HTTP status, body decodificado)
  */
 function local_liamateriales_service_post_full(string $path, array $payload): array {
-    $url = local_liamateriales_service_url() . $path;
-    $headers = [
-        'Content-Type: application/json',
-        'Accept: application/json',
-    ];
-    $curl = new \curl();
-    $response = $curl->post($url, json_encode($payload), ['CURLOPT_HTTPHEADER' => $headers]);
-    if ($curl->get_errno()) {
-        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $curl->error);
+    $result = \local_liamateriales\local\engine_client::send('POST', $path, [], $payload);
+    if ($result->errno) {
+        throw new \moodle_exception('servicerror', 'local_liamateriales', '', $result->error);
     }
-    $status = (int) ($curl->get_info()['http_code'] ?? 0);
-    $data = json_decode($response);
-    if ($data === null && $response !== 'null') {
+    $data = json_decode($result->body);
+    if ($data === null && $result->body !== 'null') {
         throw new \moodle_exception('servicerror', 'local_liamateriales', '', 'invalid JSON');
     }
-    return [$status, $data];
+    return [$result->status, $data];
 }
 
 /**
@@ -130,6 +111,106 @@ function local_liamateriales_cors_origin(): string {
     }
     $port = isset($parts['port']) ? ':' . $parts['port'] : '';
     return $parts['scheme'] . '://' . $parts['host'] . $port;
+}
+
+/**
+ * Cabeceras de las respuestas de los scripts que usa el editor
+ * (content.php, save.php, token.php, asset.php; LIA-063): CORS
+ * restringido al origen del editor, sin Referer, sin sniffing y sin caché.
+ */
+function local_liamateriales_api_headers(): void {
+    header('Referrer-Policy: no-referrer');
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: no-store');
+    $origin = local_liamateriales_cors_origin();
+    if ($origin !== '') {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+    }
+}
+
+/**
+ * Responde el preflight CORS (OPTIONS) y termina; en otro método no hace nada.
+ *
+ * @param string $methods métodos admitidos además de OPTIONS (``POST``, ``GET, POST``)
+ */
+function local_liamateriales_api_preflight(string $methods): void {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'OPTIONS') {
+        return;
+    }
+    local_liamateriales_api_headers();
+    if (local_liamateriales_cors_origin() !== '') {
+        header('Access-Control-Allow-Methods: ' . $methods . ', OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type');
+        header('Access-Control-Max-Age: 600');
+    }
+    exit;
+}
+
+/**
+ * Respuesta JSON de los scripts del editor y fin.
+ *
+ * @param array<string, mixed> $body
+ * @param string[] $headers cabeceras adicionales («Nombre: valor»)
+ */
+function local_liamateriales_api_respond(int $status, array $body, array $headers = []): void {
+    http_response_code($status);
+    local_liamateriales_api_headers();
+    header('Content-Type: application/json; charset=utf-8');
+    foreach ($headers as $header) {
+        header($header);
+    }
+    echo json_encode($body);
+    exit;
+}
+
+/**
+ * Error interno hacia el navegador (LIA-070): mensaje genérico con un
+ * identificador de incidencia; el detalle (rutas, mensajes de Git o del
+ * engine) va solo al log del servidor, con ese identificador.
+ *
+ * @param string $detail detalle interno (no se envía al navegador)
+ */
+function local_liamateriales_api_internal_error(string $detail, int $status = 502): void {
+    $incident = bin2hex(random_bytes(5));
+    error_log("local_liamateriales [incidencia {$incident}] {$detail}");
+    local_liamateriales_api_respond($status, [
+        'status' => 'error',
+        'message' => get_string('internalerror', 'local_liamateriales', $incident),
+        'incident' => $incident,
+    ]);
+}
+
+/**
+ * Respuesta 429 con ``Retry-After`` (LIA-064, LIA-066) y fin.
+ */
+function local_liamateriales_api_too_many(int $seconds): void {
+    local_liamateriales_api_respond(429, [
+        'status' => 'rate_limited',
+        'message' => get_string('ratelimited', 'local_liamateriales', $seconds),
+        'retry_after' => $seconds,
+    ], ['Retry-After: ' . $seconds]);
+}
+
+/** Corta con 429 si la IP está bloqueada por tokens inválidos (LIA-066). */
+function local_liamateriales_api_guard_ip(): void {
+    $left = \local_liamateriales\local\rate_limiter::ip_blocked(getremoteaddr());
+    if ($left !== null) {
+        local_liamateriales_api_too_many($left);
+    }
+}
+
+/** Anota un token inválido desde la IP de la petición (LIA-066). */
+function local_liamateriales_api_token_failed(): void {
+    \local_liamateriales\local\rate_limiter::token_failure(getremoteaddr());
+}
+
+/** Corta con 429 si el usuario supera el límite de la acción (LIA-064). */
+function local_liamateriales_api_limit(string $action, int $userid): void {
+    $wait = \local_liamateriales\local\rate_limiter::hit($action, $userid);
+    if ($wait !== null) {
+        local_liamateriales_api_too_many($wait);
+    }
 }
 
 /**
@@ -250,6 +331,38 @@ function local_liamateriales_editor_open_url(string $contenturl, bool $readonly)
 }
 
 /**
+ * ¿Se mantiene la URL de apertura antigua (token en la query, para el fork
+ * de LiveEditor)? Ajuste ``legacy_open_url``, desactivado por defecto (LIA-062).
+ */
+function local_liamateriales_legacy_open(): bool {
+    return (bool) get_config('local_liamateriales', 'legacy_open_url');
+}
+
+/**
+ * URL del editor que abre un material (LIA-062).
+ *
+ * Emite un **código de apertura** (60 s, un solo uso) y lo pasa en el
+ * fragmento: ``<editor>/#open=<código>&src=<content.php>``. El fragmento no
+ * llega a ningún servidor (ni a los registros ni al Referer); el editor lo
+ * borra de la barra de direcciones y canjea el código con
+ * ``POST content.php {code}``, que le devuelve el token de edición.
+ *
+ * Con ``legacy_open_url`` activo se mantiene el formato antiguo
+ * (``?/open/file/<content.php?…&token=…>``) para el fork.
+ */
+function local_liamateriales_open_in_editor(int $userid, string $file, string $branch, int $courseid, bool $readonly): string {
+    $content = new \moodle_url('/local/liamateriales/content.php');
+    if (local_liamateriales_legacy_open()) {
+        $token = \local_liamateriales\local\token_manager::issue($userid, $file, $branch, $courseid, $readonly);
+        $content->params(['file' => $file, 'branch' => $branch, 'token' => $token->token]);
+        return local_liamateriales_editor_open_url($content->out(false), $readonly);
+    }
+    $code = \local_liamateriales\local\token_manager::issue_open($userid, $file, $branch, $courseid, $readonly);
+    return local_liamateriales_editor_url() . '/#open=' . rawurlencode($code->token)
+        . '&src=' . rawurlencode($content->out(false));
+}
+
+/**
  * Crea o actualiza la sesión de edición del usuario (LIA-010, D3).
  *
  * Una sesión activa (closed_at NULL) por usuario y fichero; si ya existe se
@@ -264,6 +377,9 @@ function local_liamateriales_touch_session(int $userid, string $file, string $br
     ]);
     if ($session) {
         $session->branch = $branch;
+        // Última apertura: la tarea de limpieza (LIA-068) cierra las sesiones
+        // sin aperturas ni guardados en 7 días.
+        $session->opened_at = time();
         if ($lastsha !== '') {
             $session->last_sha = $lastsha;
             $session->last_save = time();
@@ -300,6 +416,63 @@ function local_liamateriales_record_save(int $userid, string $file, string $bran
     } else {
         local_liamateriales_touch_session($userid, $file, $branch, $newsha);
     }
+}
+
+/** Imágenes por guardado, tamaño por imagen y total (docs/imagenes, D7; mismos límites que el engine). */
+const LOCAL_LIAMATERIALES_MAX_IMAGES = 20;
+/** Tamaño máximo de una imagen ya decodificada (bytes). */
+const LOCAL_LIAMATERIALES_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+/** Tamaño máximo del conjunto de imágenes de un guardado (bytes). */
+const LOCAL_LIAMATERIALES_MAX_IMAGES_BYTES = 10 * 1024 * 1024;
+/** Extensión → tipo MIME de las imágenes que se pueden subir (sin SVG ni WebP). */
+const LOCAL_LIAMATERIALES_UPLOAD_TYPES = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif'];
+
+/**
+ * Valida las imágenes nuevas de un guardado (docs/imagenes, fase 2) y las
+ * devuelve listas para el engine. Comprueba número y tamaños, la ruta
+ * (relativa, sin «..», caracteres seguros), la extensión y el tipo real del
+ * contenido (finfo y getimagesize), sin fiarse de lo que declare el cliente.
+ * El engine repite la validación (ruta dentro de la carpeta del material y
+ * firma de bytes).
+ *
+ * @param mixed $images valor recibido (``images`` del cuerpo)
+ * @return array<int, array{path: string, content_base64: string}>
+ * @throws \moodle_exception imageinvalid (con la ruta) o imagestoomany / imagestoobig
+ */
+function local_liamateriales_validate_images($images): array {
+    if ($images === null) {
+        return [];
+    }
+    if (!is_array($images) || count($images) > LOCAL_LIAMATERIALES_MAX_IMAGES) {
+        throw new \moodle_exception('imagestoomany', 'local_liamateriales', '', LOCAL_LIAMATERIALES_MAX_IMAGES);
+    }
+    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+    $result = [];
+    $total = 0;
+    foreach ($images as $image) {
+        $path = is_object($image) && isset($image->path) && is_string($image->path) ? $image->path : '';
+        $encoded = is_object($image) && isset($image->content_base64) && is_string($image->content_base64)
+            ? $image->content_base64 : '';
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $data = base64_decode($encoded, true);
+        $valid = preg_match('#^[A-Za-z0-9._/-]{1,200}$#D', $path)
+            && $path[0] !== '/'
+            && !in_array('..', explode('/', $path), true)
+            && isset(LOCAL_LIAMATERIALES_UPLOAD_TYPES[$ext])
+            && is_string($data) && $data !== ''
+            && strlen($data) <= LOCAL_LIAMATERIALES_MAX_IMAGE_BYTES
+            && $finfo->buffer($data) === LOCAL_LIAMATERIALES_UPLOAD_TYPES[$ext]
+            && @getimagesizefromstring($data) !== false;
+        if (!$valid) {
+            throw new \moodle_exception('imageinvalid', 'local_liamateriales', '', s($path));
+        }
+        $total += strlen($data);
+        if ($total > LOCAL_LIAMATERIALES_MAX_IMAGES_BYTES) {
+            throw new \moodle_exception('imagestoobig', 'local_liamateriales', '', LOCAL_LIAMATERIALES_MAX_IMAGES_BYTES / 1048576);
+        }
+        $result[] = ['path' => $path, 'content_base64' => $encoded];
+    }
+    return $result;
 }
 
 /**
@@ -357,4 +530,34 @@ function local_liamateriales_extend_navigation_course(\navigation_node $parent, 
             new \pix_icon('i/edit', '')
         );
     }
+}
+
+/**
+ * Pie con la versión del plugin y la fecha de su último cambio (seguimiento).
+ *
+ * La fecha sale del número de versión (AAAAMMDDNN, convención de Moodle): cada
+ * cambio del plugin sube $plugin->version en version.php. Si el código es más
+ * nuevo que lo instalado, lo indica (falta ejecutar la actualización).
+ *
+ * @return string HTML: línea pequeña alineada a la derecha.
+ */
+function local_liamateriales_version_footer(): string {
+    $plugin = new stdClass();
+    require(__DIR__ . '/version.php');
+    $version = (string) $plugin->version;
+    $date = '';
+    if (preg_match('/^(\d{4})(\d{2})(\d{2})\d{2}$/', $version, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+        $date = userdate(make_timestamp((int) $m[1], (int) $m[2], (int) $m[3], 12), get_string('strftimedate', 'langconfig'));
+    }
+    $text = get_string('versionfooter', 'local_liamateriales', (object) [
+        'release' => s($plugin->release),
+        'version' => s($version),
+        'date' => $date,
+    ]);
+    $installed = (string) get_config('local_liamateriales', 'version');
+    if ($installed !== '' && $installed !== $version) {
+        $text .= ' · ' . get_string('versionpending', 'local_liamateriales', s($installed));
+    }
+    return html_writer::div($text, 'local-liamateriales-version text-end text-muted small mt-4',
+        ['style' => 'font-size: 0.75rem']);
 }

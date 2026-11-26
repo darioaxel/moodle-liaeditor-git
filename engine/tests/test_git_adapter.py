@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -99,3 +100,29 @@ def test_commit_date_iso_con_zona(provider: LocalGitProvider, git_repo: Path) ->
 def test_commit_date_ref_invalida_devuelve_none(provider: LocalGitProvider) -> None:
     assert provider.commit_date("ref-imposible") is None
     assert provider.commit_date("0" * 40) is None
+
+
+def test_lecturas_simultaneas(provider: LocalGitProvider) -> None:
+    """El editor pide todas las imágenes a la vez: lecturas en paralelo en el pool de FastAPI.
+
+    Sin el bloqueo del provider, el ``git cat-file --batch`` compartido de
+    GitPython mezclaba las respuestas («SHA … could not be resolved», ramas «no
+    encontradas», contenido de otro fichero) y los hilos acababan bloqueados.
+    """
+    tareas = [
+        ("get_file", ("main", "materiales/ut03-mvc/02-mvc.md")),
+        ("get_file", ("main~3", "materiales/ut03-mvc/02-mvc.md")),
+        ("get_bytes", ("main", "materiales/ut03-mvc/assets/mvc.svg")),
+        ("get_commit", ("otra",)),
+        ("get_commit", ("main",)),
+        ("list_files", ("otra",)),
+        ("commits_ahead", ("main", "otra")),
+        ("is_ancestor", ("main~3", "main")),
+    ]
+    esperado = [getattr(provider, metodo)(*args) for metodo, args in tareas]
+    trabajo = [i % len(tareas) for i in range(400)]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        resultados = list(
+            pool.map(lambda i: getattr(provider, tareas[i][0])(*tareas[i][1]), trabajo, timeout=60)
+        )
+    assert resultados == [esperado[i] for i in trabajo]

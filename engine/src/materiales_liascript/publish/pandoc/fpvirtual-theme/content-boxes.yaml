@@ -1,0 +1,18 @@
+# Mapeo clase → entorno LaTeX para el filtro pandoc-latex-environment.
+# Se pasa a pandoc con --metadata-file; si el documento define su propio
+# `pandoc-latex-environment`, ese tiene prioridad sobre este.
+pandoc-latex-environment:
+  nota: [nota]
+  aviso: [aviso]
+  importante: [importante]
+
+# Fuente del código: Source Code Pro (la de Eisvogel). Latin Modern Mono, la
+# fuente por defecto, no tiene los caracteres de dibujo de cajas (─ │ └ ▶) y
+# XeLaTeX los omite sin error. Se carga por fichero: la imagen pandoc/extra no
+# tiene fontconfig y fontspec no la encuentra por nombre.
+monofont: SourceCodePro-Regular.otf
+monofontoptions:
+  - BoldFont=SourceCodePro-Bold.otf
+  - ItalicFont=SourceCodePro-RegularIt.otf
+  - BoldItalicFont=SourceCodePro-BoldIt.otf
+  - Scale=MatchLowercase

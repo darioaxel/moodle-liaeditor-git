@@ -14,7 +14,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_liamateriales';
-$plugin->version = 2026112304;        // SCORM 1.2 mostrado como contenido; fix artifact_type (h5p llegaba como hp).
+$plugin->version = 2026112601;        // Una actividad borrada deja de figurar como publicada.
 $plugin->requires = 2026100600;       // Moodle 5.3.0.
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '2.4.2';
+$plugin->release = '2.8.0';

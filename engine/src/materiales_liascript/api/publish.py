@@ -12,6 +12,7 @@ host) responde 503 con JSON claro.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException
@@ -20,6 +21,7 @@ from fastapi.responses import Response
 from materiales_liascript.edit.branches import EditError
 from materiales_liascript.git.provider import GitProvider
 from materiales_liascript.publish.models import PublishError, PublishRequest
+from materiales_liascript.publish.pandoc_export import PandocExporter
 from materiales_liascript.publish.service import ArtifactExecutor, PublishService
 
 
@@ -29,6 +31,7 @@ class PublishApiDeps:
 
     git: GitProvider | None
     executor: ArtifactExecutor | None = None
+    pandoc: PandocExporter | None = None
 
 
 def create_publish_router(deps: PublishApiDeps) -> APIRouter:
@@ -41,7 +44,7 @@ def create_publish_router(deps: PublishApiDeps) -> APIRouter:
                 status_code=503,
                 detail="publicación no disponible: el contenido no es un repositorio Git",
             )
-        return PublishService(deps.git, deps.executor)
+        return PublishService(deps.git, deps.executor, deps.pandoc)
 
     @router.post("/publish")
     def publish(request: PublishRequest) -> Response:
@@ -52,10 +55,10 @@ def create_publish_router(deps: PublishApiDeps) -> APIRouter:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         except EditError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        return Response(
-            content=result.content,
-            media_type=result.media_type,
-            headers={"Content-Disposition": f'attachment; filename="{result.filename}"'},
-        )
+        headers = {"Content-Disposition": f'attachment; filename="{result.filename}"'}
+        if result.avisos:
+            # Lo que el lector LiaScript no pudo convertir (JSON en ASCII).
+            headers["X-Liamat-Avisos"] = json.dumps(result.avisos)
+        return Response(content=result.content, media_type=result.media_type, headers=headers)
 
     return router

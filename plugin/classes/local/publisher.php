@@ -8,9 +8,11 @@
  *
  * Mapeo tipo → módulo: ``scorm`` → mod_scorm (SCORM 1.2 de liaex, mostrado
  * como contenido: sin página de intentos, índice ni navegación) ·
- * ``h5p`` → mod_h5pactivity · ``epub``/``pdf`` →
- * mod_resource (descarga accesible). Desde Materiales Editables v2.0 los
- * formatos de publicación son solo H5P, ePub y PDF.
+ * ``h5p`` → mod_h5pactivity · ``epub``/``pdf``/``pdfcontenido`` →
+ * mod_resource (descarga accesible) · ``web`` → mod_resource con todos los
+ * ficheros de la web estática (Pandoc + lector LiaScript) e ``index.html``
+ * como fichero principal, abierta en ventana emergente como los sitios de
+ * eXeLearning (configurable; docs/generacion_web).
  *
  * @package    local_liamateriales
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -30,6 +32,8 @@ class publisher {
         'epub' => ['resource', 'files'],
         'pdf' => ['resource', 'files'],
         'scorm' => ['scorm', 'packagefile'],
+        'web' => ['resource', 'files'],
+        'pdfcontenido' => ['resource', 'files'],
     ];
 
     /** Extensión del fichero de cada formato (SCORM es un .zip). */
@@ -38,7 +42,18 @@ class publisher {
         'epub' => 'epub',
         'pdf' => 'pdf',
         'scorm' => 'zip',
+        'web' => 'zip',
+        'pdfcontenido' => 'pdf',
     ];
+
+    /** Visualización por defecto de la web (RESOURCELIB_DISPLAY_POPUP, como eXeLearning). */
+    public const WEB_DISPLAY_DEFAULT = 6;
+
+    /** Modos de visualización ofrecidos para la web: automático, incrustar, abrir, emergente, nueva ventana. */
+    public const WEB_DISPLAYS = [0, 1, 5, 6, 3];
+
+    /** Avisos del lector LiaScript de la última generación (cabecera X-Liamat-Avisos). */
+    private static array $lastavisos = [];
 
     /**
      * Ajustes de mod_scorm que su formulario toma de la configuración del
@@ -51,7 +66,7 @@ class publisher {
         'displayactivityname', 'auto', 'autocommit', 'masteryoverride',
     ];
 
-    /** Formatos publicables (h5p, epub, pdf, scorm). */
+    /** Formatos publicables (h5p, epub, pdf, scorm, web, pdfcontenido). */
     public static function types(): array {
         return array_keys(self::TYPES);
     }
@@ -87,7 +102,7 @@ class publisher {
         int $existingcmid,
         string $deployedby
     ): int {
-        global $DB, $CFG;
+        global $DB, $CFG, $USER;
         require_once($CFG->dirroot . '/course/modlib.php');
 
         if (!isset(self::TYPES[$artifacttype])) {
@@ -111,6 +126,19 @@ class publisher {
         if ($modulename === 'scorm') {
             self::apply_scorm_defaults($moduleinfo);
         }
+        if ($artifacttype === 'web') {
+            foreach (self::web_settings(get_config('local_liamateriales')) as $key => $value) {
+                $moduleinfo->$key = $value;
+            }
+        } else if ($modulename === 'resource') {
+            // PDF, PDF de contenido y ePub: la visualización por defecto del
+            // sitio para Recurso, como en el formulario. Sin `display`,
+            // resource_add_instance() avisaba en mitad de la respuesta JSON
+            // («No se pudo completar: HTTP 200» al publicar por primera vez).
+            foreach (self::resource_defaults(get_config('resource')) as $key => $value) {
+                $moduleinfo->$key = $value;
+            }
+        }
 
         if ($existingcmid > 0) {
             $cm = get_coursemodule_from_id('', $existingcmid, 0, false, MUST_EXIST);
@@ -118,6 +146,14 @@ class publisher {
             $moduleinfo->coursemodule = $cm->id;
             $moduleinfo->cmidnumber = $cm->idnumber;
             $moduleinfo->introeditor = ['text' => '', 'format' => FORMAT_HTML, 'itemid' => 0];
+            if ($modulename === 'resource') {
+                // resource_update_instance() hace revision++ sobre lo recibido
+                // (el formulario lo manda oculto). Sin él, PHP avisa en mitad
+                // de la respuesta JSON y la revisión vuelve a 1, de modo que
+                // las URL de los ficheros no cambian y el navegador sirve la
+                // versión anterior de su caché.
+                $moduleinfo->revision = (int) $DB->get_field('resource', 'revision', ['id' => $cm->instance]);
+            }
             update_moduleinfo($cm, $moduleinfo, $course);
             $cmid = (int) $cm->id;
         } else {
@@ -135,6 +171,13 @@ class publisher {
             'deployed_at' => time(),
             'deployed_by' => $deployedby,
             'status' => 'ok',
+        ]);
+        // Auditoría (LIA-069): visible en los informes del curso.
+        \local_liamateriales\event\material_published::fire((int) $USER->id, $courseid, [
+            'file' => $sourcefile,
+            'sha' => $sha,
+            'format' => $artifacttype,
+            'cmid' => $cmid,
         ]);
         return $cmid;
     }
@@ -191,6 +234,53 @@ class publisher {
         }
     }
 
+    /**
+     * Ajustes de mod_resource para PDF, PDF de contenido y ePub: los valores
+     * por defecto del sitio para Recurso (como el formulario), sin descripción.
+     *
+     * @param \stdClass $config get_config('resource')
+     * @return array<string, int>
+     */
+    public static function resource_defaults(\stdClass $config): array {
+        return [
+            'display' => (int) ($config->display ?? 0),
+            'popupwidth' => (int) ($config->popupwidth ?? 620),
+            'popupheight' => (int) ($config->popupheight ?? 450),
+            'printintro' => 0,
+            'showsize' => (int) !empty($config->showsize),
+            'showtype' => (int) !empty($config->showtype),
+            'showdate' => (int) !empty($config->showdate),
+            'filterfiles' => (int) ($config->filterfiles ?? 0),
+        ];
+    }
+
+    /**
+     * Ajustes de mod_resource para la web: visualización de los ajustes del
+     * plugin (por defecto, ventana emergente de 1200×600 como eXeLearning),
+     * sin filtros sobre los ficheros (el HTML ya está generado) ni descripción.
+     *
+     * @param \stdClass $config get_config('local_liamateriales')
+     * @return array<string, int>
+     */
+    public static function web_settings(\stdClass $config): array {
+        $display = isset($config->web_display) ? (int) $config->web_display : self::WEB_DISPLAY_DEFAULT;
+        if (!in_array($display, self::WEB_DISPLAYS, true)) {
+            $display = self::WEB_DISPLAY_DEFAULT;
+        }
+        $width = (int) ($config->web_popupwidth ?? 0);
+        $height = (int) ($config->web_popupheight ?? 0);
+        return [
+            'display' => $display,
+            'popupwidth' => $width > 0 ? $width : 1200,
+            'popupheight' => $height > 0 ? $height : 600,
+            'printintro' => 0,
+            'showsize' => 0,
+            'showtype' => 0,
+            'showdate' => 0,
+            'filterfiles' => 0,
+        ];
+    }
+
     /** Tiempo máximo de generación del artefacto (s). PDF con Chromium tarda ~20 s en frío. */
     private const GENERATE_TIMEOUT = 330;
 
@@ -199,34 +289,57 @@ class publisher {
      *
      * @param string $sourcefile ruta del .md en el repo
      * @param string $sha commit exacto a exportar
-     * @param string $artifacttype h5p | epub | pdf | scorm
-     * @return string bytes del artefacto
+     * @param string $artifacttype h5p | epub | pdf | scorm | web | pdfcontenido
+     * @return string bytes del artefacto (los avisos del lector, en last_avisos())
      * @throws \moodle_exception con el motivo si el engine no lo genera
      */
     public static function generate_artifact(string $sourcefile, string $sha, string $artifacttype): string {
         if (!isset(self::TYPES[$artifacttype])) {
             throw new \moodle_exception('invalidartifacttype', 'local_liamateriales', '', $artifacttype);
         }
+        self::$lastavisos = [];
         // La generación puede superar el límite de ejecución PHP por defecto.
         \core_php_time_limit::raise(self::GENERATE_TIMEOUT + 30);
-        $curl = new \curl();
-        $curl->setHeader('Content-Type: application/json');
-        $curl->setHeader('Accept: application/octet-stream');
-        $curl->setopt(['CURLOPT_TIMEOUT' => self::GENERATE_TIMEOUT, 'CURLOPT_CONNECTTIMEOUT' => 10]);
-        $response = $curl->post(
-            local_liamateriales_service_url() . '/publish',
-            json_encode(['file' => $sourcefile, 'sha' => $sha, 'format' => $artifacttype])
+        $result = engine_client::send(
+            'POST',
+            '/publish',
+            [],
+            ['file' => $sourcefile, 'sha' => $sha, 'format' => $artifacttype],
+            'application/octet-stream',
+            ['CURLOPT_TIMEOUT' => self::GENERATE_TIMEOUT, 'CURLOPT_CONNECTTIMEOUT' => 10]
         );
-        $status = (int) ($curl->get_info()['http_code'] ?? 0);
-        if ($curl->get_errno() || $status !== 200 || !is_string($response) || $response === '') {
-            $detail = $curl->get_errno() ? $curl->error : "HTTP {$status}";
-            $decoded = json_decode(is_string($response) ? $response : '');
+        if ($result->errno || $result->status !== 200 || $result->body === '') {
+            $detail = $result->errno ? $result->error : "HTTP {$result->status}";
+            $decoded = json_decode($result->body);
             if (is_object($decoded) && !empty($decoded->detail)) {
                 $detail = $decoded->detail;
             }
             throw new \moodle_exception('publishgenerateerror', 'local_liamateriales', '', $detail);
         }
-        return $response;
+        self::$lastavisos = self::parse_avisos($result->headers);
+        return $result->body;
+    }
+
+    /**
+     * Avisos del lector LiaScript (sintaxis que la web o el PDF no
+     * representan) de la cabecera ``X-Liamat-Avisos`` (lista JSON).
+     *
+     * @param array $headers cabeceras de la respuesta (curl::getResponse)
+     * @return string[]
+     */
+    public static function parse_avisos(array $headers): array {
+        foreach ($headers as $key => $value) {
+            if (strcasecmp(trim((string) $key), 'x-liamat-avisos') === 0) {
+                $decoded = json_decode(trim((string) $value));
+                return is_array($decoded) ? array_values(array_map('strval', array_filter($decoded, 'is_scalar'))) : [];
+            }
+        }
+        return [];
+    }
+
+    /** Avisos del lector de la última generación (vacío si no hubo o no aplica). */
+    public static function last_avisos(): array {
+        return self::$lastavisos;
     }
 
     /**
@@ -246,18 +359,56 @@ class publisher {
         return $draftitemid;
     }
 
+    /**
+     * Deja el artefacto en el área de borrador según su formato: la web se
+     * descomprime (todos sus ficheros, con ``index.html`` como principal); el
+     * resto es un único fichero.
+     */
+    public static function stage_artifact(int $userid, string $filename, string $bytes, string $artifacttype): int {
+        return $artifacttype === 'web' ? self::stage_web($userid, $bytes) : self::stage_draft($userid, $filename, $bytes);
+    }
+
+    /**
+     * Descomprime la web en un área de borrador. El extractor de Moodle
+     * (zip_packer) limpia las rutas (sin «..» ni rutas absolutas).
+     * ``index.html`` lleva sortorder 1: mod_resource lo toma como principal.
+     *
+     * @throws \moodle_exception si el zip no es válido o no tiene index.html
+     */
+    public static function stage_web(int $userid, string $bytes): int {
+        $zippath = make_request_directory() . '/web.zip';
+        file_put_contents($zippath, $bytes);
+        $draftitemid = file_get_unused_draft_itemid();
+        $contextid = \context_user::instance($userid)->id;
+        $result = get_file_packer('application/zip')->extract_to_storage(
+            $zippath, $contextid, 'user', 'draft', $draftitemid, '/', $userid
+        );
+        $fs = get_file_storage();
+        if ($result === false || !$fs->file_exists($contextid, 'user', 'draft', $draftitemid, '/', 'index.html')) {
+            throw new \moodle_exception('publishwebinvalid', 'local_liamateriales');
+        }
+        file_set_sortorder($contextid, 'user', 'draft', $draftitemid, '/', 'index.html', 1);
+        return $draftitemid;
+    }
+
     /** Nombre por defecto del módulo: el actual si ya existe, si no el del material y el formato. */
     public static function default_name(int $courseid, string $sourcefile, string $artifacttype): string {
         $cmid = self::reusable_cmid($courseid, $sourcefile, $artifacttype);
         $cms = get_fast_modinfo($courseid)->get_cms();
         return $cmid && isset($cms[$cmid])
             ? $cms[$cmid]->name
-            : basename($sourcefile, '.md') . ' (' . strtoupper($artifacttype) . ')';
+            : basename($sourcefile, '.md') . ' (' . self::label($artifacttype) . ')';
+    }
+
+    /** Etiqueta corta de un formato (nombres de módulo y progreso). */
+    public static function label(string $artifacttype): string {
+        return ['web' => 'Web', 'pdfcontenido' => 'PDF de contenido', 'epub' => 'ePub'][$artifacttype]
+            ?? strtoupper($artifacttype);
     }
 
     /**
-     * Genera el artefacto desde Git y lo publica en el curso (un clic): usado
-     * por el botón Publicar del editor y por la página Publicar del plugin.
+     * Genera el artefacto desde Git y lo publica en el curso (página Publicar
+     * del plugin; el botón del editor y publish_api.php se retiraron en 2.8.0).
      *
      * @return int cmid del módulo creado o actualizado
      */
@@ -270,11 +421,36 @@ class publisher {
         ?string $name,
         \stdClass $user
     ): int {
+        // Una publicación a la vez por usuario y material (LIA-065): dos clics
+        // seguidos no crean dos módulos ni lanzan dos generaciones.
+        $lock = \core\lock\lock_config::get_lock_factory('local_liamateriales')
+            ->get_lock('publish_' . $user->id . '_' . sha1($sourcefile), 0);
+        if (!$lock) {
+            throw new \moodle_exception('publishbusy', 'local_liamateriales');
+        }
+        try {
+            return self::generate_and_publish($courseid, $section, $sourcefile, $artifacttype, $sha, $name, $user);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /** Genera y publica (dentro del bloqueo de publish_generated). */
+    private static function generate_and_publish(
+        int $courseid,
+        int $section,
+        string $sourcefile,
+        string $artifacttype,
+        string $sha,
+        ?string $name,
+        \stdClass $user
+    ): int {
         $bytes = self::generate_artifact($sourcefile, $sha, $artifacttype);
-        $draftitemid = self::stage_draft(
+        $draftitemid = self::stage_artifact(
             (int) $user->id,
             basename($sourcefile, '.md') . '@' . substr($sha, 0, 8) . '.' . self::extension($artifacttype),
-            $bytes
+            $bytes,
+            $artifacttype
         );
         return self::publish(
             $courseid,
@@ -290,46 +466,76 @@ class publisher {
     }
 
     /**
-     * Módulo que se puede actualizar al volver a publicar un fichero en un
-     * formato: el del último despliegue de ese mismo formato, si el módulo
-     * sigue existiendo en el curso y es del tipo esperado. 0 = crear uno nuevo
-     * (primera publicación, otro formato o módulo borrado por el profesor).
+     * Despliegues vivos de un curso: el más reciente por fichero y formato
+     * cuyo módulo sigue en el curso y es del tipo esperado.
+     *
+     * La tabla de despliegues es historial (trazabilidad D6) y no se borra
+     * cuando el profesor elimina la actividad: aquí se descartan las filas
+     * de módulos borrados o en borrado (``deletioninprogress``, la actividad
+     * ya no se ve en el curso aunque el cron aún no la haya eliminado).
+     *
+     * @param int $courseid curso
+     * @param string $sourcefile solo este fichero ('' = todos)
+     * @return \stdClass[] filas de ``local_liamateriales_deploy``, de la más reciente a la más antigua
      */
-    public static function reusable_cmid(int $courseid, string $sourcefile, string $artifacttype): int {
+    public static function live_deploys(int $courseid, string $sourcefile = ''): array {
         global $DB;
-        if (!isset(self::TYPES[$artifacttype])) {
-            return 0;
+        $conditions = ['courseid' => $courseid];
+        if ($sourcefile !== '') {
+            $conditions['source_file'] = $sourcefile;
         }
-        $rows = $DB->get_records(
-            'local_liamateriales_deploy',
-            ['courseid' => $courseid, 'source_file' => $sourcefile, 'artifact_type' => $artifacttype],
-            'deployed_at DESC, id DESC',
-            'id, cmid',
-            0,
-            1
+        $rows = $DB->get_records('local_liamateriales_deploy', $conditions, 'deployed_at DESC, id DESC');
+        if (!$rows) {
+            return [];
+        }
+        $cmids = array_values(array_unique(array_map(static fn($row) => (int) $row->cmid, $rows)));
+        [$insql, $params] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED);
+        $params['courseid'] = $courseid;
+        // Módulos vivos del curso: cmid => nombre del tipo de módulo.
+        $alive = $DB->get_records_sql_menu(
+            "SELECT cm.id, m.name
+               FROM {course_modules} cm
+               JOIN {modules} m ON m.id = cm.module
+              WHERE cm.id $insql AND cm.course = :courseid AND cm.deletioninprogress = 0",
+            $params
         );
-        $row = $rows ? reset($rows) : null;
-        if (!$row) {
-            return 0;
+        $live = [];
+        foreach ($rows as $row) {
+            $key = $row->source_file . "\0" . $row->artifact_type;
+            $modname = $alive[(int) $row->cmid] ?? null;
+            $expected = self::TYPES[$row->artifact_type][0] ?? $modname;
+            if (isset($live[$key]) || $modname === null || $modname !== $expected) {
+                continue;
+            }
+            $live[$key] = $row;
         }
-        $cm = get_coursemodule_from_id(self::TYPES[$artifacttype][0], (int) $row->cmid, $courseid, false, IGNORE_MISSING);
-        return $cm ? (int) $cm->id : 0;
+        return array_values($live);
     }
 
     /**
-     * Último despliegue de un fichero en el curso (para pre-rellenar el
-     * formulario de actualización), o null.
+     * Módulo que se puede actualizar al volver a publicar un fichero en un
+     * formato: el del último despliegue vivo de ese mismo formato. 0 = crear
+     * uno nuevo (primera publicación, otro formato o módulo borrado por el
+     * profesor).
+     */
+    public static function reusable_cmid(int $courseid, string $sourcefile, string $artifacttype): int {
+        if (!isset(self::TYPES[$artifacttype])) {
+            return 0;
+        }
+        foreach (self::live_deploys($courseid, $sourcefile) as $row) {
+            if ($row->artifact_type === $artifacttype) {
+                return (int) $row->cmid;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Último despliegue vivo de un fichero en el curso (para pre-rellenar el
+     * formulario de actualización), o null si no está publicado o se borró
+     * su actividad.
      */
     public static function latest_deploy(int $courseid, string $sourcefile): ?\stdClass {
-        global $DB;
-        $rows = $DB->get_records(
-            'local_liamateriales_deploy',
-            ['courseid' => $courseid, 'source_file' => $sourcefile],
-            'deployed_at DESC, id DESC',
-            '*',
-            0,
-            1
-        );
-        return $rows ? reset($rows) : null;
+        return self::live_deploys($courseid, $sourcefile)[0] ?? null;
     }
 }

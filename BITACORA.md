@@ -28,6 +28,232 @@
 
 ## Registro de sesiones
 
+### 2026-11-26 — Sesión 45: «Volver a Moodle» regresa al catálogo del curso
+
+- El botón «Volver a Moodle» del editor llevaba siempre a `/my/courses.php`
+  (`return_url` fijo en `content.php`). Ahora `content.php` toma el curso
+  del token y devuelve `materials.php?id=<curso>`; sin curso (tokens
+  antiguos), sigue yendo a «Mis cursos».
+- `preview.php` emite el token de solo lectura con el curso (antes `0`)
+  para que la vista previa también vuelva al catálogo. Publicar sigue
+  vetado en solo lectura; los eventos de auditoría de la vista previa
+  quedan ahora asociados al curso.
+- `version.php` → 2026112600. Pendiente: probarlo en el Moodle de
+  desarrollo (no hay PHP en el host para `php -l`).
+- **Actividad borrada seguía «publicada»**: la pestaña «Publicados en este
+  curso» listaba la tabla `local_liamateriales_deploy` sin comprobar si el
+  módulo existía. Nuevo `publisher::live_deploys()`: el último despliegue
+  por fichero **y formato** cuyo módulo sigue en el curso, es del tipo
+  esperado y no está en borrado (`deletioninprogress`). Lo usan la
+  pestaña de publicados, `latest_deploy()` (página Publicar: «SHA
+  publicado» y aviso de actualización) y `reusable_cmid()`. El historial
+  de la tabla se conserva (D6). Antes la pestaña mostraba una fila por
+  fichero; ahora una por fichero y formato. Tests nuevos en
+  `publisher_test.php` (sintaxis comprobada con `php -l`; falta lanzarlos
+  en un Moodle). `version.php` → 2026112601.
+
+
+### 2026-11-25 — Sesión 43: Borrado de imágenes, ancho, dos columnas e iconos de tema
+
+- **Borrado** (LIA-126): en la prueba LIA-124 quedaron tres imágenes
+  huérfanas en `img/` de ut03. El engine borra ahora, en el mismo commit,
+  las que el material deja de usar (si ningún otro `.md` las usa). En el
+  editor, borrar una imagen sola en su párrafo **no se guardaba nunca**: el
+  bloque de imagen de Crepe no tenía posición y el preservador la
+  recuperaba del hueco original. Corregido en el transformer LiaScript.
+- **Ancho y columnas** (LIA-127): estudiado LiaScript (sin clases de
+  columnas; estilo de `<div>` y comentario `<!-- style -->`), comprobado con
+  liaex en Chrome. Engine: ancho → atributo `width` en el lector Pandoc;
+  columnas → minipages en el PDF de contenido (fixture `ut07-columnas`).
+  Editor: nodos `lia_columns`/`lia_column`, atributo `width` del bloque de
+  imagen y barra *Ancho*, plantillas en el menú «/» y el panel.
+- **Tema con iconos** (LIA-128): `AppIcon.vue` + grupo de opciones.
+- **Pruebas**: engine 176 ✓ (ruff, mypy); editor 166 ✓ y e2e 42/42 (tema,
+  columnas, ancho, borrar, insertar). Capturas en `reports/` del editor.
+- **Pendiente**: imágenes de vista previa del panel para las plantillas
+  nuevas (`npm run lia:previews`); LIA-124 completa en Moodle.
+
+### 2026-11-25 — Sesión 42: Publicar solo desde el plugin; pie de versión; PDF sin código
+
+- **Repos revisados**: `contenidos-test` con `main` por carpetas
+  (`6d833bd`); fusión de `feature/generacion-web` en `feature/imagenes`.
+- **PDF de contenido**: un material sin bloques de código fallaba
+  («Undefined control sequence», `\RecustomVerbatimEnvironment`): se carga
+  `fvextra` y `Shaded` solo se renueva si existe. Pandoc local 3.9 → 3.14
+  (la imagen `pandoc/extra:latest` no está fijada: pendiente).
+- **Plugin 2.7.1 (2026112502)**: pie con versión y fecha del último cambio
+  en Materiales Editables y Publicar (la fecha sale de `$plugin->version`;
+  avisa si falta el upgrade).
+- **Plugin 2.8.0 (2026112503)**: publicar solo en `publish.php` (sesión).
+  Retirados `publish_api.php` y el límite `ratelimit_publish` (el upgrade
+  lo borra). `content.php` envía `publish_url` (sin token) si el usuario
+  tiene `:deploy`. **Editor**: fuera el botón y el selector de formato;
+  enlace «Publicar…» en otra pestaña, que avisa si hay cambios sin
+  guardar; `publish_url` solo del mismo origen que Moodle.
+- **Pruebas**: engine 163 ✓; editor 153 ✓ y e2e 31/31; plugin: lint (PHP
+  8.3) y arnés del pie. Documento de seguridad (§4.1, §6.5, §7.3, T4, R13)
+  y flujos de datos actualizados. LIA-125.
+- **Pendiente**: LIA-124 (prueba en el Moodle de pruebas).
+
+### 2026-11-25 — Sesión 41: Imágenes, fase 3, y contenidos-test por carpetas
+
+- **contenidos-test** (rama `feature/imagenes`): un material por carpeta
+  (`materiales/<material>/<material>.md` + `img/`) e imágenes de prueba en
+  ut03, ut04, ut05 (PNG con transparencia) y la demo (JPEG con título, GIF
+  animado en línea). Los fixtures `real/` del editor, actualizados.
+- **Engine**: `isolate_material` quita los otros `.md` de la carpeta en la
+  copia temporal antes de liaex (el H5P los empaquetaba). Amenaza T14 en el
+  documento de seguridad.
+- **Editor**: pegar y arrastrar con un uploader propio (el de Crepe dejaba
+  el marcador colgado y perdía el pegado entero si fallaba una imagen);
+  aviso de imágenes sin texto alternativo.
+- **Git LFS**: descartado por ahora (D10 del roadmap).
+- **Pruebas**: engine 163 ✓ (ruff, mypy); exportación real con liaex y
+  Pandoc de ut05 y la demo en H5P, SCORM, web y PDF de contenido (cada
+  paquete solo con su `.md` y sus imágenes); editor 151 ✓, round-trip de
+  los materiales con imágenes y e2e 29/29 (pegar PNG + SVG).
+- **Pendiente**: LIA-124 (prueba en el Moodle de pruebas). Al desplegar
+  `contenidos-test` por carpetas cambian las rutas de los materiales: las
+  publicaciones y ramas `edicion/*` anteriores apuntan a las rutas viejas.
+
+### 2026-11-25 — Sesión 40: Imágenes en los materiales (fases 0, 1 y 2)
+
+Rama `feature/imagenes` (sale de `feature/seguridad`) en este repo y en el
+editor. Roadmap en `docs/imagenes/roadmap.md` (opción B: las imágenes
+viajan con el guardado, un commit).
+
+- **Fase 0**: material de prueba `ut06-imagenes` (PNG, JPEG, WebP, externa).
+  Matriz por formato: el PDF de contenido fallaba con WebP y GIF (XeLaTeX
+  no los admite) → copias PNG con Pillow; el H5P de liaex descarta las
+  WebP y mete todos los `.md` de la carpeta del material (pendiente).
+- **Fase 1**: `GET /edit/asset` (ruta en la carpeta del material, tipo y
+  firma), `asset.php` (token en el cuerpo, límite propio), `ImageStore` en
+  el editor (`proxyDomURL` → `blob:`). **Corregida una pérdida de datos**:
+  el bloque de imagen de Crepe escribía la proporción en el texto
+  alternativo (`![1.00](…)`).
+- **Fase 2**: `commit_files` (texto y binario, un commit con CAS),
+  `images` en el guardado validadas en plugin y engine; en el editor,
+  reducir a 1920 px, recodificar a JPEG/PNG (sin EXIF), pendientes en
+  memoria y en el borrador, y solo las referenciadas en el guardado.
+- **Pruebas**: engine 160 ✓ (ruff, mypy); editor 148 ✓ y e2e 25/25 (con
+  una subida real de 2600 px); plugin: lint y arnés de la validación.
+- **Pendiente**: fase 3 y prueba en el Moodle de pruebas.
+
+### 2026-11-24 — Sesión 39: Fase S — Seguridad
+
+Rama `feature/seguridad` (sale de `feature/generacion-web`) en este repo y
+en `fpvirtual-crepe-editor`.
+
+- **LIA-060** Firma HMAC-SHA256 plugin → engine: middleware ASGI
+  (`materiales_liascript.auth`; ±60 s, sin réplicas, `/health` libre),
+  `serve.py` exige `MATERIALES_LIASCRIPT_SHARED_SECRET`; en el plugin,
+  `engine_client` (único cliente HTTP) y el secreto en `config.php` o en
+  el ajuste nuevo. Vectores de prueba idénticos en Python y PHP.
+- **LIA-061** Documentado (engine sin puerto publicado); falta aplicarlo
+  en el servidor.
+- **LIA-062/067** Código de apertura de 60 s y un solo uso en el fragmento
+  (`#open=…&src=…`); `content.php` lo canjea por POST y recarga con
+  `POST {token}`; `preview.php` emite el código al pulsar (el catálogo ya
+  no crea tokens al cargarse). Formato antiguo tras `legacy_open_url`.
+- **LIA-063** Cabeceras (`no-referrer`, `nosniff`, `no-store`, CORS con
+  `Vary`) unificadas en `lib.php`; `meta referrer` y CSP en el editor.
+- **LIA-064/065/066** `rate_limiter` (MUC): límites por usuario
+  configurables (429 + `Retry-After`), bloqueo por IP tras 20 tokens
+  inválidos, una publicación a la vez (409). El editor trata el 429 sin
+  perder el trabajo.
+- **LIA-068** Tarea diaria de limpieza; **LIA-069** eventos
+  `material_opened/saved/conflict/published`; **LIA-070** errores
+  genéricos con identificador de incidencia.
+- **LIA-071** Documentado en el README del plugin (Nginx `limit_req`).
+- **Pruebas**: engine 113 ✓ (ruff, mypy); editor 127 ✓, typecheck, build,
+  e2e 18/18; plugin: lint y arnés mínimo (rate_limiter, firma); los tests
+  PHPUnit nuevos (`engine_client`, `token_manager`, `rate_limiter`,
+  `cleanup_task`, `events`) se ejecutan en el Moodle de pruebas.
+- **Pendiente**: desplegar, quitar el puerto del engine, límite del
+  proxy, e2e real.
+
+### 2026-11-24 — Sesión 38: Web y editor con la estética de vuepress-theme-hope
+
+- **Web** (`liamat.css`, `web.html`, `liamat.js`, `web.lua`): barra superior
+  y lateral, migas, información de la página, índice «En esta página»,
+  contenedores de aviso con título e icono, código con lenguaje,
+  navegación en tarjetas, portada y modo claro/oscuro. Colores de avisos y
+  resaltado tomados de la paleta del editor (AA).
+- **Editor**: cajas `@nota/@aviso/…` como contenedores de aviso, quizzes
+  como en la web y token `code-block-bg`; mismo aspecto que la web.
+
+### 2026-11-23 — Sesión 38 bis: Pruebas de la Fase 4 en el Moodle de pruebas y correcciones
+
+- **Despliegue** de `feature/generacion-web` (`42c4e2a`) en el servidor de
+  pruebas: plugin 2.5.0 en Moodle 8088, engine 8091 reconstruido, imagen
+  `pandoc/extra:latest` (Pandoc 3.14) descargada en el host. `web` y
+  `pdfcontenido` funcionan con los 5 materiales; «Descargar sin publicar»
+  en web probado desde la página Publicar.
+- **Engine — web con imágenes sin URL**: el editor Crepe guarda un bloque de
+  imagen vacío como `![1.00]()` y `chunkedhtml` fallaba («File '.' not found
+  in resource path»). `web.lua` omite esas imágenes con aviso del lector y
+  quita la figura vacía. `--mathml` → `--math-method=mathml`.
+- **Engine — PDF de contenido**: bloques de código en caja (fondo y borde,
+  aspecto Eisvogel, `tcolorbox` en `content-boxes.tex`) conservando el
+  resaltado de Pandoc, sin `listings` (descoloca los multibyte). Fuente de
+  código Source Code Pro (`content-boxes.yaml`): Latin Modern Mono no tenía
+  `─ │ └ ▶` y XeLaTeX los omitía sin error (172 caracteres en la demo).
+- **Plugin — Publicar**: botón «Regresar a Edición Materiales v2» bajo el
+  título (antes solo había «Cancelar» al final del formulario).
+- **Roadmap** de generación web 0.3: §3.4 (código), riesgos nuevos y §10
+  (estado de las pruebas).
+- **Pendiente**: publicar (crear la actividad) `web` y `pdfcontenido` desde
+  Publicar y desde el editor; corregir en el editor el bloque de imagen
+  vacío; `①` `②` en cursiva sin glifo; separador inicial en los avisos sin
+  línea.
+
+### 2026-11-23 — Sesión 37: Generación web y PDF de contenido — Fase 4 (integración)
+
+- **Engine**: formatos `web` (zip) y `pdfcontenido` (PDF) en `POST /publish`
+  con `PandocExporter`. Avisos del lector en la cabecera `X-Liamat-Avisos`
+  (lista JSON). Imagen por defecto pública `pandoc/extra:latest`
+  (`MATERIALES_LIASCRIPT_PANDOC_IMAGE`) y plantilla FP Virtual incluida en
+  `publish/pandoc/fpvirtual-theme/` (copia de `fpvirtual-markdown-a-pdf`
+  2f39291; otra con `MATERIALES_LIASCRIPT_PDF_THEME_DIR`). `/health` informa
+  de `pandoc`. Sin Docker, 503 en esos formatos.
+- **Plugin 2.5.0** (2026112305): `publisher` admite `web` (mod_resource con
+  todos los ficheros del zip, extraídos con `zip_packer`, e `index.html` como
+  principal; visualización de los ajustes nuevos, por defecto ventana
+  emergente 1200×600 como eXeLearning) y `pdfcontenido` (mod_resource).
+  Avisos del lector en la actividad publicada, en la descarga (página
+  Publicar) y en la respuesta de `publish_api.php`.
+- **Editor** (rama `feature/generacion-web`): formatos nuevos en Publicar y
+  avisos en el banner.
+- **Tests**: engine 102 ✓ (ruff, mypy); editor 114 ✓ y build; plugin: lint y
+  funciones puras (ajustes web, avisos); `stage_web` tiene test PHPUnit que
+  se ejecuta en el Moodle de pruebas.
+- **Pendiente**: probar en el Moodle de pruebas (criterio de salida de la
+  Fase 4); decisiones de aspecto y visualización.
+
+### 2026-11-23 — Sesión 36: Generación web y PDF de contenido — Fase 0 (prototipo)
+
+- **Rama `feature/generacion-web`** (se unirá a `main` más adelante).
+- **Extensión Pandoc** en `engine/.../publish/pandoc/`: lector LiaScript en
+  Lua (cabecera y macros, quizzes de todos los tipos con pistas y solución,
+  encuestas, cajas, fragmentos, narración, multimedia, código ejecutable;
+  avisos de lo no convertido), filtros `web.lua` y `contenido.lua`,
+  plantilla `web.html` y `liamat.js`/`liamat.css` (tema verde).
+  `PandocExporter` (`publish/pandoc_export.py`) la ejecuta en Docker con la
+  imagen `fpvirtual-pandoc`, como liaex (copia temporal, docker-in-docker).
+- **Resultados**: conformidad con `liaex -f fullJson` 4/4 materiales;
+  web de `ut05` 17 KB en 0,6 s (liaex `web`: 24 MB); PDF de contenido con
+  la plantilla FP Virtual sin quizzes, encuestas ni sus enunciados;
+  comportamiento en Chrome 12/12 sin errores de JavaScript.
+- **Hallazgos y arreglos**: Pandoc escribe `type` sin `data-` (atributo HTML
+  válido), así que el lenguaje intermedio usa `tipo`; identificadores ASCII
+  para los nombres de página; el CSS del resaltado se añade a la plantilla.
+- **Tests**: `tests/test_pandoc_export.py` (12, de integración: se saltan
+  sin Docker o sin imágenes; el PDF requiere
+  `MATERIALES_LIASCRIPT_PDF_THEME_DIR`) y `tests/web/liamat_e2e.mjs`.
+  Engine 99 tests ✓, ruff ✓, mypy ✓.
+- **Pendiente**: web dentro de `mod_resource` en el Moodle de pruebas;
+  decisiones de aspecto y visualización; Fases 1–4 del roadmap.
+
 ### 2026-11-23 — Sesión 35: Tema del editor en los contenidos exportados
 
 - **Revisión**: los contenidos (SCORM, H5P, ePub, PDF) usaban el tema por

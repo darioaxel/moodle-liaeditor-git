@@ -33,6 +33,17 @@ class EditContent(BaseModel):
     committed_at: str | None = None  # fecha del commit ``sha`` (ISO 8601 con zona)
 
 
+#: Máximo de imágenes por guardado (docs/imagenes, D7).
+MAX_IMAGES_PER_SAVE = 20
+
+
+class ImageUpload(BaseModel):
+    """Imagen nueva que viaja con el guardado (ruta relativa al ``.md``)."""
+
+    path: str = Field(min_length=1, max_length=255)
+    content_base64: str = Field(min_length=1, max_length=3 * 1024 * 1024)
+
+
 class SaveRequest(BaseModel):
     """Cuerpo de ``POST /edit/save`` (D5: optimistic locking por SHA)."""
 
@@ -42,6 +53,7 @@ class SaveRequest(BaseModel):
     original_sha: str = Field(min_length=40, max_length=40)
     content: str = Field(max_length=MAX_FILE_SIZE)
     message: str | None = None
+    images: list[ImageUpload] = Field(default_factory=list, max_length=MAX_IMAGES_PER_SAVE)
 
 
 class SaveOk(BaseModel):

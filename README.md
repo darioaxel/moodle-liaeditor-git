@@ -106,6 +106,7 @@ Las credenciales nunca se commitean: el push del engine usa las del
 
 ## Documentación
 
+- [Roadmap de generación web y PDF de contenido](docs/generacion_web/roadmap.md) — web estática con quizzes en JavaScript propio y PDF solo de contenido, con Pandoc.
 - [Flujos de datos — plugin, engine y editor](docs/Flujos%20de%20datos%20—%20plugin,%20engine%20y%20editor.md) — diagramas de abrir, guardar y publicar.
 - [Desarrollo LiaEditor–Moodle v1](docs/desarrollo-liaeditor-moodle-v1.md) — decisiones de arquitectura D1–D10 y fases.
 - [Especificación `mod_liamd` v0.1.0](docs/cambio-curso-a-liascript.md) — requisitos funcionales, endpoints, BD, capacidades.

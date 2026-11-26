@@ -14,7 +14,8 @@
  * fichero generado por cuenta propia (p. ej. con el LiaScript Exporter en
  * el navegador), con el mismo registro.
  *
- * Formatos: H5P, ePub, PDF y SCORM 2004 (mod_scorm). La versión se elige
+ * Formatos: H5P, ePub, PDF, SCORM 1.2 (mod_scorm), web estática y PDF de
+ * contenido (Pandoc + lector LiaScript, docs/generacion_web). La versión se elige
  * entre la última de la rama de edición del usuario y la oficial (`main`);
  * el SHA lo resuelve el servidor, no llega del formulario.
  *
@@ -117,6 +118,11 @@ if (data_submitted() && confirm_sesskey()) {
         if ($mode === 'download') {
             // Descargar: genera el fichero desde el Markdown sin publicarlo.
             $bytes = publisher::generate_artifact($file, $sha, $artifacttype);
+            $avisos = publisher::last_avisos();
+            if ($avisos) {
+                // Para que el JS los muestre tras la descarga (ASCII: json_encode escapa).
+                header('X-Liamat-Avisos: ' . json_encode(array_slice($avisos, 0, 50)));
+            }
             send_file(
                 $bytes,
                 basename($file, '.md') . '@' . substr($sha, 0, 8) . '.' . publisher::extension($artifacttype),
@@ -138,7 +144,7 @@ if (data_submitted() && confirm_sesskey()) {
                 $file,
                 $artifacttype,
                 $sha,
-                publisher::stage_draft((int) $USER->id, $upload['name'], file_get_contents($upload['tmp_name'])),
+                publisher::stage_artifact((int) $USER->id, $upload['name'], file_get_contents($upload['tmp_name']), $artifacttype),
                 $name !== '' ? $name : publisher::default_name($courseid, $file, $artifacttype),
                 publisher::reusable_cmid($courseid, $file, $artifacttype),
                 $USER->username
@@ -164,10 +170,18 @@ if (data_submitted() && confirm_sesskey()) {
     $cm = get_coursemodule_from_id('', $cmid, 0, false, MUST_EXIST);
     $target = new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => $cmid]);
     $message = get_string('publishok', 'local_liamateriales', format_string($cm->name));
+    $avisos = $mode === 'upload' ? [] : publisher::last_avisos();
+    if ($avisos) {
+        // Avisos del lector LiaScript: se ven en la actividad publicada.
+        \core\notification::warning(get_string('publish_avisos', 'local_liamateriales')
+            . html_writer::alist(array_map('s', array_slice($avisos, 0, 20))));
+    }
     if ($ajax) {
         // El aviso de éxito se muestra en la actividad a la que navega el JS.
         \core\notification::success($message);
-        local_liamateriales_publish_json(200, ['status' => 'published', 'url' => $target->out(false), 'message' => $message]);
+        local_liamateriales_publish_json(200, [
+            'status' => 'published', 'url' => $target->out(false), 'message' => $message, 'avisos' => $avisos,
+        ]);
     }
     redirect($target, $message, null, \core\output\notification::NOTIFY_SUCCESS);
 }
@@ -175,6 +189,16 @@ if (data_submitted() && confirm_sesskey()) {
 // Formulario (GET).
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('material_publish', 'local_liamateriales'));
+
+// Volver a la lista de materiales (el «Cancelar» del formulario queda al final).
+echo html_writer::div(
+    html_writer::link(
+        $returnurl,
+        $OUTPUT->pix_icon('t/left', '') . get_string('backto', 'moodle', get_string('materials', 'local_liamateriales')),
+        ['class' => 'btn btn-outline-secondary btn-sm', 'id' => 'liamat-publish-back']
+    ),
+    'mb-3'
+);
 
 echo $OUTPUT->box_start('generalbox');
 echo html_writer::tag('p', html_writer::tag('strong', get_string('material_file', 'local_liamateriales') . ': ')
@@ -199,16 +223,16 @@ if (!$versions) {
 // textos traducidos. Un porcentaje real no existe: liaex no informa de su
 // avance, así que se muestra tiempo transcurrido frente al habitual.
 $progress = [
-    'estimates' => ['h5p' => 6, 'scorm' => 6, 'epub' => 25, 'pdf' => 30, 'upload' => 6],
+    'estimates' => ['h5p' => 6, 'scorm' => 6, 'epub' => 25, 'pdf' => 30, 'web' => 4, 'pdfcontenido' => 20, 'upload' => 6],
     'strings' => [],
 ];
 foreach (['progress_generate', 'progress_download', 'progress_upload', 'progress_elapsed',
         'progress_estimate', 'progress_slow', 'progress_keepopen', 'progress_published',
-        'progress_downloaded', 'progress_error', 'progress_nofile'] as $key) {
+        'progress_downloaded', 'progress_error', 'progress_nofile', 'progress_avisos'] as $key) {
     $progress['strings'][$key] = get_string($key, 'local_liamateriales');
 }
-foreach (['h5p' => 'H5P', 'epub' => 'ePub', 'pdf' => 'PDF', 'scorm' => 'SCORM'] as $type => $label) {
-    $progress['strings']['type_' . $type] = $label;
+foreach (publisher::types() as $type) {
+    $progress['strings']['type_' . $type] = publisher::label($type);
 }
 $PAGE->requires->js(new moodle_url('/local/liamateriales/js/publish_progress.js'));
 
@@ -282,4 +306,5 @@ echo html_writer::tag('button', get_string('publish_upload_button', 'local_liama
 echo html_writer::end_tag('details');
 
 echo html_writer::end_tag('form');
+echo local_liamateriales_version_footer();
 echo $OUTPUT->footer();

@@ -8,10 +8,15 @@ sesión) que delega en estos métodos vía HTTP.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import re
 from collections.abc import Callable
 from datetime import datetime
 
+import structlog
+
+from materiales_liascript import images
 from materiales_liascript.edit.branches import (
     EditError,
     edit_branch_name,
@@ -29,6 +34,8 @@ from materiales_liascript.edit.models import (
     SaveResult,
 )
 from materiales_liascript.git.provider import BranchMovedError, GitProvider, GitProviderError
+
+_log = structlog.get_logger(__name__)
 
 _SSH_URL_RE = re.compile(r"^git@(?P<host>[^:]+):(?P<path>.+?)(?:\.git)?$")
 _HTTPS_URL_RE = re.compile(r"^https?://(?P<creds>[^/@]+@)?(?P<rest>.+?)(?:\.git)?$")
@@ -113,7 +120,12 @@ class EditService:
         file = validate_file_path(request.file)
         if not self._git.branch_exists(request.branch):
             raise EditError(404, f"la rama no existe: {request.branch!r}")
+        uploads = self._uploads(file, request)
+        files: dict[str, str | bytes | None] = {file: request.content, **uploads}
         current = self._git.get_commit(request.branch)
+        # Imágenes que el material ha dejado de usar: se borran en el mismo commit.
+        for path in self._dropped_images(file, request, current, set(uploads)):
+            files[path] = None
         message = request.message or f"Editado desde Moodle por {request.user}"
         target = request.branch
         conflict = current != request.original_sha
@@ -125,10 +137,10 @@ class EditService:
                 target = f"{target}-{current[:8]}"
                 self._git.create_branch(target, current)
         try:
-            new_sha = self._git.commit_file(
+            # Markdown e imágenes nuevas en un único commit (docs/imagenes, D2).
+            new_sha = self._git.commit_files(
                 target,
-                file,
-                request.content,
+                files,
                 message,
                 author=f"{request.user} <{request.user}@liaeditor.local>",
             )
@@ -142,6 +154,79 @@ class EditService:
                 diff_url=build_compare_url(self._repo_url, request.original_sha, target),
             )
         return SaveOk(branch=target, new_sha=new_sha, committed_at=self._git.commit_date(new_sha))
+
+    def _dropped_images(
+        self, file: str, request: SaveRequest, head: str, uploads: set[str]
+    ) -> list[str]:
+        """Imágenes que el material usaba en ``original_sha`` y ya no usa.
+
+        Solo se borran si existen en ``head`` y ningún otro ``.md`` del
+        repositorio las referencia (dos materiales pueden compartir una
+        imagen). Las que el material no referenciaba antes (añadidas a mano
+        en Git) nunca se tocan.
+        """
+        try:
+            before = self._git.get_file(request.original_sha, file)
+        except GitProviderError:
+            return []  # material nuevo o SHA desconocido: nada que comparar
+        dropped = images.references(file, before) - images.references(file, request.content)
+        dropped -= uploads
+        if not dropped:
+            return []
+        present = set(self._git.list_files(head))
+        dropped &= present
+        for other in present:
+            if not dropped:
+                break
+            if other == file or not other.lower().endswith(".md"):
+                continue
+            try:
+                text = self._git.get_file(head, other)
+            except GitProviderError:
+                continue
+            dropped -= images.references(other, text, confined=False)
+        if dropped:
+            _log.info("imagenes_borradas", file=file, imagenes=sorted(dropped))
+        return sorted(dropped)
+
+    @staticmethod
+    def _uploads(file: str, request: SaveRequest) -> dict[str, bytes]:
+        """Imágenes del guardado, validadas: ruta en la carpeta del material,
+        formato que se puede subir, firma de bytes y tamaño (400 si no)."""
+        uploads: dict[str, bytes] = {}
+        total = 0
+        for image in request.images:
+            try:
+                path = images.resolve(file, image.path)
+                data = base64.b64decode(image.content_base64, validate=True)
+                images.check(path, data, upload=True)
+            except (images.ImageError, binascii.Error, ValueError) as exc:
+                _log.info("imagen_subida_rechazada", file=file, ref=image.path, motivo=str(exc))
+                raise EditError(400, f"imagen no válida: {image.path}") from exc
+            total += len(data)
+            if total > images.MAX_SAVE_BYTES:
+                raise EditError(400, "las imágenes del guardado superan el tamaño máximo")
+            uploads[path] = data
+        return uploads
+
+    def asset(self, file: str, branch: str, ref: str) -> tuple[bytes, str]:
+        """Imagen ``ref`` (ruta del Markdown de ``file``) en ``branch``: bytes y tipo MIME.
+
+        Solo imágenes de la carpeta del material, con extensión y firma de
+        imagen (``materiales_liascript.images``). Cualquier fallo es 404 sin
+        detalle, para no revelar qué existe en el repositorio.
+        """
+        file = validate_file_path(file)
+        if not self._git.branch_exists(branch):
+            raise EditError(404, "imagen no encontrada")
+        try:
+            path = images.resolve(file, ref)
+            data = self._git.get_bytes(branch, path)
+            mime = images.check(path, data)
+        except (images.ImageError, GitProviderError) as exc:
+            _log.info("imagen_rechazada", file=file, ref=ref, motivo=str(exc))
+            raise EditError(404, "imagen no encontrada") from exc
+        return data, mime
 
     def list_materials(self, branch: str | None = None) -> MaterialList:
         """Materiales ``.md`` de la rama, con título de la cabecera LiaScript.

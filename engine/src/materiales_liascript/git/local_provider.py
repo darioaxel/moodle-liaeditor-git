@@ -2,6 +2,14 @@
 
 Los worktrees temporales usan el CLI de Git (``git worktree add``): GitPython no
 expone worktrees de forma fiable. El resto de operaciones van por la API tipada.
+
+Hilos: FastAPI atiende las rutas síncronas en un pool de hilos y el provider es
+único. GitPython lee los objetos por un ``git cat-file --batch`` persistente
+compartido, que no admite lecturas simultáneas: con varias imágenes pedidas a la
+vez (el editor pide todas al abrir) las respuestas se mezclaban («SHA … could
+not be resolved», ramas «no encontradas», un PNG que «no es image/png») y los
+hilos acababan bloqueados. Toda lectura con GitPython va bajo ``self._lock``;
+las operaciones con subprocesos de ``git`` propios no lo necesitan.
 """
 
 from __future__ import annotations
@@ -10,7 +18,8 @@ import os
 import re
 import subprocess
 import tempfile
-from collections.abc import Iterator
+import threading
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -38,6 +47,8 @@ class LocalGitProvider(GitProvider):
             msg = f"No es un repositorio Git: {repo_path}"
             raise GitProviderError(msg) from exc
         self._root = Path(self._repo.working_tree_dir or self._repo.git_dir)
+        # Reentrante: is_ancestor → get_commit → _commit.
+        self._lock = threading.RLock()
 
     # -- refs y checkouts -------------------------------------------------------
 
@@ -59,25 +70,31 @@ class LocalGitProvider(GitProvider):
     # -- contenido ---------------------------------------------------------------
 
     def list_files(self, ref: str, path: str = "") -> list[str]:
-        commit = self._commit(ref)
-        tree = commit.tree / path if path else commit.tree
-        return sorted(str(item.path) for item in self._walk(tree))
+        with self._lock:
+            commit = self._commit(ref)
+            tree = commit.tree / path if path else commit.tree
+            return sorted(str(item.path) for item in self._walk(tree))
 
     def get_file(self, ref: str, path: str) -> str:
-        commit = self._commit(ref)
-        try:
-            entry = commit.tree / path
-        except KeyError as exc:
-            msg = f"Archivo no encontrado en {ref}: {path}"
-            raise GitProviderError(msg) from exc
-        if entry.type != "blob":
-            msg = f"No es un archivo en {ref}: {path}"
-            raise GitProviderError(msg)
-        data: bytes = entry.data_stream.read()
-        return data.decode("utf-8")
+        return self.get_bytes(ref, path).decode("utf-8")
+
+    def get_bytes(self, ref: str, path: str) -> bytes:
+        with self._lock:
+            commit = self._commit(ref)
+            try:
+                entry = commit.tree / path
+            except KeyError as exc:
+                msg = f"Archivo no encontrado en {ref}: {path}"
+                raise GitProviderError(msg) from exc
+            if entry.type != "blob":
+                msg = f"No es un archivo en {ref}: {path}"
+                raise GitProviderError(msg)
+            data: bytes = entry.data_stream.read()
+            return data
 
     def get_commit(self, ref: str) -> str:
-        return str(self._commit(ref).hexsha)
+        with self._lock:
+            return str(self._commit(ref).hexsha)
 
     def commit_date(self, ref: str) -> str | None:
         try:
@@ -90,19 +107,21 @@ class LocalGitProvider(GitProvider):
 
     def commits_ahead(self, base: str, ref: str) -> int:
         try:
-            return len(list(self._repo.iter_commits(f"{base}..{ref}")))
+            with self._lock:
+                return len(list(self._repo.iter_commits(f"{base}..{ref}")))
         except GitCommandError as exc:
             msg = f"Referencia Git inválida: {exc}"
             raise GitProviderError(msg) from exc
 
     def is_ancestor(self, ref_a: str, ref_b: str) -> bool:
-        sha_a = self.get_commit(ref_a)
-        try:
-            bases = self._repo.merge_base(ref_a, ref_b)
-        except GitCommandError as exc:
-            msg = f"Referencia Git inválida: {exc}"
-            raise GitProviderError(msg) from exc
-        return bool(bases) and bases[0].hexsha == sha_a
+        with self._lock:
+            sha_a = self.get_commit(ref_a)
+            try:
+                bases = self._repo.merge_base(ref_a, ref_b)
+            except GitCommandError as exc:
+                msg = f"Referencia Git inválida: {exc}"
+                raise GitProviderError(msg) from exc
+            return bool(bases) and bases[0].hexsha == sha_a
 
     # -- escritura (LIA-003/004) -------------------------------------------------
 
@@ -137,14 +156,32 @@ class LocalGitProvider(GitProvider):
         message: str,
         author: str,
     ) -> str:
+        return self.commit_files(branch, {path: content}, message, author)
+
+    def commit_files(
+        self,
+        branch: str,
+        files: Mapping[str, str | bytes | None],
+        message: str,
+        author: str,
+    ) -> str:
         if not self.branch_exists(branch):
             msg = f"La rama no existe: {branch!r}"
+            raise GitProviderError(msg)
+        if not files:
+            msg = "commit sin archivos"
             raise GitProviderError(msg)
         author_name, _, email_part = author.partition("<")
         author_email = email_part.rstrip("> ") or f"{author_name.strip()}@liaeditor.local"
         base = self.get_commit(branch)
-        blob = self._git_in(["hash-object", "-w", "--stdin"], content)
-        tree = self._replace_tree_entry(f"{base}^{{tree}}", path.split("/"), blob)
+        tree = f"{base}^{{tree}}"
+        for path, content in files.items():
+            if content is None:
+                blob = None  # borrar
+            else:
+                data = content.encode("utf-8") if isinstance(content, str) else content
+                blob = self._hash_blob(data)
+            tree = self._replace_tree_entry(tree, path.split("/"), blob)
         env = {
             "GIT_AUTHOR_NAME": author_name.strip(),
             "GIT_AUTHOR_EMAIL": author_email,
@@ -155,13 +192,29 @@ class LocalGitProvider(GitProvider):
         try:
             self._git("update-ref", f"refs/heads/{branch}", commit, base)
         except GitProviderError as exc:
+            paths = ", ".join(files)
             raise BranchMovedError(
-                f"la rama {branch!r} avanzó durante el commit de {path}"
+                f"la rama {branch!r} avanzó durante el commit de {paths}"
             ) from exc
         return commit
 
+    def _hash_blob(self, data: bytes) -> str:
+        """Escribe ``data`` como blob (binario intacto) y devuelve su SHA."""
+        result = subprocess.run(
+            ["git", "-C", str(self._root), "hash-object", "-w", "--stdin"],
+            input=data,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            msg = f"git hash-object falló: {result.stderr.decode(errors='replace').strip()}"
+            raise GitProviderError(msg)
+        return result.stdout.decode().strip()
+
     def push_branch(self, branch: str) -> None:
-        if not any(remote.name == "origin" for remote in self._repo.remotes):
+        with self._lock:
+            has_origin = any(remote.name == "origin" for remote in self._repo.remotes)
+        if not has_origin:
             return
         self._git("push", "origin", f"refs/heads/{branch}:refs/heads/{branch}")
 
@@ -169,9 +222,10 @@ class LocalGitProvider(GitProvider):
 
     def _commit(self, ref: str) -> Commit:
         try:
-            commit = self._repo.commit(ref)
-            _ = commit.tree  # fuerza la resolución: un SHA de 40 hex es lazy
-            return commit
+            with self._lock:
+                commit = self._repo.commit(ref)
+                _ = commit.tree  # fuerza la resolución: un SHA de 40 hex es lazy
+                return commit
         except (BadName, ValueError) as exc:
             msg = f"Referencia Git no encontrada: {ref!r}"
             raise GitProviderError(msg) from exc
@@ -195,12 +249,13 @@ class LocalGitProvider(GitProvider):
             raise GitProviderError(msg)
         return result.stdout.strip()
 
-    def _replace_tree_entry(self, tree_ref: str, parts: list[str], blob_sha: str) -> str:
+    def _replace_tree_entry(self, tree_ref: str, parts: list[str], blob_sha: str | None) -> str:
         """Árbol nuevo igual que ``tree_ref`` pero con ``blob_sha`` en ``parts``.
 
         Reescribe recursivamente con ``git mktree`` solo los árboles del camino
         del archivo; crea los directorios intermedios si la ruta es nueva.
-        Devuelve el SHA del árbol raíz resultante.
+        Con ``blob_sha=None`` quita la entrada (y el directorio que se quede
+        vacío); si no existe, no cambia nada. Devuelve el SHA del árbol raíz.
         """
         tree_sha = self._git("rev-parse", tree_ref) if "^{" in tree_ref else tree_ref
         lines = self._git("ls-tree", tree_sha).splitlines()
@@ -214,15 +269,19 @@ class LocalGitProvider(GitProvider):
                 continue
             found = True
             if not rest:
-                entries.append(f"100644 blob {blob_sha}\t{name}")
+                if blob_sha is not None:
+                    entries.append(f"100644 blob {blob_sha}\t{name}")
                 continue
             mode, entry_type, sha = meta.split()
             if entry_type != "tree":
                 msg = f"{'/'.join(parts)} no es un directorio en {tree_ref}"
                 raise GitProviderError(msg)
             sub = self._replace_tree_entry(sha, rest, blob_sha)
-            entries.append(f"{mode} tree {sub}\t{name}")
-        if not found:
+            if sub != _EMPTY_TREE:
+                entries.append(f"{mode} tree {sub}\t{name}")
+        if not found and blob_sha is None:
+            pass  # borrar algo que no existe: nada que hacer
+        elif not found:
             if not rest:
                 entries.append(f"100644 blob {blob_sha}\t{head}")
             else:
@@ -230,6 +289,8 @@ class LocalGitProvider(GitProvider):
                 entries.append(f"040000 tree {sub}\t{head}")
         # mktree exige las entradas ordenadas; los directorios se ordenan
         # como si el nombre acabara en '/' (regla de Git).
+        if not entries:
+            return _EMPTY_TREE  # directorio vacío tras un borrado: el padre lo quita
         entries.sort(key=lambda e: e.split("\t", 1)[1] + ("/" if " tree " in e else ""))
         return self._git_in(["mktree"], "\n".join(entries) + "\n")
 

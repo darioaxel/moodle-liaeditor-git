@@ -1,0 +1,83 @@
+% Cajas de contenido corporativas (nota, aviso, importante) y estilo del
+% resumen. Se inyecta en la cabecera del documento con `pandoc -H` y se
+% activan con el filtro pandoc-latex-environment a partir de divs con clase
+% (::: nota, ::: aviso, ::: importante). Mismos colores que
+% fpvirtual/customization.latex. Las definiciones se protegen con guards para
+% no chocar con entornos definidos por el propio documento.
+\usepackage[most]{tcolorbox}
+
+\definecolor{fpvbox-orange}{HTML}{F3970D}
+\definecolor{fpvbox-darkorange}{HTML}{C77800}
+\definecolor{fpvbox-red}{HTML}{A50000}
+\definecolor{fpvbox-midgray}{HTML}{808080}
+
+% resumen — caja del abstract (YAML), naranja corporativo
+\tcolorboxenvironment{abstract}{
+  enhanced, breakable,
+  colback=fpvbox-orange!6!white, colframe=fpvbox-orange,
+  boxrule=0.5pt, arc=1.2mm,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title=Resumen, colbacktitle=fpvbox-orange, coltitle=white,
+  fonttitle=\sffamily\bfseries\small, titlerule=0mm,
+}
+
+% nota — información complementaria
+\ifcsname nota\endcsname\else
+\newtcolorbox{nota}{
+  enhanced, breakable,
+  colback=fpvbox-midgray!7!white, colframe=fpvbox-midgray!40!white,
+  boxrule=0.5pt, arc=1.2mm,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title=Nota, colbacktitle=fpvbox-midgray!40!white, coltitle=white,
+  fonttitle=\sffamily\bfseries\small, titlerule=0mm,
+}
+\fi
+
+% aviso — precaución
+\ifcsname aviso\endcsname\else
+\newtcolorbox{aviso}{
+  enhanced, breakable,
+  colback=fpvbox-darkorange!7!white, colframe=fpvbox-darkorange,
+  boxrule=0.5pt, arc=1.2mm,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title=Aviso, colbacktitle=fpvbox-darkorange, coltitle=white,
+  fonttitle=\sffamily\bfseries\small, titlerule=0mm,
+}
+\fi
+
+% importante — advertencia grave / irreversible
+\ifcsname importante\endcsname\else
+\newtcolorbox{importante}{
+  enhanced, breakable,
+  colback=fpvbox-red!5!white, colframe=fpvbox-red,
+  boxrule=0.5pt, arc=1.2mm,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title=Importante, colbacktitle=fpvbox-red, coltitle=white,
+  fonttitle=\sffamily\bfseries\small, titlerule=0mm,
+}
+\fi
+
+% ---------------------------------------------------------------------------
+% Bloques de código con caja (aspecto Eisvogel) SIN listings: se conserva el
+% resaltado de Pandoc (--syntax-highlighting=default) y los caracteres Unicode
+% (listings descoloca los multibyte: diagramas con ─ │ └ ▶).
+% ---------------------------------------------------------------------------
+\usepackage[most]{tcolorbox}
+\usepackage{etoolbox}
+% fvextra (incluye fancyvrb): Pandoc solo carga fancyvrb si el documento tiene
+% código resaltado; sin él, \RecustomVerbatimEnvironment no existe y el PDF de
+% un material sin bloques de código fallaba. La opción breaklines es de fvextra.
+\usepackage{fvextra}
+\definecolor{codigo-fondo}{HTML}{F7F7F7}
+\definecolor{codigo-borde}{HTML}{B3B2B3}
+\tcbset{codigo/.style={breakable, enhanced, colback=codigo-fondo,
+  colframe=codigo-borde, boxrule=0.4pt, arc=0pt, outer arc=0pt,
+  left=5pt, right=5pt, top=3pt, bottom=3pt, before skip=0.8em, after skip=0.8em}}
+% Bloques con lenguaje resaltado (Shaded/Highlighting de Pandoc).
+% (Solo existe si el documento tiene código resaltado.)
+\AtBeginDocument{\ifcsname Shaded\endcsname
+  \renewenvironment{Shaded}{\begin{tcolorbox}[codigo]}{\end{tcolorbox}}\fi}
+% Bloques sin lenguaje o no resaltables (verbatim): misma caja y cortes de línea.
+\RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines,fontsize=\small}
+\BeforeBeginEnvironment{verbatim}{\begin{tcolorbox}[codigo]}
+\AfterEndEnvironment{verbatim}{\end{tcolorbox}}
