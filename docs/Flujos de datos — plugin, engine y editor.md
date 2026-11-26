@@ -214,6 +214,15 @@ sequenceDiagram
     Note over B,I: nunca se sube a Git automáticamente
 ```
 
+### 3.5 Incorporar la versión oficial (LIA-130)
+
+La rama de edición sale de `main` y no se actualiza sola. Al abrir y tras
+cada guardado, el editor pregunta a `sync.php` (→ `GET /edit/sync`) si
+`main` trae cambios del material; el profesor los revisa en una vista lado
+a lado (`@codemirror/merge`), resuelve los conflictos si los hay y pulsa
+*Incorporar* (→ `POST /edit/merge`, commit de fusión). Detalle, estados y
+diagrama en `docs/incorporar-main/roadmap.md`.
+
 ## 4. Publicar
 
 ### 4.1 Desde el editor: enlace a la página Publicar

@@ -47,7 +47,7 @@ flowchart LR
 
   subgraph SM["Servidor de Moodle"]
     PS["Scripts con sesión<br/>materials.php · edit.php · preview.php · publish.php"]
-    PT["Scripts sin sesión (token)<br/>content.php · save.php · token.php · asset.php"]
+    PT["Scripts sin sesión (token)<br/>content.php · save.php · token.php · asset.php · sync.php"]
     MUC[("Caché MUC<br/>límites y bloqueos")]
     FS[("moodledata<br/>ficheros publicados")]
   end
@@ -94,7 +94,7 @@ flowchart LR
 
 **Por qué hay scripts sin sesión.** El editor se sirve desde otro origen y
 la cookie de sesión de Moodle (SameSite=Lax) no viaja en sus `fetch`. Por
-eso esos cuatro scripts se autentican con un token propio.
+eso esos scripts sin sesión se autentican con un token propio.
 
 ### 2.2 Topología de producción
 
@@ -142,7 +142,7 @@ denegado.
 
 | # | Origen | Destino | Puerto | Protocolo | Motivo |
 | --- | --- | --- | --- | --- | --- |
-| F1 | Internet | A (Moodle) | 443 | HTTPS | Moodle; incluye los cuatro scripts que usa el editor |
+| F1 | Internet | A (Moodle) | 443 | HTTPS | Moodle; incluye los scripts sin sesión que usa el editor |
 | F2 | Internet | C (Nginx, nombre del editor) | 443 | HTTPS | Descarga de los estáticos del editor |
 | F3 | A (Moodle) | B (BD) | Puerto del SGBD | Protocolo del SGBD (con TLS si es posible) | Base de datos de Moodle |
 | F4 | A (Moodle) | C (Nginx, nombre del engine) | 443 | HTTPS + firma HMAC | Peticiones al engine (servidor a servidor) |
@@ -201,6 +201,7 @@ edición **no** permite publicar (desde la versión 2.8.0 no existe
 | `save.php` | Token de edición (cuerpo) | POST, OPTIONS | Guarda (commit y push) |
 | `token.php` | Token de edición (cuerpo) | POST, OPTIONS | Renueva el token |
 | `asset.php` | Token de edición o de solo lectura (cuerpo) | POST, OPTIONS | Imágenes de la carpeta del material para el editor (PNG, JPEG, GIF, WebP) |
+| `sync.php` | Token de edición (cuerpo) | POST, OPTIONS | Cambios de la versión oficial pendientes e incorporarlos a la rama de edición (commit de fusión; LIA-130) |
 
 **Imágenes.** `save.php` acepta imágenes nuevas en el mismo guardado
 (PNG, JPEG o GIF; 20 como máximo, 2 MB cada una y 10 MB en total). El
@@ -602,6 +603,7 @@ flowchart TD
 | T11 | Falta de trazabilidad | Eventos de Moodle y tabla de despliegues | `classes/event/*` |
 | T13 | Imágenes maliciosas (SVG con JavaScript, HTML disfrazado, rutas fuera del material, tamaño) | Solo PNG/JPEG/GIF para subir; tipo real comprobado en plugin y engine; rutas normalizadas dentro de la carpeta del material; límites de número y tamaño; respuestas de `asset.php` con `nosniff`, CSP y `sandbox`; el editor recodifica (elimina EXIF) | `plugin/lib.php` (`local_liamateriales_validate_images`), `asset.php`, `engine/…/images.py` |
 | T14 | Un paquete publicado (H5P, SCORM) lleva otros materiales de la misma carpeta, que el alumnado puede descargar | El engine exporta con liaex desde una copia del SHA sin los otros `.md` de la carpeta del material; convención de un material por carpeta | `engine/…/publish/service.py` (`isolate_material`) |
+| T15 | Incorporar la versión oficial (`sync.php`) para escribir en ramas ajenas o en `main`, o colar marcas de conflicto | Token de escritura del fichero y la rama; nunca sobre `main`; fusión solo de `main` en la rama del token, con compare-and-swap sobre los SHA revisados (409); material resuelto sin marcas (400); límite propio | `plugin/sync.php`, `engine/…/edit/service.py` (`sync_status`, `merge`) |
 | T12 | Contenedores de conversión | Copia temporal del commit, `--rm`, red `none` por defecto (Pandoc además con `--user`) | `publish/service.py`, `publish/pandoc_export.py` |
 
 ---
@@ -651,7 +653,7 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 - [ ] «Origen CORS» o «URL del editor» con el origen HTTPS exacto del editor.
 - [ ] Editor servido por HTTPS con la CSP, `Referrer-Policy` y `nosniff`
   (README del editor).
-- [ ] Límite por IP en el proxy para los cuatro scripts (README del
+- [ ] Límite por IP en el proxy para los scripts sin sesión (README del
   plugin, «Límite en el proxy»).
 - [ ] `$CFG->reverseproxy` / `getremoteaddrconf` coherentes con el proxy.
 - [ ] Caché de aplicación compartida si hay varios nodos web.
@@ -669,13 +671,14 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | Flujo del editor | Abre canjeando el código, ninguna URL lleva token, el código desaparece de la barra, 429 sin perder trabajo | `fpvirtual-crepe-editor/scripts/e2e-mock.mjs` (18 comprobaciones), `tests/lms.test.ts` |
 | Imágenes | Rutas fuera de la carpeta, SVG, falso PNG, extensión que no casa, base64 roto, tamaño y número → rechazadas sin commit; un commit con Markdown e imágenes; 409 con imágenes | `engine/tests/test_api_asset.py`, `test_save_images.py`, `test_images.py`, `plugin/tests/images_test.php`, e2e del editor |
 | Paquetes aislados | El H5P y el SCORM no llevan otros materiales de la carpeta; Git no cambia | `engine/tests/test_publish_isolate.py` |
+| Incorporar `main` | Sin cambios / limpia / conflicto con trozos y resolución; rama o `main` movidas → 409; marcas → 400; material retirado → coordinación | `engine/tests/test_merge_main.py`, `tests/sync.test.ts` y e2e del editor |
 | Límites y bloqueo de IP | Cada límite, ventana deslizante, desactivación, bloqueo y caducidad del bloqueo, una publicación a la vez | `plugin/tests/rate_limiter_test.php` |
 | Limpieza | Borra lo viejo y conserva lo reciente; tarea registrada | `plugin/tests/cleanup_task_test.php` |
 | Auditoría | Cuatro eventos con contexto y datos | `plugin/tests/events_test.php` |
 | Engine aislado | Desde cualquier máquina que no sea A: `curl https://<engine>/health` rechazado (403 de Nginx o sin conexión) y el puerto 8000 de C cerrado; desde A: `/health` responde y `/edit/files` sin firma → 401 | Manual |
 | Canal cifrado | Desde A: `curl -v https://<engine>/health` valida el certificado; en Moodle, los guardados y publicaciones funcionan con la URL `https://` | Manual |
 | Matriz de flujos | Desde C no se alcanza A ni B; desde Internet solo se alcanza el 443 de A y el nombre del editor en C | Manual (escaneo de puertos) |
-| Cabeceras | `curl -I` a los cuatro scripts y al editor | Manual |
+| Cabeceras | `curl -I` a los scripts sin sesión y al editor | Manual |
 | Sin tokens en registros | Buscar `token=` en los access log tras usar el editor | Manual |
 
 ## 13. Referencias en el código
@@ -687,7 +690,7 @@ Se listan para que el equipo de seguridad decida su tratamiento.
 | Límites y bloqueos | `plugin/classes/local/rate_limiter.php`, `plugin/db/caches.php` |
 | Cabeceras, preflight, errores y 429 | `plugin/lib.php` (`local_liamateriales_api_*`) |
 | Apertura del editor | `plugin/lib.php` (`local_liamateriales_open_in_editor`), `plugin/edit.php`, `plugin/preview.php` |
-| Scripts del editor | `plugin/content.php`, `plugin/save.php`, `plugin/token.php`, `plugin/asset.php` |
+| Scripts del editor | `plugin/content.php`, `plugin/save.php`, `plugin/token.php`, `plugin/asset.php`, `plugin/sync.php` |
 | Publicación | `plugin/classes/local/publisher.php`, `plugin/publish.php` |
 | Eventos | `plugin/classes/event/` |
 | Limpieza | `plugin/classes/task/cleanup.php`, `plugin/db/tasks.php` |

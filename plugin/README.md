@@ -40,6 +40,10 @@ en Moodle 6.0dev.
   con el nuevo SHA y devuelve token renovado (contrato C6). El 409 de
   conflicto llega al editor con su rama `resolucion/...` (D5).
 - **`token.php`**: renovación del token sin guardar (ping del editor, C6).
+- **`sync.php`** (LIA-130): el editor pregunta si la versión oficial
+  (`main`) trae cambios del material que su rama no tiene y los incorpora
+  (commit de fusión; conflictos resueltos en el editor). Ver
+  `docs/incorporar-main/roadmap.md`.
 - **Publicar** (`publish.php` + `local\publisher`, D6): subida del artefacto
   exportado en el navegador (**H5P / ePub / PDF**), creación/actualización
   del módulo (`mod_h5pactivity` / `mod_resource`) y registro del despliegue
@@ -84,8 +88,8 @@ pendiente: instalada …» (falta `admin/cli/upgrade.php`).
 
 ## Seguridad (fase S)
 
-Superficie expuesta: cuatro scripts sin sesión de Moodle, que usa el
-editor (`content.php`, `save.php`, `token.php`, `asset.php`). Publicar se
+Superficie expuesta: cinco scripts sin sesión de Moodle, que usa el
+editor (`content.php`, `save.php`, `token.php`, `asset.php`, `sync.php`). Publicar se
 hace solo en la página Publicar, con sesión: `publish_api.php` (publicar
 desde el editor) se retiró en 2.8.0.
 
@@ -122,7 +126,7 @@ desde el editor) se retiró en 2.8.0.
 ### Límite en el proxy (LIA-071)
 
 Además de los límites por usuario del plugin, el proxy delante de Moodle
-debe limitar el volumen por IP de los cuatro scripts (`asset.php` con un
+debe limitar el volumen por IP de los scripts sin sesión (`asset.php` con un
 margen mayor: pide una imagen por petición). Nginx:
 
 ```nginx
@@ -130,7 +134,7 @@ margen mayor: pide una imagen por petición). Nginx:
 limit_req_zone $binary_remote_addr zone=liamat:10m rate=60r/m;
 
 # En el server { … } de Moodle
-location ~ ^/local/liamateriales/(content|save|token)\.php$ {
+location ~ ^/local/liamateriales/(content|save|token|sync)\.php$ {
     limit_req zone=liamat burst=20 nodelay;
     limit_req_status 429;
     # … lo mismo que el resto de PHP de Moodle (fastcgi_pass / proxy_pass)

@@ -324,9 +324,10 @@ editor.
   versión»: al cambiar `main`, lo publicado desde `main` cuyo material
   cambió se regenera y sustituye en el mismo módulo (plugin 2.10.0; el
   estado del engine mira la carpeta del material) (sesión 49).
-- [ ] **LIA-130** (M) Incorporar a las ramas de edición los cambios de
-  `main` (fusión a tres vías; conflictos con una vista tipo Meld en el
-  editor o, mientras tanto, con Meld en local).
+- [x] **LIA-130** (M) Incorporar a las ramas de edición los cambios de
+  `main`: `/edit/sync` y `/edit/merge` (engine), `sync.php` (plugin
+  2.11.0), aviso y vista tipo Meld con `@codemirror/merge` (editor) y
+  `scripts/incorporar-main.sh` con Meld para coordinación (sesión 50).
 
 ---
 

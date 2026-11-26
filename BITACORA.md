@@ -28,6 +28,30 @@
 
 ## Registro de sesiones
 
+### 2026-11-26 — Sesión 50: Incorporar la versión oficial a las ramas de edición (LIA-130)
+
+Rama `feature/incorporar-main` (sale de `feature/actualizar-dependientes`)
+y `feature/incorporar-main` del editor (sale de su `main`). Diseño en
+`docs/incorporar-main/roadmap.md` (M1–M7).
+
+- **Engine**: `GET /edit/sync` fusiona en memoria (`git merge-tree
+  --write-tree`) y dice si hay que incorporar (solo si `main` cambió la
+  carpeta del material): `clean` (texto actual y fusionado), `conflict`
+  (trozos de `git merge-file --diff3`), `conflict_other`. `POST
+  /edit/merge`: commit de fusión con CAS sobre los SHA revisados (409) y
+  sin marcas (400). Git ≥ 2.38.
+- **Plugin 2.11.0 (2026112606)**: `sync.php` (patrón de `save.php`, límite
+  `ratelimit_sync`), `sync_endpoint` en el bloque LMS, evento
+  `material_saved` con `merged_main`.
+- **Editor**: aviso al abrir y tras guardar; `MergeDialog.vue` con
+  `@codemirror/merge` 6.12.3 (oficial | resultado editable con flechas;
+  sin conflictos, actual | cómo quedará), cargado bajo demanda.
+- **Coordinación**: `scripts/incorporar-main.sh` con Meld (probado con un
+  repositorio de juguete: fusión limpia, conflicto y rama divergida).
+- **Pruebas**: engine 192 ✓ (ruff, mypy); editor 176 ✓ y e2e 48/48;
+  plugin: lint PHP 8.3.
+- **Pendiente**: probarlo en el Moodle de pruebas.
+
 ### 2026-11-26 — Sesión 49: Actualizar los contenidos dependientes de la versión oficial
 
 Rama `feature/actualizar-dependientes` (sale de `main`, 70ce32b).
