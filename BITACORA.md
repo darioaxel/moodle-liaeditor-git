@@ -28,6 +28,37 @@
 
 ## Registro de sesiones
 
+### 2026-11-26 — Sesión 46: Despliegue de imágenes en el servidor de pruebas, LIA-124 y paso a `main`
+
+- **Despliegue** en 192.168.2.253 de `feature/imagenes` (plugin, engine y
+  editor) y, al fusionarse, de **`main` en los tres repositorios** (plugin
+  2.8.0 / 2026112601, engine y editor desde `main`; `contenidos-test` en
+  `6d833bd`, un material por carpeta). Antes, `feature/generacion-web` se
+  fusionó en `feature/imagenes` con las correcciones de las pruebas del
+  23-11.
+- **Fase S desplegada** (no lo estaba): secreto compartido en el `.env` del
+  engine y en `config.php` (más la línea en la plantilla de
+  `entrypoint.sh`), puerto 8091 sin publicar, firma comprobada (401 sin
+  firma). CSP del editor en su `nginx.conf` con `blob:` en `img-src` y el
+  origen del Moodle en `connect-src`.
+- **LIA-124** con Chrome real como `profesor.cac`: las nueve comprobaciones
+  pasan (detalle en [docs/imagenes/roadmap.md §7](docs/imagenes/roadmap.md)).
+- **Tres fallos encontrados y corregidos**: subida imposible con el editor
+  servido por http (`crypto.subtle`; SHA-256 en JS como respaldo); engine
+  bloqueado por lecturas paralelas de GitPython (`RLock` en
+  `LocalGitProvider`); «HTTP 200» al publicar por primera vez un PDF o ePub
+  (`resource_defaults()`). Antes, en la generación web: no reutilizar
+  actividades en borrado y conservar la revisión del Recurso al republicar.
+- **Incidencias de operación**: ficheros de root en el clon de
+  `contenidos-test` (un fetch como root) impedían guardar; corregido con
+  `chown` a uid 1000. Las 13 actividades de prueba de LIA-124 se borraron
+  del curso; la rama de ut03 de `profesor.cac` volvió al contenido de
+  `main` (historial conservado).
+- `feature/imagenes` fusionada en `main` de `fpvirtual-crepe-editor`
+  (`c709138`, merge sin conflictos).
+- Pendiente: PHPUnit no está instalado en el Moodle de pruebas; decidir qué
+  hacer con los bloques de imagen vacíos (`![]()`).
+
 ### 2026-11-26 — Sesión 45: «Volver a Moodle» regresa al catálogo del curso
 
 - El botón «Volver a Moodle» del editor llevaba siempre a `/my/courses.php`

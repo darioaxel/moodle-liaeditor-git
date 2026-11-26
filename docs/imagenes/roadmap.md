@@ -3,7 +3,8 @@
 Ver y subir imágenes desde el editor, con Git como fuente de verdad.
 
 Rama `feature/imagenes` (sale de `feature/seguridad`) en este repositorio y
-en `fpvirtual-crepe-editor`.
+en `fpvirtual-crepe-editor`. **Fusionada en `main` en los dos repositorios
+(2026-11-26)** y desplegada desde `main` en el servidor de pruebas (§7).
 
 ## 1. Objetivo
 
@@ -208,5 +209,53 @@ imágenes; la web y el PDF de contenido incluyen las imágenes.
 | 1 — Ver | Hecha: `GET /edit/asset`, `asset.php`, `ImageStore` en el editor. Corregida la pérdida del texto alternativo en el bloque de imagen de Crepe |
 | 2 — Subir | Hecha: `commit_files` y `images` en el guardado (engine), validación en `save.php`, subida en el editor (reducir, recodificar, pendientes, borrador) |
 | 3 — Pegar y aislar | Hecha: pegar y arrastrar, aviso de texto alternativo, paquetes de liaex sin otros materiales, un material por carpeta en `contenidos-test`. Git LFS descartado por ahora (D10) |
-| Prueba en Moodle | Hecha en parte (LIA-124): subir, pegar y arrastrar funcionan; reveló las imágenes huérfanas |
+| Prueba en Moodle | Hecha (LIA-124, §7): las nueve comprobaciones pasan en el servidor de pruebas con Chrome real. Reveló las imágenes huérfanas y tres fallos, corregidos |
 | 4 — Borrado, tamaño y columnas | Hecha: borrado en Git y en el editor, ancho de imagen, dos columnas (editor, web y PDF de contenido) |
+
+## 7. Prueba en el servidor de pruebas (LIA-124, 2026-11-25)
+
+Servidor 192.168.2.253: Moodle 8088 (plugin montado desde el clon), engine
+8091 (solo en la red interna) y editor 8092 (estático, **por http**). Se
+desplegó primero la fase S (secreto compartido en `.env` y `config.php`,
+puerto del engine sin publicar), que `feature/imagenes` incluye. Pruebas del
+editor con Chrome real (headless, el de la imagen `liascript/exporter`) como
+`profesor.cac` en CAC-TEST.
+
+| Comprobación | Resultado |
+| --- | --- |
+| a) Catálogo | Los cinco materiales con las rutas nuevas; las publicaciones antiguas con rutas viejas siguen en el historial |
+| b) Ver | Imágenes con POST a `asset.php`, ninguna URL con token, GIF en línea; sin violaciones de la CSP |
+| c) Subir | JPEG de 3000×2000 → 1920×1280; aviso de texto alternativo; el pie se conserva al recargar |
+| d) Pegar y arrastrar | Entran las dos, sin «Preparando la imagen…»; SVG rechazado con aviso |
+| e) Git | Un commit por guardado con el `.md` y `img/<nombre>-<hash>`; lado mayor ≤ 1920 px, sin EXIF |
+| f) Conflicto | Diálogo de conflicto; la rama `resolucion/*` contiene la imagen |
+| g) Publicar | Seis formatos de `ut05-sesiones` y `demo-liascript` con imágenes; H5P y SCORM solo con su `.md` |
+| h) Seguridad | `../`, rutas absolutas, otro material, `.git` y el propio `.md` → 404; token falso → 403 |
+| i) Registros | «Material guardado» con el número de imágenes; evento de conflicto |
+
+**Fallos encontrados y corregidos**:
+
+1. **Editor servido por http: ninguna imagen se podía subir** («No se pudo
+   leer la imagen» con cualquier PNG o JPEG). El nombre usa SHA-256 con
+   `crypto.subtle`, que solo existe en contextos seguros. Respaldo en
+   JavaScript (`src/lms/sha256.ts`) que da el mismo nombre con o sin HTTPS.
+2. **Engine bloqueado al abrir un material con varias imágenes.** El editor
+   pide todas a la vez; las lecturas paralelas compartían el `git cat-file
+   --batch` de GitPython, se mezclaban («SHA … could not be resolved», ramas
+   «no encontradas», un PNG que «no es image/png») y los hilos del pool
+   quedaban bloqueados: el engine solo respondía a `/health`. Las lecturas
+   con GitPython van bajo un `RLock` en `LocalGitProvider`; test con 16
+   hilos (sin el bloqueo se cuelga).
+3. **«No se pudo completar: HTTP 200» al publicar por primera vez un PDF,
+   PDF de contenido o ePub**: sin `display`, `resource_add_instance()`
+   avisaba en mitad de la respuesta JSON. Se usan los valores por defecto
+   de Recurso del sitio (`publisher::resource_defaults()`).
+
+**Notas del despliegue**: PHPUnit no está instalado en ese Moodle (los tests
+del plugin no se ejecutaron allí); `display_errors` está activado, así que
+cualquier aviso de PHP rompe las respuestas JSON del plugin.
+
+**Pendiente**: el editor guarda `![]()` si un bloque de imagen queda vacío
+(en las plantillas de columnas es el hueco de la imagen, a propósito). La web
+y el PDF de contenido lo omiten con aviso; falta decidir si el editor debe
+quitarlo al guardar o avisar como con el texto alternativo.
