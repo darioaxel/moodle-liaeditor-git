@@ -28,6 +28,25 @@
 
 ## Registro de sesiones
 
+### 2026-11-26 — Sesión 48: Playground al día con `main` (2.9.0) y portada comprobada
+
+- **Despliegue** en el servidor de pruebas de `main` hasta `21fd8f0`:
+  plugin 2.9.0 / 2026112604 (sin SCORM; PDF (contenido web) y PDF
+  (LaTeX); rama en los despliegues), engine reconstruido; editor en `main`
+  (`c709138`).
+- **«No sale la portada del PDF (LaTeX)»**: el playground ejecutaba
+  `30d9cbf`, anterior a la sesión 47. La plantilla `fpvirtual.latex` solo
+  dibuja la portada con `titlepage` en los metadatos, y hasta `21fd8f0`
+  nada lo activaba: el lector LiaScript solo traslada `title`, `author`,
+  `language`, `version` y `comment`, y `content-boxes.yaml` no lo define
+  (en `fpvirtual-markdown-a-pdf` lo pone el YAML de cada documento).
+  Comprobado tras desplegar con `ut04-pdo`: página 1 portada (módulo,
+  unidad, autor y fecha), página 2 índice, cabeceras con unidad y autor.
+- **Imágenes Docker de respaldo borradas** (ninguna en uso): engine
+  `pre-imagenes`, `pre-cfc469c`, `42c4e2a`, `aab8b05`; editor
+  `pre-imagenes`, `0e37155`. Solo quedan las `latest`; volver atrás es
+  reconstruir desde el commit.
+
 ### 2026-11-26 — Sesión 47: Autor de lo generado y PDF (LaTeX) con portada
 
 - **Autor de la web generada**: salía el `author:` de la cabecera del

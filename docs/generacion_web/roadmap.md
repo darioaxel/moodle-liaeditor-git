@@ -1,6 +1,6 @@
 # Roadmap — Generación web estática y PDF de contenido desde LiaScript
 
-**Versión**: 0.3 · **Fecha**: 2026-11-23 · **Estado**: Fase 4 (integración)
+**Versión**: 0.4 · **Fecha**: 2026-11-26 · **Estado**: Fase 4 desplegada desde `main` en el servidor de pruebas
 desplegada y en pruebas en el Moodle de pruebas, rama `feature/generacion-web`
 (ver §8, §9 y §10)
 
@@ -380,3 +380,23 @@ Desplegado en el servidor de pruebas (Moodle 8088, engine 8091, editor
   Code Pro Italic (4 caracteres en UT03); valorar una fuente de respaldo.
 - Avisos sin número de línea salen con un separador inicial (` · imagen ·
   …`); quitarlo en `pandoc_export.py`.
+
+## 11. Estado — `main` en el servidor de pruebas (2026-11-26)
+
+Desplegado desde `main` (`21fd8f0`, plugin 2.9.0): los formatos de Pandoc
+se llaman **PDF (LaTeX)** (`pdfcontenido`) y la web; los de liaex, H5P, ePub
+y **PDF (contenido web)**. SCORM retirado.
+
+- **Portada del PDF (LaTeX)**: hasta `21fd8f0` no salía. La plantilla solo
+  la dibuja con `titlepage` en los metadatos, que nadie activaba (el lector
+  LiaScript solo traslada `title`, `author`, `language`, `version` y
+  `comment`; en `fpvirtual-markdown-a-pdf` lo pone el YAML de cada
+  documento). Ahora `pandoc_export.py` pasa `titlepage`, `toc`, `date` y el
+  módulo. Comprobado con `ut04-pdo`: portada (módulo, unidad, autor, fecha),
+  índice en página propia y cabeceras con unidad y autor.
+- Publicados en el curso se comparan con la rama publicada (columna
+  `branch` de los despliegues), no con `main`.
+- Hecho de §10: publicar (crear la actividad) los formatos desde la página
+  Publicar (prueba LIA-124, `docs/imagenes/roadmap.md` §7). Publicar desde
+  el editor se retiró en 2.8.0. Las imágenes sin URL siguen omitiéndose con
+  aviso; el editor aún las guarda (`![]()`).
