@@ -28,6 +28,27 @@
 
 ## Registro de sesiones
 
+### 2026-11-27 — Sesión 51: Playground en 2.11.0 y nonce en la firma del engine
+
+- **Despliegue**: plugin 2026112606 / 2.11.0 (sin cambios de BD; ajuste
+  nuevo `ratelimit_sync`), engine y editor (`7635c86`) reconstruidos desde
+  `main`. Borrada la imagen `crepe-editor-8092:pre-generacion-web`.
+- **Error en «Materiales»**: `deploy_state: rama edicion/…: petición no
+  autorizada`. El engine registraba «firma repetida»: un material publicado
+  en PDF y en web desde la misma rama y SHA genera dos `GET /edit/state`
+  idénticos en el mismo segundo, con la misma firma, y el engine rechazaba
+  el segundo como réplica (también le pasaría a dos profesores pidiendo lo
+  mismo a la vez). Arreglo: cabecera `X-Liamat-Nonce` (16 bytes aleatorios
+  en hexadecimal) que entra en el texto canónico
+  (`MÉTODO\nRUTA?QUERY\nMARCA\nNONCE\nSHA256(cuerpo)`); el engine la exige
+  (16–64 hex) y sigue rechazando réplicas. Plugin y engine se despliegan a
+  la vez (cambia el formato de la firma).
+- **Tests**: engine (`test_auth.py`: vector canónico nuevo, dos peticiones
+  idénticas en el mismo segundo, nonce ausente/inválido/cambiado) en verde;
+  `engine_client_test.php` con los vectores nuevos (no ejecutado: sin
+  PHPUnit en el servidor; vector comprobado desde la CLI de Moodle). En el
+  curso 2, PDF y web de `ut04-pdo` dan «Actualizado» sin rechazos.
+
 ### 2026-11-26 — Sesión 50: Incorporar la versión oficial a las ramas de edición (LIA-130)
 
 Rama `feature/incorporar-main` (sale de `feature/actualizar-dependientes`)

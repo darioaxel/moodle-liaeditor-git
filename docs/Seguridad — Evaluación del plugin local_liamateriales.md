@@ -434,9 +434,9 @@ sequenceDiagram
   participant W as Engine · SignatureMiddleware
   participant A as Engine · rutas
 
-  M->>M: canónico = MÉTODO, RUTA?QUERY, MARCA_DE_TIEMPO, SHA256(cuerpo)
+  M->>M: canónico = MÉTODO, RUTA?QUERY, MARCA_DE_TIEMPO, NONCE (aleatorio), SHA256(cuerpo)
   M->>M: firma = HMAC-SHA256(secreto, canónico)
-  M->>W: Petición + X-Liamat-Timestamp + X-Liamat-Signature
+  M->>W: Petición + X-Liamat-Timestamp + X-Liamat-Nonce + X-Liamat-Signature
   W->>W: Lee el cuerpo completo
   alt Sin cabeceras · marca de tiempo a más de 60 s · firma distinta (comparación en tiempo constante) · firma ya usada
     W-->>M: 401 {"detail": "petición no autorizada"} (y lo registra)

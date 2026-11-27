@@ -4,12 +4,16 @@ El plugin y el engine comparten un secreto (ajuste del plugin y
 ``MATERIALES_LIASCRIPT_SHARED_SECRET``). El plugin firma cada petición con
 HMAC-SHA256 sobre el texto canónico::
 
-    MÉTODO \\n RUTA[?QUERY] \\n MARCA_DE_TIEMPO \\n SHA256(CUERPO) en hexadecimal
+    MÉTODO \\n RUTA[?QUERY] \\n MARCA_DE_TIEMPO \\n NONCE \\n SHA256(CUERPO) en hexadecimal
 
-y lo envía en las cabeceras ``X-Liamat-Timestamp`` (segundos Unix) y
-``X-Liamat-Signature`` (hexadecimal). El engine:
+y lo envía en las cabeceras ``X-Liamat-Timestamp`` (segundos Unix),
+``X-Liamat-Nonce`` (16–64 caracteres hexadecimales aleatorios) y
+``X-Liamat-Signature`` (hexadecimal). El nonce distingue dos peticiones
+legítimas idénticas en el mismo segundo (p. ej. el estado de un material
+publicado en dos formatos), que sin él tendrían la misma firma y la segunda se
+rechazaría como réplica. El engine:
 
-- rechaza con 401 las peticiones sin firma, con firma errónea, con una marca
+- rechaza con 401 las peticiones sin firma o sin nonce, con firma errónea, con una marca
   de tiempo a más de 60 s de su reloj o con una firma ya usada (réplica);
 - compara en tiempo constante (``hmac.compare_digest``);
 - deja pasar sin firma solo ``GET /health`` (healthcheck del contenedor).
@@ -23,6 +27,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 import threading
 import time
 from collections.abc import Awaitable, Callable, MutableMapping
@@ -38,24 +43,28 @@ ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
 
 TIMESTAMP_HEADER = "x-liamat-timestamp"
 SIGNATURE_HEADER = "x-liamat-signature"
+NONCE_HEADER = "x-liamat-nonce"
 #: Diferencia máxima entre la marca de tiempo de la petición y el reloj del engine.
 MAX_SKEW = 60
 #: Rutas sin firma (método, ruta).
 PUBLIC = frozenset({("GET", "/health")})
+_NONCE = re.compile(r"[0-9a-f]{16,64}")
 
 _log = structlog.get_logger(__name__)
 
 
-def canonical(method: str, target: str, timestamp: str, body: bytes) -> bytes:
+def canonical(method: str, target: str, timestamp: str, nonce: str, body: bytes) -> bytes:
     """Texto que se firma (mismo formato que ``engine_client`` del plugin)."""
     digest = hashlib.sha256(body).hexdigest()
-    return f"{method.upper()}\n{target}\n{timestamp}\n{digest}".encode()
+    return f"{method.upper()}\n{target}\n{timestamp}\n{nonce}\n{digest}".encode()
 
 
-def sign(secret: str, method: str, target: str, timestamp: str, body: bytes = b"") -> str:
+def sign(
+    secret: str, method: str, target: str, timestamp: str, nonce: str, body: bytes = b""
+) -> str:
     """Firma HMAC-SHA256 en hexadecimal."""
     return hmac.new(
-        secret.encode(), canonical(method, target, timestamp, body), hashlib.sha256
+        secret.encode(), canonical(method, target, timestamp, nonce, body), hashlib.sha256
     ).hexdigest()
 
 
@@ -123,8 +132,11 @@ class SignatureMiddleware:
         headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]}
         timestamp = headers.get(TIMESTAMP_HEADER, "")
         signature = headers.get(SIGNATURE_HEADER, "")
+        nonce = headers.get(NONCE_HEADER, "").lower()
         if not timestamp or not signature:
             return "sin firma"
+        if not _NONCE.fullmatch(nonce):
+            return "nonce ausente o inválido"
         if not timestamp.isdigit():
             return "marca de tiempo inválida"
         now = self._clock()
@@ -133,7 +145,7 @@ class SignatureMiddleware:
         query = scope.get("query_string", b"").decode("latin-1")
         target = scope.get("raw_path", scope["path"].encode()).decode("latin-1").split("?", 1)[0]
         target += f"?{query}" if query else ""
-        expected = sign(self._secret, scope["method"], target, timestamp, body)
+        expected = sign(self._secret, scope["method"], target, timestamp, nonce, body)
         if not hmac.compare_digest(expected, signature.lower()):
             return "firma errónea"
         if not self._seen.add(expected, now):
