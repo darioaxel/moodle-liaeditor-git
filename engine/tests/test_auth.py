@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 import time
 from pathlib import Path
 
@@ -22,9 +23,11 @@ def firmado(
     method: str, target: str, body: bytes = b"", *, ts: int | None = None
 ) -> dict[str, str]:
     timestamp = str(int(time.time()) if ts is None else ts)
+    nonce = secrets.token_hex(16)
     return {
         "X-Liamat-Timestamp": timestamp,
-        "X-Liamat-Signature": sign(SECRET, method, target, timestamp, body),
+        "X-Liamat-Nonce": nonce,
+        "X-Liamat-Signature": sign(SECRET, method, target, timestamp, nonce, body),
     }
 
 
@@ -35,9 +38,9 @@ def client(git_repo: Path) -> TestClient:
 
 def test_texto_canonico_estable() -> None:
     # Mismo formato que engine_client del plugin (tests/engine_client_test.php).
-    texto = canonical("post", "/edit/save", "1700000000", b'{"a":1}')
+    texto = canonical("post", "/edit/save", "1700000000", "0123456789abcdef0123456789abcdef", b'{"a":1}')
     assert texto == (
-        b"POST\n/edit/save\n1700000000\n"
+        b"POST\n/edit/save\n1700000000\n0123456789abcdef0123456789abcdef\n"
         b"015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862"
     )
 
@@ -80,6 +83,35 @@ def test_replica_401(client: TestClient) -> None:
     target = "/edit/files?branch=main"
     cabeceras = firmado("GET", target)
     assert client.get(target, headers=cabeceras).status_code == HTTP_OK
+    assert client.get(target, headers=cabeceras).status_code == HTTP_UNAUTHORIZED
+
+
+def test_peticiones_identicas_en_el_mismo_segundo(client: TestClient) -> None:
+    # Mismo estado pedido dos veces (material publicado en dos formatos): con
+    # nonces distintos, las dos firmas son válidas y distintas.
+    target = "/edit/files?branch=main"
+    ts = int(time.time())
+    assert client.get(target, headers=firmado("GET", target, ts=ts)).status_code == HTTP_OK
+    assert client.get(target, headers=firmado("GET", target, ts=ts)).status_code == HTTP_OK
+
+
+@pytest.mark.parametrize("nonce", [None, "", "corto", "Z" * 32])
+def test_nonce_ausente_o_invalido_401(client: TestClient, nonce: str | None) -> None:
+    target = "/edit/files?branch=main"
+    cabeceras = firmado("GET", target)
+    if nonce is None:
+        del cabeceras["X-Liamat-Nonce"]
+    else:
+        ts = cabeceras["X-Liamat-Timestamp"]
+        cabeceras["X-Liamat-Nonce"] = nonce
+        cabeceras["X-Liamat-Signature"] = sign(SECRET, "GET", target, ts, nonce)
+    assert client.get(target, headers=cabeceras).status_code == HTTP_UNAUTHORIZED
+
+
+def test_nonce_cambiado_401(client: TestClient) -> None:
+    target = "/edit/files?branch=main"
+    cabeceras = firmado("GET", target)
+    cabeceras["X-Liamat-Nonce"] = secrets.token_hex(16)
     assert client.get(target, headers=cabeceras).status_code == HTTP_UNAUTHORIZED
 
 

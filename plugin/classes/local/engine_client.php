@@ -5,8 +5,11 @@
  * engine_client: único punto por el que el plugin habla con el engine.
  *
  * Firma cada petición con HMAC-SHA256 sobre el texto canónico
- * ``MÉTODO\nRUTA[?QUERY]\nMARCA_DE_TIEMPO\nSHA256(CUERPO)`` y la envía en
- * ``X-Liamat-Timestamp`` y ``X-Liamat-Signature`` (mismo formato que
+ * ``MÉTODO\nRUTA[?QUERY]\nMARCA_DE_TIEMPO\nNONCE\nSHA256(CUERPO)`` y la envía en
+ * ``X-Liamat-Timestamp``, ``X-Liamat-Nonce`` y ``X-Liamat-Signature``. El
+ * nonce (aleatorio) evita que dos peticiones idénticas en el mismo segundo
+ * —el estado de un material publicado en dos formatos— tengan la misma firma
+ * y el engine rechace la segunda como réplica (mismo formato que
  * ``materiales_liascript.auth`` del engine). El secreto compartido sale de
  * ``$CFG->local_liamateriales_service_secret`` (config.php, preferente) o del
  * ajuste «Secreto compartido con el engine»; sin secreto no se firma (el
@@ -30,6 +33,8 @@ class engine_client {
     public const TIMESTAMP_HEADER = 'X-Liamat-Timestamp';
     /** Cabecera con la firma HMAC en hexadecimal. */
     public const SIGNATURE_HEADER = 'X-Liamat-Signature';
+    /** Cabecera con el nonce aleatorio (hexadecimal) que entra en la firma. */
+    public const NONCE_HEADER = 'X-Liamat-Nonce';
 
     /** Secreto compartido con el engine ('' si no está configurado). */
     public static function secret(): string {
@@ -59,25 +64,33 @@ class engine_client {
     }
 
     /** Texto que se firma. */
-    public static function canonical(string $method, string $target, string $timestamp, string $body): string {
-        return strtoupper($method) . "\n" . $target . "\n" . $timestamp . "\n" . hash('sha256', $body);
+    public static function canonical(string $method, string $target, string $timestamp, string $nonce, string $body): string {
+        return strtoupper($method) . "\n" . $target . "\n" . $timestamp . "\n" . $nonce . "\n" . hash('sha256', $body);
     }
 
     /**
      * Cabeceras de firma para una petición (vacío si no hay secreto).
      *
      * @param string $url URL completa (se firma su ruta y su query)
+     * @param int|null $time marca de tiempo (tests; por defecto, ahora)
+     * @param string|null $nonce nonce (tests; por defecto, 16 bytes aleatorios)
      * @return string[] cabeceras «Nombre: valor»
      */
-    public static function auth_headers(string $secret, string $method, string $url, string $body, ?int $time = null): array {
+    public static function auth_headers(string $secret, string $method, string $url, string $body,
+            ?int $time = null, ?string $nonce = null): array {
         if ($secret === '') {
             return [];
         }
         $parts = parse_url($url);
         $target = ($parts['path'] ?? '/') . (isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '');
         $timestamp = (string) ($time ?? time());
-        $signature = hash_hmac('sha256', self::canonical($method, $target, $timestamp, $body), $secret);
-        return [self::TIMESTAMP_HEADER . ': ' . $timestamp, self::SIGNATURE_HEADER . ': ' . $signature];
+        $nonce ??= bin2hex(random_bytes(16));
+        $signature = hash_hmac('sha256', self::canonical($method, $target, $timestamp, $nonce, $body), $secret);
+        return [
+            self::TIMESTAMP_HEADER . ': ' . $timestamp,
+            self::NONCE_HEADER . ': ' . $nonce,
+            self::SIGNATURE_HEADER . ': ' . $signature,
+        ];
     }
 
     /**
